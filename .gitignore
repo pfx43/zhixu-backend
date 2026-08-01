@@ -13,6 +13,7 @@
 ehthumbs.db
 Thumbs.db
 desktop.ini
+*.lnk
 
 # ------------------------------
 # IDE 和编辑器配置文件
@@ -106,3 +107,4 @@ htmlcov/
 # ------------------------------
 .workbuddy/
 .agents/
+.codegraph/
