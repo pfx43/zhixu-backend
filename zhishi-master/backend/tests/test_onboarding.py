@@ -101,6 +101,65 @@ def test_state_in_progress(onboarding_client):
     assert data["state"]["current_step"] == "channel"
 
 
+def test_state_completed_with_legacy_profile_omits_unreadable_profile(onboarding_client):
+    """Historical free-form profiles must not break current mobile clients."""
+    client, SessionLocal = onboarding_client
+    with SessionLocal() as db:
+        db.add(OnboardingState(
+            user_id=9991, guide_version=1, revision=6,
+            status="completed", current_step=None,
+            steps={
+                "channel": "completed", "upload": "completed",
+                "profile": "completed", "tags": "completed",
+                "help": "completed",
+            },
+            profile_answer={
+                "identity": "大学生", "field": "计算机科学",
+                "purposes": ["课程学习"],
+                "function_preferences": ["知识库"],
+                "usage_frequency": "35",
+            },
+            tags=["计算机科学", "课程学习"],
+        ))
+        db.commit()
+
+    resp = client.get("/api/v1/onboarding/state")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["should_show"] is False
+    assert data["state"]["status"] == "completed"
+    assert data["state"]["profile"] is None
+    assert data["state"]["tags"] == []
+
+
+def test_state_profile_with_invalid_enum_collection_degrades_without_500(onboarding_client):
+    """Malformed historical enum collections remain a readable state response."""
+    client, SessionLocal = onboarding_client
+    with SessionLocal() as db:
+        db.add(OnboardingState(
+            user_id=9991, guide_version=1, revision=6,
+            status="completed", current_step=None,
+            steps={
+                "channel": "completed", "upload": "completed",
+                "profile": "completed", "tags": "completed",
+                "help": "completed",
+            },
+            profile_answer={
+                "identity_code": "student",
+                "use_purposes": ["learning"],
+                "function_preferences": [{"legacy": "知识库"}],
+                "personalization_consent": True,
+            },
+        ))
+        db.commit()
+
+    resp = client.get("/api/v1/onboarding/state")
+
+    assert resp.status_code == 200
+    assert resp.json()["state"]["profile"] is None
+
+
 # ── restart ──
 
 def test_restart_success(onboarding_client):

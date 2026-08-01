@@ -14,17 +14,17 @@ class OnboardingRestartIn(BaseModel):
     preserve_answers: bool
 
 class ChannelOut(BaseModel):
-    code: str
-    remark: Optional[str] = None
+    channel: Literal["friend", "social_media", "search_engine", "school_teacher", "competition_project", "other"]
+    channel_remark: Optional[str] = None
 
 class ProfileOut(BaseModel):
-    identity_code: Optional[str] = None
+    identity_code: Optional[Literal["student", "professional", "researcher", "teacher", "other", "prefer_not_to_say"]] = None
     identity_other: Optional[str] = None
     major_field: Optional[str] = None
-    use_purposes: Optional[List[str]] = None
-    function_preferences: Optional[List[str]] = None
-    daily_usage: Optional[str] = None
-    personalization_consent: Optional[bool] = None
+    use_purposes: List[Literal["learning", "research", "work", "competition", "knowledge_management", "other"]]
+    function_preferences: List[Literal["tina", "knowledge_base", "graph", "practice", "analytics", "other"]]
+    daily_usage: Optional[Literal["less_than_15_minutes", "15_30_minutes", "30_60_minutes", "more_than_60_minutes", "unsure", "prefer_not_to_say"]] = None
+    personalization_consent: bool
 
 class TagOut(BaseModel):
     id: str
@@ -36,9 +36,9 @@ class OnboardingStateOut(BaseModel):
     status: str
     current_step: Optional[str] = None
     steps: Dict[str, str]
-    channel: Optional[Any] = None
-    profile: Optional[Any] = None
-    tags: Optional[Any] = None
+    channel: Optional[ChannelOut] = None
+    profile: Optional[ProfileOut] = None
+    tags: List[TagOut]
 
 
 class OnboardingStateWrapper(BaseModel):

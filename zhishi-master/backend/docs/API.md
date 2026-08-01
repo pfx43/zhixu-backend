@@ -488,6 +488,8 @@ DELETE /api/v1/auth/account
 }
 ```
 
+数据库关联数据在同一事务内删除。事务提交失败时会回滚并保留账号、现有 Token 与外部 Dify 知识库；提交成功后才失效该用户全部 Token，并以非阻断方式清理外部 Dify 知识库。
+
 ---
 
 ### 1.17 Token 调试接口
@@ -608,12 +610,14 @@ GET /api/v1/onboarding/state
     "current_step": "channel",
     "steps": {
       "channel": "pending",
+      "upload": "pending",
       "profile": "pending",
-      "tags": "pending"
+      "tags": "pending",
+      "help": "pending"
     },
     "channel": null,
     "profile": null,
-    "tags": null
+    "tags": []
   }
 }
 ```
@@ -622,12 +626,16 @@ GET /api/v1/onboarding/state
 |------|------|------|
 | `guide_version` | int | 引导版本号 |
 | `revision` | int | 当前进度版本号（用于并发控制） |
-| `status` | string | 引导状态：`in_progress` / `completed` / `not_started` |
+| `status` | string | 引导状态：`pending` / `in_progress` / `completed` / `skipped` |
 | `current_step` | string\|null | 当前步骤标识 |
 | `steps` | dict | 各步骤状态映射 |
 | `channel` | object\|null | 渠道信息 |
 | `profile` | object\|null | 用户画像信息 |
-| `tags` | array\|null | 用户标签 |
+| `tags` | array | 用户标签，每项为 `{id,name}` |
+
+响应只输出当前结构化契约。历史账号中无法可靠映射的自由文本 `profile_answer`
+降级为 `profile: null`，旧字符串标签数组降级为 `tags: []`；引导的 `status`/`revision`
+和步骤终态保持不变，避免历史答案使客户端无法读取整个账号状态。
 
 ---
 
@@ -652,12 +660,12 @@ POST /api/v1/onboarding/step
 
 ```json
 {
-  "identity_code": "undergraduate",
+  "identity_code": "student",
   "identity_other": null,
-  "major_field": "computer_science",
-  "use_purposes": ["exam_prep", "skill_improve"],
-  "function_preferences": ["ai_chat", "quiz"],
-  "daily_usage": "1-2h",
+  "major_field": "计算机科学",
+  "use_purposes": ["learning"],
+  "function_preferences": ["knowledge_base", "practice"],
+  "daily_usage": "30_60_minutes",
   "personalization_consent": true
 }
 ```
@@ -2564,4 +2572,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.0 · **更新时间**: 2025-07-31 · **维护团队**: 知拾 (Zhishi) 后端组
+> **文档版本**: v2.0 · **更新时间**: 2026-08-01 · **维护团队**: 知拾 (Zhishi) 后端组

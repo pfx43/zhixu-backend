@@ -21,10 +21,11 @@ call "..\.venv\Scripts\activate.bat"
 
 echo [启动] 后端: http://127.0.0.1:8765
 echo [文档] API:  http://127.0.0.1:8765/docs
+echo [模式] 稳定联调（不启用热重载，避免进程内会话失效）
 echo [退出] 按 Ctrl+C 停止
 echo ================================================
 echo.
 
-uvicorn server:app --host 127.0.0.1 --port 8765 --reload
+uvicorn server:app --host 127.0.0.1 --port 8765
 
 pause

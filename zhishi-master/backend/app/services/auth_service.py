@@ -691,10 +691,10 @@ class AuthManager:
         注销账号并删除关联数据。
 
         主流程：
-        1. 失效用户的所有 token
-        2. 删除 Dify 知识库（弱依赖，失败不阻断）
-        3. 删除与用户相关的业务数据，避免外键依赖问题
-        4. 删除用户主记录
+        1. 删除与用户相关的业务数据和用户主记录
+        2. 提交数据库事务
+        3. 失效用户的所有 token
+        4. 删除 Dify 知识库（弱依赖，失败不阻断）
         """
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
@@ -707,23 +707,12 @@ class AuthManager:
         dataset_id = user.dataset_id
 
         try:
-            # 1. 删除当前用户在 Redis 中的所有会话 Token
-            AuthManager._invalidate_user_tokens(user_id)
-
-            # 2. 删除 Dify 知识库（失败不阻断）
-            if dataset_id:
-                try:
-                    DifyKB.delete_dataset(dataset_id)
-                except Exception as e:
-                    logger.warning(f"删除 Dify 知识库失败（不影响注销）: {e}")
-
-            # 3. 删除与用户相关的业务数据（FK 安全顺序：子表 → 父表）
+            # 1. 删除与用户相关的业务数据（FK 安全顺序：子表 → 父表）
             #
             # 阶段 1 — 清理引用 documents / document_segments 的子表
             #   QuestionProvenance FK → documents.id / document_segments.id
             #   UserQuestionRef   FK → documents.id / document_segments.id
             #   TutorSession      FK → documents.id / document_segments.id / quiz_answers.id
-            #   QuizSession       FK → documents.id（弱引用，设为 NULL）
             document_ids = [doc_id for (doc_id,) in db.query(Document.id).filter(Document.user_id == user_id).all()]
             if document_ids:
                 # 1a. question_provenance（FK → documents / document_segments）— 之前完全遗漏
@@ -736,40 +725,36 @@ class AuthManager:
                     db.query(QuestionProvenance).filter(
                         QuestionProvenance.segment_id.in_(segment_ids)
                     ).delete(synchronize_session=False)
-                # 1b. user_question_refs（FK → documents / document_segments）— 原顺序在 document 之后，颠倒
-                db.query(UserQuestionRef).filter(
-                    UserQuestionRef.document_id.in_(document_ids)
-                ).delete(synchronize_session=False)
-                # 1c. tutor_sessions（FK → documents / document_segments / quiz_answers）— 原顺序颠倒
-                db.query(TutorSession).filter(
-                    TutorSession.document_id.in_(document_ids)
-                ).delete(synchronize_session=False)
-                # 1d. quiz_sessions 对 document 的弱引用设为 NULL（FK → documents）— 原顺序颠倒
-                db.query(QuizSession).filter(
-                    QuizSession.document_id.in_(document_ids)
-                ).update({"document_id": None}, synchronize_session=False)
 
-                # 阶段 2 — 删除 documents 分段和主记录（子表已清完 FK 引用）
-                db.query(DocumentSegment).filter(
-                    DocumentSegment.document_id.in_(document_ids)
-                ).delete(synchronize_session=False)
-            # 阶段 2.5 — 删除 UserNote（必须在 KbCollection 之前，因为 note 有 FK → kb_collections.id）
-            db.query(UserNote).filter(UserNote.user_id == user_id).delete(synchronize_session=False)
-            db.query(Document).filter(Document.user_id == user_id).delete(synchronize_session=False)
-            db.query(KbCollection).filter(KbCollection.user_id == user_id).delete(synchronize_session=False)
+            # 1b. 这两张表直接归属用户，按 user_id 清理可避免未来可空引用造成遗漏
+            db.query(UserQuestionRef).filter(
+                UserQuestionRef.user_id == user_id
+            ).delete(synchronize_session=False)
+            db.query(TutorSession).filter(
+                TutorSession.user_id == user_id
+            ).delete(synchronize_session=False)
 
-            # 阶段 3 — 清理 quiz 链路（training_plans → quiz_answers → quiz_session_questions → quiz_sessions）
+            # 阶段 2 — 先清理 quiz 链路；QuizSession 仍引用 Document / KbCollection
             quiz_session_ids = [s_id for (s_id,) in db.query(QuizSession.id).filter(QuizSession.user_id == user_id).all()]
             if quiz_session_ids:
-                # 3a. training_plans（FK → quiz_sessions）— 原顺序颠倒
+                # 2a. training_plans（FK → quiz_sessions）
                 db.query(TrainingPlan).filter(TrainingPlan.user_id == user_id).delete(synchronize_session=False)
-                # 3b. quiz_answers（FK → quiz_sessions / global_questions）
+                # 2b. quiz_answers（FK → quiz_sessions / global_questions）
                 db.query(QuizAnswer).filter(QuizAnswer.user_id == user_id).delete(synchronize_session=False)
-                # 3c. quiz_session_questions（FK → quiz_sessions）
+                # 2c. quiz_session_questions（FK → quiz_sessions）
                 db.query(QuizSessionQuestion).filter(
                     QuizSessionQuestion.session_id.in_(quiz_session_ids)
                 ).delete(synchronize_session=False)
             db.query(QuizSession).filter(QuizSession.user_id == user_id).delete(synchronize_session=False)
+
+            # 阶段 3 — quiz 引用已清理，再删除文档、分区及其直接子表
+            if document_ids:
+                db.query(DocumentSegment).filter(
+                    DocumentSegment.document_id.in_(document_ids)
+                ).delete(synchronize_session=False)
+            db.query(UserNote).filter(UserNote.user_id == user_id).delete(synchronize_session=False)
+            db.query(Document).filter(Document.user_id == user_id).delete(synchronize_session=False)
+            db.query(KbCollection).filter(KbCollection.user_id == user_id).delete(synchronize_session=False)
 
             # 阶段 4 — 其余独立表（无 FK 到上述已清理表）+ 用户主记录
             db.query(QuestionTag).filter(QuestionTag.user_id == user_id).delete(synchronize_session=False)
@@ -792,6 +777,19 @@ class AuthManager:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="注销账号失败，请稍后重试"
             )
+
+        # 数据库提交成功后再执行不可回滚的外部副作用，避免回滚后出现部分注销。
+        try:
+            AuthManager._invalidate_user_tokens(user_id)
+            logger.info(f"✅ 用户所有 Token 已失效: ID = {user_id}")
+        except Exception as e:
+            logger.warning(f"清理用户 Token 失败（账号已注销）: {e}")
+
+        if dataset_id:
+            try:
+                DifyKB.delete_dataset(dataset_id)
+            except Exception as e:
+                logger.warning(f"删除 Dify 知识库失败（账号已注销）: {e}")
 
         return {
             "message": "账号已注销"

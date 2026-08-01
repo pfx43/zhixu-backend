@@ -4,6 +4,49 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.models.onboarding import OnboardingState
 
 
+_CHANNEL_CODES = {
+    "friend",
+    "social_media",
+    "search_engine",
+    "school_teacher",
+    "competition_project",
+    "other",
+}
+_IDENTITY_CODES = {
+    "student",
+    "professional",
+    "researcher",
+    "teacher",
+    "other",
+    "prefer_not_to_say",
+}
+_USE_PURPOSES = {
+    "learning",
+    "research",
+    "work",
+    "competition",
+    "knowledge_management",
+    "other",
+}
+_FUNCTION_PREFERENCES = {
+    "tina",
+    "knowledge_base",
+    "graph",
+    "practice",
+    "analytics",
+    "other",
+}
+_DAILY_USAGE = {
+    "less_than_15_minutes",
+    "15_30_minutes",
+    "30_60_minutes",
+    "more_than_60_minutes",
+    "unsure",
+    "prefer_not_to_say",
+}
+_TAG_PREFIXES = {"identity", "field", "purpose", "preference"}
+
+
 class OnboardingAlreadyInProgress(Exception):
     def __init__(self, latest: Dict[str, Any]):
         self.latest = latest
@@ -18,6 +61,82 @@ def _default_steps():
     return {"channel": "pending", "upload": "pending", "profile": "pending", "tags": "pending", "help": "pending"}
 
 
+def _channel_for_response(value: Any):
+    if not isinstance(value, dict):
+        return None
+    code = value.get("channel")
+    remark = value.get("channel_remark")
+    if not isinstance(code, str) or code not in _CHANNEL_CODES:
+        return None
+    if not isinstance(remark, (str, type(None))):
+        return None
+    return {"channel": code, "channel_remark": remark}
+
+
+def _profile_for_response(value: Any):
+    if not isinstance(value, dict) or not value:
+        return None
+    consent = value.get("personalization_consent")
+    identity_code = value.get("identity_code")
+    identity_other = value.get("identity_other")
+    major_field = value.get("major_field")
+    use_purposes = value.get("use_purposes") or []
+    function_preferences = value.get("function_preferences") or []
+    daily_usage = value.get("daily_usage")
+    if not isinstance(consent, bool):
+        return None
+    if identity_code is not None and (
+        not isinstance(identity_code, str) or identity_code not in _IDENTITY_CODES
+    ):
+        return None
+    if not isinstance(identity_other, (str, type(None))):
+        return None
+    if not isinstance(major_field, (str, type(None))):
+        return None
+    if not isinstance(use_purposes, list) or any(
+        not isinstance(item, str) or item not in _USE_PURPOSES
+        for item in use_purposes
+    ):
+        return None
+    if not isinstance(function_preferences, list) or any(
+        not isinstance(item, str) or item not in _FUNCTION_PREFERENCES
+        for item in function_preferences
+    ):
+        return None
+    if daily_usage is not None and (
+        not isinstance(daily_usage, str) or daily_usage not in _DAILY_USAGE
+    ):
+        return None
+    return {
+        "identity_code": identity_code,
+        "identity_other": identity_other,
+        "major_field": major_field,
+        "use_purposes": use_purposes,
+        "function_preferences": function_preferences,
+        "daily_usage": daily_usage,
+        "personalization_consent": consent,
+    }
+
+
+def _tags_for_response(value: Any):
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return []
+    result = []
+    for item in value:
+        if not isinstance(item, dict):
+            return []
+        tag_id = item.get("id")
+        name = item.get("name")
+        if not isinstance(tag_id, str) or not isinstance(name, str):
+            return []
+        if tag_id.split("-", 1)[0] not in _TAG_PREFIXES:
+            return []
+        result.append({"id": tag_id, "name": name})
+    return result
+
+
 def serialize_state(state: OnboardingState) -> Dict[str, Any]:
     return {
         "guide_version": int(state.guide_version),
@@ -25,9 +144,9 @@ def serialize_state(state: OnboardingState) -> Dict[str, Any]:
         "status": state.status,
         "current_step": state.current_step,
         "steps": state.steps or _default_steps(),
-        "channel": state.channel_answer,
-        "profile": state.profile_answer,
-        "tags": state.tags,
+        "channel": _channel_for_response(state.channel_answer),
+        "profile": _profile_for_response(state.profile_answer),
+        "tags": _tags_for_response(state.tags),
     }
 
 
