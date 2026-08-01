@@ -171,7 +171,13 @@ class AuthManager:
                 detail="请提供邮箱或手机号",
             )
 
-        if not user or not verify_password(password, user.password_hash):
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="账号不存在，请先注册",
+            )
+
+        if not verify_password(password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="账号或密码错误",
@@ -726,6 +732,17 @@ class AuthManager:
                         QuestionProvenance.segment_id.in_(segment_ids)
                     ).delete(synchronize_session=False)
 
+                # QuestionTag.document_id 也引用 documents，必须在删除文档前清理。
+                # 按 document_id 删除还能处理历史上 user_id 与文档归属不一致的数据。
+                db.query(QuestionTag).filter(
+                    QuestionTag.document_id.in_(document_ids)
+                ).delete(synchronize_session=False)
+
+            # 无文档关联的用户标签仍需在删除用户主记录前清理。
+            db.query(QuestionTag).filter(
+                QuestionTag.user_id == user_id
+            ).delete(synchronize_session=False)
+
             # 1b. 这两张表直接归属用户，按 user_id 清理可避免未来可空引用造成遗漏
             db.query(UserQuestionRef).filter(
                 UserQuestionRef.user_id == user_id
@@ -757,7 +774,6 @@ class AuthManager:
             db.query(KbCollection).filter(KbCollection.user_id == user_id).delete(synchronize_session=False)
 
             # 阶段 4 — 其余独立表（无 FK 到上述已清理表）+ 用户主记录
-            db.query(QuestionTag).filter(QuestionTag.user_id == user_id).delete(synchronize_session=False)
             db.query(OnboardingState).filter(OnboardingState.user_id == user_id).delete(synchronize_session=False)
 
             # 4. 删除用户主记录

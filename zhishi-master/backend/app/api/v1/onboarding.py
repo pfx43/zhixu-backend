@@ -3,6 +3,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Literal, Optional, Dict, Any, List
 from app.api.deps import get_db, get_current_active_user
+from app.schemas.onboarding import (
+    OnboardingChannelCode,
+    OnboardingDailyUsage,
+    OnboardingFunctionPreference,
+    OnboardingIdentityCode,
+    OnboardingUsePurpose,
+)
 from app.services.onboarding_service import restart_onboarding, OnboardingAlreadyInProgress, OnboardingRevisionConflict
 from app.services.onboarding_service import get_onboarding_state, submit_onboarding_step, complete_onboarding
 
@@ -14,16 +21,16 @@ class OnboardingRestartIn(BaseModel):
     preserve_answers: bool
 
 class ChannelOut(BaseModel):
-    channel: Literal["friend", "social_media", "search_engine", "school_teacher", "competition_project", "other"]
+    channel: OnboardingChannelCode
     channel_remark: Optional[str] = None
 
 class ProfileOut(BaseModel):
-    identity_code: Optional[Literal["student", "professional", "researcher", "teacher", "other", "prefer_not_to_say"]] = None
+    identity_code: Optional[OnboardingIdentityCode] = None
     identity_other: Optional[str] = None
     major_field: Optional[str] = None
-    use_purposes: List[Literal["learning", "research", "work", "competition", "knowledge_management", "other"]]
-    function_preferences: List[Literal["tina", "knowledge_base", "graph", "practice", "analytics", "other"]]
-    daily_usage: Optional[Literal["less_than_15_minutes", "15_30_minutes", "30_60_minutes", "more_than_60_minutes", "unsure", "prefer_not_to_say"]] = None
+    use_purposes: List[OnboardingUsePurpose]
+    function_preferences: List[OnboardingFunctionPreference]
+    daily_usage: Optional[OnboardingDailyUsage] = None
     personalization_consent: bool
 
 class TagOut(BaseModel):

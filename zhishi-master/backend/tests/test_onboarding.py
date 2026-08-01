@@ -160,6 +160,61 @@ def test_state_profile_with_invalid_enum_collection_degrades_without_500(onboard
     assert resp.json()["state"]["profile"] is None
 
 
+def test_state_with_current_structured_answers_preserves_all_fields(onboarding_client):
+    """Current structured answers pass through compatibility serialization."""
+    client, SessionLocal = onboarding_client
+    with SessionLocal() as db:
+        db.add(OnboardingState(
+            user_id=9991, guide_version=1, revision=6,
+            status="completed", current_step=None,
+            steps={
+                "channel": "completed", "upload": "completed",
+                "profile": "completed", "tags": "completed",
+                "help": "completed",
+            },
+            channel_answer={
+                "channel": "competition_project",
+                "channel_remark": "校赛",
+            },
+            profile_answer={
+                "identity_code": "student",
+                "identity_other": None,
+                "major_field": "计算机科学",
+                "use_purposes": ["learning", "competition"],
+                "function_preferences": ["knowledge_base", "practice"],
+                "daily_usage": "30_60_minutes",
+                "personalization_consent": True,
+            },
+            tags=[
+                {"id": "field-computer-science", "name": "计算机科学"},
+                {"id": "purpose-learning", "name": "课程学习"},
+            ],
+        ))
+        db.commit()
+
+    resp = client.get("/api/v1/onboarding/state")
+
+    assert resp.status_code == 200
+    state = resp.json()["state"]
+    assert state["channel"] == {
+        "channel": "competition_project",
+        "channel_remark": "校赛",
+    }
+    assert state["profile"] == {
+        "identity_code": "student",
+        "identity_other": None,
+        "major_field": "计算机科学",
+        "use_purposes": ["learning", "competition"],
+        "function_preferences": ["knowledge_base", "practice"],
+        "daily_usage": "30_60_minutes",
+        "personalization_consent": True,
+    }
+    assert state["tags"] == [
+        {"id": "field-computer-science", "name": "计算机科学"},
+        {"id": "purpose-learning", "name": "课程学习"},
+    ]
+
+
 # ── restart ──
 
 def test_restart_success(onboarding_client):

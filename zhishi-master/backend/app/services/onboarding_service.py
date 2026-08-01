@@ -2,48 +2,22 @@ from typing import Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from app.models.onboarding import OnboardingState
+from app.schemas.onboarding import (
+    OnboardingChannelCode,
+    OnboardingDailyUsage,
+    OnboardingFunctionPreference,
+    OnboardingIdentityCode,
+    OnboardingUsePurpose,
+)
 
 
-_CHANNEL_CODES = {
-    "friend",
-    "social_media",
-    "search_engine",
-    "school_teacher",
-    "competition_project",
-    "other",
-}
-_IDENTITY_CODES = {
-    "student",
-    "professional",
-    "researcher",
-    "teacher",
-    "other",
-    "prefer_not_to_say",
-}
-_USE_PURPOSES = {
-    "learning",
-    "research",
-    "work",
-    "competition",
-    "knowledge_management",
-    "other",
-}
+_CHANNEL_CODES = {item.value for item in OnboardingChannelCode}
+_IDENTITY_CODES = {item.value for item in OnboardingIdentityCode}
+_USE_PURPOSES = {item.value for item in OnboardingUsePurpose}
 _FUNCTION_PREFERENCES = {
-    "tina",
-    "knowledge_base",
-    "graph",
-    "practice",
-    "analytics",
-    "other",
+    item.value for item in OnboardingFunctionPreference
 }
-_DAILY_USAGE = {
-    "less_than_15_minutes",
-    "15_30_minutes",
-    "30_60_minutes",
-    "more_than_60_minutes",
-    "unsure",
-    "prefer_not_to_say",
-}
+_DAILY_USAGE = {item.value for item in OnboardingDailyUsage}
 _TAG_PREFIXES = {"identity", "field", "purpose", "preference"}
 
 

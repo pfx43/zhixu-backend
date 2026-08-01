@@ -90,6 +90,86 @@ def test_delete_account_basic(monkeypatch, db_session):
     assert db_session.query(DocumentSegment).filter(DocumentSegment.document_id == document_id).count() == 0
 
 
+def test_login_missing_account_requests_registration(db_session):
+    """不存在的账号应给出可行动的注册提示，而不是混同为密码错误。"""
+    with pytest.raises(HTTPException) as exc_info:
+        AuthManager.login(
+            db=db_session,
+            email="missing-account@example.com",
+            password="any-password",
+        )
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "账号不存在，请先注册"
+
+
+def test_login_existing_account_keeps_password_error(monkeypatch, db_session):
+    """账号存在但密码错误时仍返回 401，不误导用户重复注册。"""
+    user = User(
+        email="existing-account@example.com",
+        password_hash="hash",
+        nickname="existing-account",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.commit()
+    monkeypatch.setattr(auth_service, "verify_password", lambda password, password_hash: False)
+
+    with pytest.raises(HTTPException) as exc_info:
+        AuthManager.login(
+            db=db_session,
+            email="existing-account@example.com",
+            password="wrong-password",
+        )
+
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "账号或密码错误"
+
+
+def test_delete_account_with_document_tag(monkeypatch, db_session):
+    """绑定文档的标签必须在文档之前删除，避免外键阻断账号注销。"""
+    monkeypatch.setattr(AuthManager, "_invalidate_user_tokens", lambda user_id, preserve_token=None: None)
+    monkeypatch.setattr(auth_service.DifyKB, "delete_dataset", lambda dataset_id: True)
+
+    user = User(
+        email="document-tag@example.com",
+        password_hash="hash",
+        nickname="document-tag",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.flush()
+
+    collection = KbCollection(user_id=user.id, name="标签分区", zone="study")
+    db_session.add(collection)
+    db_session.flush()
+
+    document = Document(
+        user_id=user.id,
+        collection_id=collection.id,
+        display_name="标签文档",
+        zone="study",
+        content_hash="document-tag-hash",
+    )
+    db_session.add(document)
+    db_session.flush()
+
+    tag = QuestionTag(
+        user_id=user.id,
+        name="外键标签",
+        document_id=document.id,
+    )
+    db_session.add(tag)
+    db_session.commit()
+
+    result = AuthManager.delete_account(db_session, user.id)
+
+    assert result == {"message": "账号已注销"}
+    assert db_session.query(User).filter(User.id == user.id).first() is None
+    assert db_session.query(QuestionTag).filter(QuestionTag.user_id == user.id).count() == 0
+    assert db_session.query(Document).filter(Document.user_id == user.id).count() == 0
+
+
 def test_delete_account_commit_failure_preserves_user_token_and_external_dataset(
     monkeypatch,
     db_session,
@@ -191,7 +271,8 @@ def test_delete_account_with_quiz_linked_to_collection_prevents_relogin(
             password="original-password",
         )
 
-    assert login_error.value.status_code == 401
+    assert login_error.value.status_code == 404
+    assert login_error.value.detail == "账号不存在，请先注册"
     assert delete_error is None
     assert result == {"message": "账号已注销"}
     assert db_session.query(User).filter(User.id == user_id).first() is None
