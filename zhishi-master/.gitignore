@@ -1,0 +1,95 @@
+# ─── Node / Frontend ───────────────────────
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# ─── Flutter（若后续加入 zhishi_app）────────
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+
+# ─── Python ───────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.Python
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Python 打包产物（勿与 frontend/dist 混淆时用 frontend/dist/ 已单独列出）
+build/
+dist/
+
+# 虚拟环境
+env/
+venv/
+.venv/
+
+# ─── OS ────────────────────────────────────
+Thumbs.db
+.DS_Store
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ─── IDE ───────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# ─── 环境配置（含密钥）────────────────────
+.env
+.env.*
+!.env.example
+!backend/.env.example
+*.env.local
+backend/tina.env
+backend/.env
+assets/config/llm_config.json
+assets/config/dify_config.json
+
+# ─── 日志 ──────────────────────────────────
+*.log
+logs/
+backend/logs/
+
+# ─── 本地运行时数据 ────────────────────────
+storage/
+backend/storage/
+backend/content_cache/
+backend/upload_hashes.json
+
+# Chroma 向量索引
+data/chroma/
+
+# SQLite / 本地数据库
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+releases/
+# ─── LEKT 本地编译产物（按需提交则注释掉）──
+# backend/*.pyd
+# backend/logic_matrix.npy
+
+# ─── 大文件 ────────────────────────────────
+*.zip
+*.rar
+*.7z
+# ������ ��Ƶ��Ⱦ���� �������������������������������������� 
+renders/ 
+zhishi-web/renders/ 
+zhishi-web/video/

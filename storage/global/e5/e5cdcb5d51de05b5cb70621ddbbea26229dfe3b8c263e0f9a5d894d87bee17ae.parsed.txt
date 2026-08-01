@@ -1,0 +1,129 @@
+目  录
+一、项目是什么	2
+二、五个功能包	2
+三、主任务流程（2025 CRAIC）	2
+四、外部依赖（仓库内没有）	3
+五、风险点与建议（按严重程度）	3
+1. 飞行安全 — 高	3
+2. 控制算法 — 高	4
+3. 感知与任务逻辑 — 中高	5
+4. 工程与部署 — 中	5
+5. 机构与电气 — 中	6
+6. 维护性 — 低（长期）	6
+六、如何使用本仓库（理解向）	6
+七、总结	7
+下面是对整个 tutorials 工作区的通览、架构说明，以及只读风险审查与建议（未改任何代码）。
+一、项目是什么
+这是一套 ROS1 + Catkin 的多旋翼竞赛/教程代码，面向 CRAIC / AIC 2025 类任务：起飞 → 读 QR → 绕圈 → 按标识投放 → 穿环 → 精准降落。飞控通过 MAVROS + PX4 的 OFFBOARD 速度/位置控制；定位依赖 Livox MID360 + FAST-LIO；视觉含霍夫圆、QR、YOLOv5；机构含 舵机弹射器（Arduino + rosserial）。
+传感器感知定位控制执行相机Livox MID360qr_detectorhough_circle_detector x2yolov5ring_center_detectfast_lioodom_forward_nodeMAVROS / PX4run_2025craic_task_node 等catapult_driver + Arduino
+二、五个功能包
+包名	职责
+tutorial_basic	基础飞行：起飞、速度 PID、绕圆；mavros.launch 接 PX4
+tutorial_vision	相机驱动、霍夫圆、QR、YOLO、精准降落节点；自定义 msg
+tutorial_navigation	FAST-LIO 里程计转发、move_base、穿环点云检测 ring_center_detect
+tutorial_catapult	弹射器 ROS 桥 + Arduino 固件
+tutorial_all	总任务编排：run_2025craic_task_node.cpp（2025 CRAIC）、run_craic_task_node.cpp（旧版）、run_aic2025.py（AIC，SMACH 状态机）
+入口 launch（典型全场）：tutorial_all/launch/run_craic2025_task.launch
+会拉起：任务节点、环心检测、MAVROS、MID360+FAST-LIO、弹射器、相机、双霍夫检测、QR、YOLO。
+三、主任务流程（2025 CRAIC）
+核心逻辑在 run_2025craic_task_node.cpp 的巨型 FSM（状态 00 → 10 → 20 → 30 → 35 绕圈 → 40–60 投放 → 70–110 特殊投放 → 111–113 穿环 → 114–130 降落 → 1000 AUTO.LAND）。
+要点：
+航点全部写死在 C++ 里（如 QR 点 (1.8,0)、四个投放点、圆心 (4.3,0)、降落左右 (0,±1.6) 等）。
+OFFBOARD：持续向 mavros/setpoint_velocity/cmd_vel 发 TwistStamped。
+投放：servo/front_left/open 等 Empty 话题 → catapult_driver → Arduino 舵机。
+穿环：飞到 (6,0,1) 触发 ring_center_detect 采样，再按估计环心做两段穿环。
+AIC 路线用 Python + SMACH（run_aic2025.py），结构类似但实现分离。
+四、外部依赖（仓库内没有）
+launch 引用了本仓库外的包/资源，单独 clone tutorials 无法直接跑全场：
+mavros、livox_ros_driver2、fast_lio
+可选：ego_planner（run_planner_node.launch）、realsense2_camera（T265）
+YOLO 权重：$(find tutorial_vision)/model/best.pt — 当前目录下无 .pt 文件
+mid360.launch 还把 map→odom 设成恒等静态 TF，等于默认“地图与里程计不漂移”，和真实 SLAM 用法需自行核对。
+五、风险点与建议（按严重程度）
+1. 飞行安全 — 高
+OFFBOARD 前是否持续发 setpoint
+PX4 要求进入 OFFBOARD 前有一段时间的稳定 setpoint 流。状态 00/10 主要切模式/解锁，若 twist 默认为零且发布频率够，一般尚可；但若某状态停止 publish 或话题断连，可能触发 failsafe。
+建议：实飞前用 rostopic hz mavros/setpoint_velocity/cmd_vel 确认全程 ≥10–20 Hz；加“丢 setpoint / 丢位姿 N 秒则 AUTO.LAND”的 watchdog（目前只有非法 FSM 才 ROS_FATAL 转降落）。
+无定位失效保护
+mavros/local_position/pose 停更或 FAST-LIO 发散时，PID 仍按旧位姿飞。
+建议：检测 pose header.stamp 超时、速度/位置跳变，触发悬停或降落。
+降落逻辑
+状态 130 把目标高度压到 z=0.15，再 1000 用 vz=-0.3 下沉，最后 z<0.1 才 AUTO.LAND。低空 PID + 手动下沉，场地不平或定位误差时触地/弹起风险大。
+建议：实飞提高最低工作高度验证；优先用 PX4 的 LAND/RTL；仿真与实机参数分开。
+drop_altitude 默认 0.2 m（launch）
+投放阶段会把目标 z 设为 drop_altitude，接近地面作业。
+建议：仅在视觉闭环可靠、场地平整、有保护网时试用；默认先用更高高度做通场测试。
+2. 控制算法 — 高
+PID 除零
+get_pid_vel / get_pix_pid_vel 里 dy_err = ... / dt.toSec()，仅在 dt > 0.2 时清零积分，未处理 dt≈0（位姿时间戳重复或首帧）。
+建议：if (dt.toSec() < 1e-3) return 上一帧或零速度。
+偏航控制目标为 0
+y_err = 0. - current_rpy.z，全程把 yaw 拉回 0，不跟航线切向，绕圈/侧飞时可能打架。
+建议：绕圈段用切向 yaw 或解耦“位置 PID / 航向”。
+投放态视觉被覆盖（逻辑风险）
+在 case 50/100 中先算 get_pix_pid_vel，紧接着又用 get_pid_vel(target) 整体覆盖 twist，像素闭环实际无效：
+} else {
+if (deliver_detect_result.header.stamp > last_srv_request - ros::Duration(1.0)) {
+geometry_msgs::Point err;
+err.x = deliver_detect_result.width / 2.0 - deliver_detect_result.circles[0].center_x;
+...
+twist.twist = get_pix_pid_vel(err);
+}
+geometry_msgs::Point target = deliver_position[checking_deliver_point];
+target.z = drop_altitude;
+twist.twist = get_pid_vel(target); // 覆盖上一行
+建议：二选一或加权融合；至少实机前确认是否故意只用位置 PID。
+3. 感知与任务逻辑 — 中高
+解析无校验
+analyseQrMessage 假定 a,b,land 三段逗号分隔，未检查 split.size()，格式错会越界崩溃。
+circles[0] 未判空
+霍夫未检出圆时访问 deliver_detect_result.circles[0] 可能越界。
+超时 60 s 的旁路
+超时后 land_target="left" 且 直接进入状态 70，跳过绕圈(35)、且 post_target 可能为空，后续 YOLO 匹配与“后两点强制投放”行为会偏离题意。
+建议：超时策略写清（悬停重试 / 安全降落 / 默认任务表）；不要静默跳过关键赛段。
+穿环状态 111 可能死等
+ring_center_received 为 false 时会一直卡在 111，无超时。点云参数与赛场不一致时常见。
+建议：加超时 → 跳过穿环或返航；调 ring_center_detect 的 ROI 前先录 bag 标定。
+强制投放
+checking_deliver_point >= 2 && posted_object < 2 会在超时或非目标标识时仍投放，易错投。
+建议：比赛策略上明确是否接受；调试阶段可关。
+4. 工程与部署 — 中
+硬编码坐标
+QR、投放点、圆心 circle_pole_x=4.3、穿环路径等全部写死，换场地/仿真坐标系必须改代码重编。
+建议：迁到 YAML/动态参数；仿真 launch 单独一套 param。
+线程安全
+回调里写 current_pose、qr_result 等，主循环读，无锁；极端情况下可能读到半更新数据。
+建议：实机问题难查时可加 mutex 或单线程 spinOnce。
+串口硬编码
+mavros.launch：/dev/ttyACM0:57600，换机/换口即失败。
+建议：launch arg + udev 规则固定设备名。
+Python 2 shebang
+hough_circle_detector.py 为 #!/usr/bin/env python，在仅 Python3 的系统可能跑不起来。
+建议：统一 python3（你若以后自己改）。
+仓库缺模型
+无 best.pt，YOLO 节点启动会失败。
+建议：文档写明权重路径与训练集版本；CI 用占位检测或 run_yolo_detector:=false。
+TF 简化
+map→odom 恒等 + odom→camera_init 恒等，若 FAST-LIO 实际发布别的 frame，任务用的 mavros/local_position 与视觉/点云可能不一致。
+建议：用 rosrun tf view_frames 实机核对；不要假设 map=odom。
+5. 机构与电气 — 中
+弹射器
+Arduino 上电后需 host_up 才 attach 舵机；任务只在起飞态发 all_servo_close。若驱动未起或 rosserial 断连，投放无动作但飞机仍飞。
+建议：投放前订阅确认 catapult 节点在线；地面单独测四门舵机。
+同时开 back_left + back_right
+特殊投放一次发布两个，机械/电源峰值需确认。
+6. 维护性 — 低（长期）
+同一套 PID 在多个 .cpp 里复制粘贴（basic / all / catapult / navigation），改一处易漏。
+tutorial_all 同时维护 C++ 两版任务 + Python AIC，行为易分叉。
+package.xml 里 license/maintainer 仍为 TODO。
+六、如何使用本仓库（理解向）
+目标	可参考
+只练起飞/速度	tutorial_basic/launch/run_takeoff.launch 等
+只练视觉	tutorial_vision/launch/*
+2025 全场 CRAIC	roslaunch tutorial_all run_craic2025_task.launch（需外栈 + 权重）
+仿真	sim_run_craic2025_task.launch 等（注意代码里实物/仿真注释块）
+AIC 任务	run_aic2025_task.launch → run_aic2025.py
+实飞前建议顺序：弹射器地面测试 → MAVROS OFFBOARD 悬停 → 单段航点 → 视觉单模块 → 再全场。
+七、总结
+项目结构清晰：感知 / 定位 / 机构 / 任务编排 分层明确，2025 主任务集中在一个 FSM 里，适合竞赛快速迭代。主要风险集中在：实飞安全链不完整、PID/数组边界、任务超时与硬编码航点、视觉与位置控制打架（投放段覆盖）、外依赖与模型缺失，以及 穿环/QR 失败时无退路。
+若你接下来想深入某一块（例如只审 run_aic2025.py、只审仿真 launch、或对照你们赛场坐标），可以说一下场景（实机/仿真、CRAIC 还是 AIC），我可以按同方式继续做定向风险清单，仍然不改代码。

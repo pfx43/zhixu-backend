@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "id": "0922271a170b457ea250e2232aebde19",
+    "title": "n你好",
+    "created_at": "2026-07-21T14:30:42+00:00Z",
+    "updated_at": "2026-07-21T14:30:42+00:00Z",
+    "message_count": 1
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "n你好",
+      "created_at": "2026-07-21T14:30:42+00:00Z"
+    }
+  ]
+}

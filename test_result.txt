@@ -1,0 +1,21 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.9, pytest-9.1.1, pluggy-1.6.0 -- C:\Program Files\Python312\python.exe
+cachedir: .pytest_cache
+rootdir: c:\zhixu\zhixu-backend\zhishi-master\backend
+plugins: anyio-4.14.2
+collecting ... collected 6 items
+
+tests/test_auth_delete_account.py::test_delete_account_basic PASSED      [ 16%]
+tests/test_auth_delete_account.py::test_delete_account_with_question_provenance PASSED [ 33%]
+tests/test_auth_delete_account.py::test_delete_account_with_quiz_and_training PASSED [ 50%]
+tests/test_auth_delete_account.py::test_delete_account_with_tutor PASSED [ 66%]
+tests/test_auth_delete_account.py::test_delete_account_notes_tags_onboarding PASSED [ 83%]
+tests/test_auth_delete_account.py::test_delete_account_nonexistent_user PASSED [100%]
+
+============================== warnings summary ===============================
+tests/test_auth_delete_account.py: 38 warnings
+  C:\Program Files\Python312\Lib\site-packages\sqlalchemy\sql\schema.py:3593: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 6 passed, 38 warnings in 2.68s ========================

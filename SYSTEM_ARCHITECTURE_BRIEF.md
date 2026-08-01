@@ -1,0 +1,690 @@
+# 系统功能分工说明
+### 面向软件开发团队的架构参考文档
+
+**版本**：v1.2  
+**日期**：2026-07-17  
+**适用范围**：个人用户端（移动端 / 桌面端 / Web 端）  
+**说明**：本文档明确 TCN 引擎层与软件层各自的职责边界，供软件开发团队实现时参考。机构端功能另行安排。
+
+---
+
+## 一、系统整体架构
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                      用户端（软件层）                          │
+│                                                              │
+│   移动端 App │ 桌面端 │ Web 端                                │
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  对话引擎     │  │  个人画像服务  │  │  个人知识库服务   │  │
+│  │（云端 LLM）   │  │（Profile）    │  │（RAG + 向量DB）   │  │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │
+│         │                 │                    │             │
+│         └─────────────────┴────────────────────┘            │
+│                           │                                  │
+│              调用 TCN REST API（知识追踪数据）                 │
+└───────────────────────────┼──────────────────────────────────┘
+                            │
+                    ┌───────▼────────┐
+                    │   TCN 引擎层    │
+                    │  (port 8001)   │
+                    │                │
+                    │  知识图谱       │
+                    │  TCN 推理       │
+                    │  LVR / CABR    │
+                    │  UserMask 存储  │
+                    └───────┬────────┘
+                            │
+                    ┌───────▼────────┐
+                    │  云端数据存储    │
+                    │  Redis（热）    │
+                    │  DB（冷）       │
+                    └────────────────┘
+```
+
+---
+
+## 二、TCN 引擎层职责（软件层直接调用，不需要自己实现）
+
+TCN 是系统的**知识追踪内核**，只做一件事：追踪用户在知识图谱上每个节点的掌握状态，并实时检测先修逻辑违反。
+
+### 2.1 已提供的能力
+
+| 功能 | API 端点 | 说明 |
+|------|---------|------|
+| 更新用户知识状态 | `POST /v1/user/predict` | 用户回答一道题后调用，传入节点ID和答对/答错，返回最新掌握度 + LVR |
+| 获取用户认知画像摘要 | `GET /v1/user/profile/{user_hash}` | 返回 global_lvr、total_steps、已追踪节点数 |
+| 获取用户完整掌握报告 | `GET /v1/user/report/{user_hash}` | 返回所有节点掌握度（0–1）+ 每节点先修父节点掌握状态 |
+| 用户状态结构化摘要 | `GET /v1/user/summary/{user_hash}` | 掌握节点数、LVR 均值、近期最活跃节点、最薄弱领域，**用于组装 LLM System Prompt** |
+| LVR 预警状态 | `GET /v1/user/lvr_alert/{user_hash}` | global_lvr + 预警级别（正常/注意/警告）+ 违反最严重的前5条先修边 |
+| 先修断层查询 | `GET /v1/user/gaps/{user_hash}` | 掌握度低且存在先修违反的节点，按严重度排序 |
+| 认知脆弱点查询 | `GET /v1/user/vulnerabilities/{user_hash}` | LVR 贡献高但掌握度也偏高的节点（高置信但逻辑脆弱，伪掌握风险） |
+| 健康检查 | `GET /health` | 返回引擎状态、节点数、图版本、当前算法和约束模式 |
+
+**`POST /v1/user/predict` 请求体参考**：
+```json
+{
+  "user_hash": "uid_xxx",
+  "current_node": "node_id",
+  "user_action": "correct",
+  "domain_id": "",
+  "step_index": 0,
+  "session_id": ""
+}
+```
+
+**响应中的关键字段**：`node_mastery`（节点掌握度）、`lvr`（本次违反率）、`vs`（违反严重度）
+
+### 2.2 TCN 不负责的事项
+
+以下内容 **TCN 明确不实现**，由软件层自行处理：
+
+- 对话内容生成（苏格拉底引导、解释、路径说明）
+- 个人画像的存储与管理
+- 文件上传、多模态解析、向量化
+- 个人知识库的检索
+- 学习路径的语言表述
+- 用户界面与可视化渲染
+- 换机数据同步逻辑
+
+---
+
+## 三、软件层职责
+
+### 3.1 对话引擎（云端 LLM）
+
+**技术方案**：调用云端 LLM API（Claude / GPT-4o 等，软件团队自选）
+
+**软件层需要实现的逻辑**：
+
+每次与用户对话前，软件层需先从 TCN 拉取用户状态并组装 System Prompt：
+
+```
+System Prompt 结构（参考）：
+─────────────────────────────
+你是一个个性化学习助手。以下是用户当前的知识状态：
+
+[知识摘要] 来自 GET /v1/user/summary/{user_hash}
+- 已掌握节点：xxx / 503
+- 当前 LVR：0.12（先修逻辑违反率）
+- 最薄弱领域：二次函数、概率基础
+
+[先修断层] 来自 GET /v1/user/gaps/{user_hash}
+- 节点"一元二次方程"掌握度 0.32，上游节点"因式分解"存在违反
+
+[认知脆弱点] 来自 GET /v1/user/vulnerabilities/{user_hash}
+- 节点"勾股定理"掌握度 0.81 但 LVR 贡献异常高，存在伪掌握风险
+
+[个人画像] 来自 Profile Service
+- 学习风格：喜欢举例、不喜欢直接给公式
+- 偏好：用生活例子类比
+
+请基于以上信息，以苏格拉底式引导用户，每次回答以问题牵引，不直接给结论。
+─────────────────────────────
+```
+
+**苏格拉底式引导规则（软件层在 System Prompt 中硬编码）**：
+- 不直接给结论，每次回答以问题结尾
+- 用户答对时更新 TCN（`POST /v1/user/predict`，user_action=correct）
+- 用户答错时更新 TCN（user_action=incorrect），同时查询 gaps 端点定位根因
+- 不确定用户画像时，优先通过对话提问（不猜测）
+
+### 3.2 个人画像服务（Profile Service）
+
+**职责**：存储与 TCN 知识状态无关的用户特征。
+
+**存储位置**：云端服务器（结构化存储，如 PostgreSQL）
+
+**Profile 数据结构参考**：
+
+```json
+{
+  "uid": "user_xxx",
+  "learning_style": "example-driven",
+  "communication_style": "casual",
+  "preferred_explanation": "analogy",
+  "known_interests": ["数学", "物理"],
+  "onboarding_completed": true,
+  "profile_confidence": 0.72,
+  "last_updated": "2026-07-13T10:00:00Z",
+  "dialogue_history_summary": "用户倾向于用生活场景理解抽象概念，不喜欢符号堆砌"
+}
+```
+
+**冷启动画像引导（软件层实现）**：
+- 新用户首次进入时，LLM 以对话方式引导用户说出学习背景、兴趣领域、学习习惯
+- 绝不猜测，所有画像字段来自用户明确表达或行为数据
+- 每次对话后根据用户回应动态迭代 Profile
+
+### 3.3 个人知识库服务（RAG Service）
+
+**职责**：存储用户上传的资料，支持 LLM 在对话时检索相关内容。
+
+#### 技术选型建议
+
+根据产品定位（个人用户，云端存储），以下三个方案供参考：
+
+| 方案 | 技术 | 适用场景 | 优点 | 缺点 |
+|------|-----|---------|------|------|
+| **方案 A（推荐）** | **Supabase pgvector** | 云端，支持多端 | PostgreSQL 生态，向量+关系数据一体，开源可自托管，SQL 查询灵活 | 需要自己维护向量索引 |
+| **方案 B** | **Pinecone** | 纯云端托管 | 零运维，API 简单，支持元数据过滤 | 费用随规模增长，数据在第三方 |
+| **方案 C** | **Chroma（自托管）** | 本地优先，未来上云 | 轻量，Python 原生，开发期成本低 | 多端同步需额外实现 |
+
+**推荐方案 A（Supabase pgvector）**，理由：
+- 云端天然支持多端（手机/桌面/Web 共享同一知识库）
+- 向量检索与用户关系数据（画像、历史）在同一个 PostgreSQL 实例，运维简单
+- 开源，可迁移至自托管，避免第三方锁定
+
+**文件处理流程（软件层实现）**：
+
+```
+用户上传文件（PDF / 图片 / 音频 / 文本）
+        ↓
+多模态解析（调用云端 API：Claude / GPT-4o vision / Whisper）
+        ↓
+提取核心内容 → 分段（chunk）
+        ↓
+向量化（embedding API）→ 存入 Supabase pgvector
+        ↓
+对话时：相关 chunk 检索 → 注入 LLM 上下文
+```
+
+### 3.4 可视化层（前端实现）
+
+以下均为纯前端实现，TCN 提供数据，前端负责渲染：
+
+| 功能 | 数据来源 | 前端实现要点 |
+|------|---------|------------|
+| 知识图谱节点掌握度可视化 | `GET /v1/user/report/{user_hash}` | 节点颜色按掌握度渐变（0→红，0.5→黄，1→绿） |
+| 节点可信度圆圈 | `GET /v1/user/report/{user_hash}` | 圆圈边框颜色编码 confidence 字段，百分比数字叠加 |
+| LVR 实时预警显示 | `GET /v1/user/lvr_alert/{user_hash}` | 顶部 Banner 或角标，三级颜色（绿/黄/红） |
+| 学习成长曲线 | TCN DB 历史接口（待实现） | 折线图，X轴时间，Y轴平均掌握度 |
+| 先修断层定位 | `GET /v1/user/gaps/{user_hash}` | 图谱上高亮断层边，点击显示"建议先学X" |
+
+---
+
+## 四、三种模式的功能分工
+
+### 普通模式
+
+| 功能 | 负责方 | 说明 |
+|------|-------|------|
+| 基础对话引导 | 软件层（LLM） | System Prompt 注入用户画像，苏格拉底式引导 |
+| 基础先修校验 | TCN | infer 响应返回 VS/LVR，软件层读取判断是否提示 |
+| 先修提示（不硬拦截） | 软件层（LLM） | LVR 异常时 LLM 在对话中自然提示，不弹窗强制 |
+| 画像动态迭代 | 软件层（Profile Service） | 每次对话后更新 Profile |
+
+### 知识追踪模式
+
+| 功能 | 负责方 | 说明 |
+|------|-------|------|
+| TCN 完整驱动 | **TCN** | 每次 infer 使用 TCN_LSTM_v21 三阶段算法，更新掌握度 |
+| 先修断层精准定位 | **TCN** + 软件层 | TCN 提供 gaps 接口，LLM 将断点转化为自然语言解释 |
+| 知识链条可追溯 | **TCN** + 前端 | TCN 提供图结构，前端高亮推理路径 |
+| 个性化学习路径 | 软件层（LLM） | LLM 读取 gaps + summary，生成"建议学习顺序"文字 |
+| 错题归因拆解 | 软件层（LLM）+ TCN | LLM 读取 gaps 端点定位根因，用语言解释"从哪断掉的" |
+| LVR 实时监控 | **TCN** + 前端 | TCN 计算，前端展示预警颜色 |
+| 学习历史追踪 | **TCN**（DB 待实现） | 掌握度变化时间序列，TCN 落库，前端折线图展示 |
+
+### 推理模式
+
+| 功能 | 负责方 | 说明 |
+|------|-------|------|
+| 高置信风险识别 | **TCN** + 软件层 | TCN 提供 vulnerabilities 接口（伪掌握节点），LLM 组织语言主动预警 |
+| 多步推理链验证 | 软件层（LLM） | LLM 对用户解题过程逐步拆解，每步检查逻辑合规；TCN 提供先修图作为约束依据 |
+| 认知脆弱点主动暴露 | **TCN** + 软件层 | TCN vulnerabilities 接口 → LLM 主动在对话中提出"你在X节点可能存在伪掌握" |
+| Dynamic-ε / CABR | **TCN**（服务端配置） | TCN 启动时统一配置 `EPSILON_MODE=dynamic`，全局生效，软件层无需传参 |
+| 推理过程可解释 | 软件层（LLM） | LLM 在每步推理后说明"为什么这步需要先掌握X" |
+| 跨域推理降级 | 软件层（LLM） | 图中无先修关系时，LLM 降级为"相关性引导"而非硬拦截 |
+
+---
+
+## 五、LVR 个人预警机制
+
+LVR（逻辑违反率；在软件中需调整表达名字为中文违背率）TCN 实时计算，数值通过 API 返回给软件层，**前端负责展示预警状态，LLM 负责在对话中干预**。软件层不自行计算 LVR，只负责读取和展示。
+
+### 预警分级标准（建议值，可与 TCN 协商调整）
+
+| 级别 | LVR 范围 | 展示方式 | LLM 行为 |
+|------|---------|---------|---------|
+| 正常 | 0 – 0.15 | 绿色状态 | 无特殊干预 |
+| 注意 | 0.15 – 0.35 | 黄色角标 | 对话中自然提示"有几个知识点需要回顾" |
+| 警告 | > 0.35 | 红色 Banner | LLM 主动暂停当前话题，引导用户先补先修断层 |
+
+### 预警触发流程
+
+```
+每次 POST /v1/user/predict 调用后
+    ↓
+软件层读取响应中的 lvr 字段
+    ↓
+对比分级阈值
+    ↓
+更新 UI 预警状态 ──→ 触发红色 Banner 时，LLM 下一轮回复加入预警引导
+    ↓
+用户可点击查看"哪里断了"→ 调用 /v1/user/gaps/{user_hash}，前端高亮断层节点
+```
+
+---
+
+## 六、换机数据同步方案
+
+### 6.1 设计原则
+
+- **云端存储为主**：所有数据存在云端服务器，多端共享，无需本地手动同步
+- **换机零操作**：用户在新设备登录账号后，数据自动还原，无需手动操作
+- **隐私保护**：用户可选择导出加密包到本地自行备份
+
+### 6.2 需要同步的数据清单
+
+| 数据类型 | 大小估算 | 存储位置 | 换机处理 |
+|---------|---------|---------|---------|
+| 用户知识掌握状态（UserMask） | ~4 KB（503节点） | TCN Redis + DB（云端） | 登录后自动还原 |
+| 推理交互历史 | ~1 MB / 万次交互 | TCN DB（云端） | 登录后自动还原 |
+| 个人画像（Profile） | < 100 KB | 云端 PostgreSQL | 登录后自动还原 |
+| 个人知识库（向量索引） | 取决于上传量，MB–GB | 云端 Supabase pgvector | 登录后自动还原 |
+| 上传的原始文件 | 取决于上传量 | 云端对象存储（S3 / 腾讯COS） | 登录后自动还原 |
+| 模型权重 | 50–200 MB | CDN 分发 | 新设备重新下载，无需同步 |
+
+### 6.3 云端架构建议
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                      云端服务器                            │
+│                                                          │
+│  ┌─────────────────┐  ┌──────────────────────────────┐  │
+│  │  TCN 引擎        │  │  应用后端（软件层自建）          │  │
+│  │  port 8001       │  │                              │  │
+│  │  Redis（热存储）  │  │  PostgreSQL                  │  │
+│  │  PostgreSQL（冷） │  │  · 用户账户 + 鉴权            │  │
+│  └─────────────────┘  │  · 个人画像（Profile）         │  │
+│                        │  · pgvector（个人知识库）      │  │
+│  ┌─────────────────┐  └──────────────────────────────┘  │
+│  │  对象存储         │                                    │
+│  │  S3 / 腾讯COS    │  存放用户上传的原始文件              │
+│  └─────────────────┘                                    │
+└──────────────────────────────────────────────────────────┘
+```
+
+**第三方服务参考（可选接入）**：
+
+| 服务类型 | 推荐 | 备注 |
+|---------|------|------|
+| 云端 LLM | Claude API / OpenAI GPT-4o | 主对话引擎 |
+| 向量数据库 | Supabase pgvector（推荐）/ Pinecone | 个人知识库 |
+| 文件解析 | Claude vision / GPT-4o vision / Whisper | 图片/PDF/音频处理 |
+| 对象存储 | AWS S3 / 腾讯 COS / Cloudflare R2 | 原始文件存储 |
+| 认证鉴权 | Supabase Auth / Auth0 | 用户账户体系 |
+
+---
+
+## 七、功能分工总表
+
+| 功能模块 | TCN 负责 | 软件层负责 |
+|---------|---------|---------|
+| 知识图谱维护与版本管理 | ✅ | — |
+| 用户知识状态追踪（TCN_LSTM_v21） | ✅ | — |
+| LVR / 先修违反计算 | ✅ | — |
+| CABR / Dynamic-ε 约束（服务端配置） | ✅ | — |
+| 认知脆弱点数据（vulnerabilities 接口） | ✅ | — |
+| 先修断层数据（gaps 接口） | ✅ | — |
+| 用户状态摘要（summary 接口） | ✅ | — |
+| LVR 预警数据（lvr_alert 接口） | ✅ | — |
+| 推理历史持久化（DB） | ✅（待实现） | — |
+| 苏格拉底式对话 | — | ✅（LLM） |
+| 个性化学习路径生成（语言表述） | — | ✅（LLM） |
+| 错题归因解释（语言） | — | ✅（LLM） |
+| 多步推理链验证 | — | ✅（LLM） |
+| 认知脆弱点主动预警（对话） | — | ✅（LLM） |
+| LVR 预警 UI 展示 | — | ✅（前端读取 TCN 数据） |
+| 知识图谱可视化 | — | ✅（前端） |
+| 节点掌握度颜色 / 可信度圆圈 | — | ✅（前端） |
+| 成长曲线折线图 | — | ✅（前端） |
+| 个人画像构建与存储 | — | ✅（Profile Service） |
+| 冷启动画像引导（对话） | — | ✅（LLM） |
+| 画像动态迭代 | — | ✅（软件层） |
+| 文件上传 / 多模态解析 | — | ✅（LLM API） |
+| 个人知识库（RAG / 向量DB） | — | ✅（Supabase pgvector） |
+| 云端数据存储与换机同步 | ✅（TCN 数据部分） | ✅（画像 + 知识库部分） |
+| 用户账户 / 鉴权 | — | ✅（软件层） |
+
+---
+
+## 八、软件层对接 TCN 的注意事项
+
+1. **每次用户交互必须调用 predict 接口**，不调用则 TCN 无法更新掌握状态，所有个性化功能失效
+
+2. **拉取上下文的时序**：每次 LLM 对话开始前，先调用 summary + gaps + vulnerabilities 组装 System Prompt，再发起 LLM 请求，不要边对话边异步拉取
+
+3. **LVR 预警不要每次都强提示**：只在 global_lvr 跨越阈值（如从注意变警告）时触发 LLM 干预，避免打扰用户
+
+4. **换机还原顺序**：TCN 数据（UserMask）→ Profile → 知识库；顺序错误会导致第一次对话上下文不完整
+
+5. **新用户冷启动**：TCN 支持新用户直接调用 predict，初始掌握度默认 0.5；软件层无需预先初始化
+
+6. **三种模式切换**：三种模式的区别**完全在软件层**，仅影响 LLM 的 System Prompt 策略和前端展示逻辑；TCN 对三种模式的调用完全相同，均为 `POST /v1/user/predict`，无需传任何模式参数。TCN 的约束模式由服务端启动时统一配置为 `dynamic`（CABR），一次性覆盖全部场景，软件层无需关心
+
+---
+
+## 九、集成前置条件（对接前必须确认）
+
+以下四项是软件层与 TCN 正式联调前必须落实的前提，**任何一项未就绪都会导致对接卡死**。
+
+### 9.1 TCN 服务部署地址
+
+**现状**：TCN 引擎当前运行在本机 `127.0.0.1:8001`，软件团队网络不可达。
+
+**联调阶段（临时方案）**：
+- TCN 侧在启动引擎后执行 `ngrok http 8001`，获得公网临时地址（如 `https://xxxx.ngrok.io`）
+- 将该地址发给软件团队，替换文档中所有 `http://localhost:8001` 引用
+- 注意：ngrok 免费版每次重启地址会变，需重新通知软件团队
+
+**正式生产**：
+- TCN 需部署至一台公网可达的云服务器（阿里云 / 腾讯云等），固定 IP 或域名
+- 软件团队在环境配置中写死该地址，后续无需再变更
+
+### 9.2 Redis 必须安装并运行
+
+**现状**：若 Redis 未运行，用户知识状态（UserMask）仅存于内存，服务重启后全部清零，用户数据丢失。
+
+**本机 Windows 安装（一次性操作）**：
+```bash
+winget install Redis.Redis
+# 安装完成后自动注册为 Windows 服务，开机自启
+```
+
+**验证是否就绪**：
+```bash
+redis-cli ping
+# 返回 PONG 表示正常
+```
+
+**注意**：若 TCN 后续部署至云服务器，Redis 也需安装在同一台服务器上（或接入云 Redis 服务）。`.env` 中的 `REDIS_URL` 需对应更新。
+
+### 9.3 当前模型精度说明（软件团队知情）
+
+**现状**：TCN 引擎当前使用合成数据训练，模型 AUC ≈ 0.53，推荐精度接近随机水平。
+
+**影响范围**：
+- 所有接口功能完整，联调和测试流程不受影响
+- `node_mastery`、`lvr`、`gaps` 等字段数值意义较弱，联调阶段以接口联通为目标，不以数值质量为验收标准
+
+**改善路径（软件侧无需操作）**：
+- 积累真实学生交互数据后，TCN 侧执行 `python training/scripts/train_tcn.py --model tcn --dataset exported` 重训模型
+- 新权重替换后引擎重启即生效，所有接口地址和请求格式**完全不变**，软件层零改动
+
+### 9.4 user_hash 生成规则须双方对齐
+
+**问题**：TCN 用 `user_hash` 唯一标识每个学生；若软件侧传入的标识不稳定或不唯一，同一学生会被识别为多人，知识状态无法积累。
+
+**推荐方案（最简）**：直接使用软件系统中**学生的数据库主键或学号**作为 `user_hash`，无需额外计算。
+
+```json
+{
+  "user_hash": "student_10086",
+  "current_node": "5",
+  "user_action": "correct"
+}
+```
+
+**对齐清单**：
+| 确认项 | 要求 |
+|-------|------|
+| 同一学生的 ID 是否唯一 | 必须唯一，不同学生不得重复 |
+| 同一学生的 ID 是否稳定 | 不得因改手机号、邮箱等操作而变更 |
+| 多端（手机/Web）是否使用同一 ID | 必须一致，否则同一学生多端数据割裂 |
+
+若使用手机号 / 邮箱等可变字段，建议软件侧在入库时对其做一次 MD5 哈希，再传给 TCN，保证稳定性。
+
+---
+
+*本文档随产品迭代持续更新。机构端功能规划另行出具文档。*
+
+---
+
+## 十、接口真实响应示例与逐字段确认表
+
+> 以下所有响应均为真实引擎返回（503节点，4个 domain），可直接用于编写对接代码。
+>
+> **节点 ID 格式**：`{domain}:{节点名}`，例如 `math:集合与基本运算`。当前四个 domain：`discrete_math` / `higher_math` / `math` / `physics`。传纯数字或纯节点名会返回 `"Unknown node"` 错误。
+
+---
+
+### 10.0 POST /v1/user/predict
+
+```bash
+curl -X POST http://<TCN_HOST>:8001/v1/user/predict \
+  -H "Content-Type: application/json; charset=utf-8" \
+  -d '{"user_hash":"student_001","current_node":"math:集合与基本运算","user_action":"correct","domain_id":"","step_index":0,"session_id":""}'
+```
+
+**真实响应**：
+```json
+{
+  "user_hash": "student_001",
+  "lvr": 0.014684,
+  "vs": 0.001028,
+  "diagnosis": "No logical violation detected.",
+  "recommended_backtrack": null,
+  "node_mastery": {
+    "discrete_math:命题与联结词": 0.6,
+    "discrete_math:命题公式与真值表": 0.6,
+    "discrete_math:合取范式与析取范式": 0.45
+  },
+  "epsilon_used": 0.05,
+  "training_phase": "unknown"
+}
+```
+
+| 字段 | 类型 | 说明 | 软件层使用方式 |
+|------|------|------|--------------|
+| `lvr` | float [0,1] | 本次推理后的逻辑违反率 | 与阈值比较决定预警等级（<0.15正常，0.15–0.35注意，>0.35警告） |
+| `vs` | float [0,+∞) | 违反严重度（gap 加权和） | 可选；普通场景忽略 |
+| `diagnosis` | string | 文本诊断描述 | 可选传给 LLM 作参考 |
+| `recommended_backtrack` | string \| null | 建议回退的节点 ID | 非 null 时在对话中提醒用户复习该节点 |
+| `node_mastery` | dict[str, float] | **增量**：只含本次更新影响的节点，非全量 | 增量更新图谱颜色；需要全量用 `/report` |
+| `epsilon_used` | float | 约束边界值 | 调试用，软件层忽略 |
+| `training_phase` | string | 模型训练阶段 | 调试用，软件层忽略 |
+
+---
+
+### 10.1 GET /v1/user/summary/{user_hash}
+
+```bash
+curl http://<TCN_HOST>:8001/v1/user/summary/student_001
+```
+
+**真实响应**：
+```json
+{
+  "user_hash": "student_001",
+  "diagnosis_version": "rule",
+  "total_steps": 16,
+  "overall_mastery": 0.536667,
+  "global_lvr": 0.014684,
+  "lvr_level": "normal",
+  "graph_version": 3,
+  "domain_summary": [
+    {"domain": "discrete_math", "mastery_avg": 0.525, "node_count": 100, "visited_count": 0},
+    {"domain": "higher_math",   "mastery_avg": 0.5625,"node_count": 233, "visited_count": 0},
+    {"domain": "math",          "mastery_avg": 0.55,  "node_count": 83,  "visited_count": 0},
+    {"domain": "physics",       "mastery_avg": 0.5,   "node_count": 87,  "visited_count": 0}
+  ],
+  "last_active_node": "discrete_math:命题与联结词",
+  "computed_at": "2026-07-17T12:03:16.949862+00:00"
+}
+```
+
+| 字段 | 类型 | 说明 | 软件层使用方式 |
+|------|------|------|--------------|
+| `total_steps` | int | 用户累计交互次数 | 冷启动判断（<5次时弱化预警展示） |
+| `overall_mastery` | float [0,1] | 全图平均掌握度 | 首页总体掌握度百分比 |
+| `global_lvr` | float [0,1] | 全图逻辑违反率 | 顶部预警角标数值 |
+| `lvr_level` | string | "normal" / "warning" / "critical" | 直接映射 UI 颜色：绿/黄/红 |
+| `graph_version` | int | 知识图版本号 | 版本变更时前端刷新图谱缓存 |
+| `domain_summary[].mastery_avg` | float | 该领域平均掌握度 | 领域卡片进度条 |
+| `domain_summary[].visited_count` | int | 该领域已交互节点数 | 暂为 0（功能待实现），暂不展示 |
+| `last_active_node` | string \| null | 最后交互的节点 ID | 新会话开场白："上次学到 X，继续吗？" |
+| `computed_at` | ISO8601 | 计算时间戳 | 可选：显示数据更新时间 |
+
+**推荐用法**：每次 LLM 对话开始前调用，把 `global_lvr`、`lvr_level`、`domain_summary`、`last_active_node` 组装进 System Prompt。
+
+---
+
+### 10.2 GET /v1/user/lvr_alert/{user_hash}
+
+```bash
+curl http://<TCN_HOST>:8001/v1/user/lvr_alert/student_001
+```
+
+**真实响应**：
+```json
+{
+  "user_hash": "student_001",
+  "diagnosis_version": "rule",
+  "global_lvr": 0.014684,
+  "lvr_level": "normal",
+  "alert_code": "LVR_NORMAL",
+  "alert_text": null,
+  "total_violations": 18,
+  "returned_violations": 10,
+  "limit": 10,
+  "violations": [
+    {
+      "parent_node": "higher_math:映射与函数",
+      "child_node": "higher_math:函数的基本性质",
+      "parent_mastery": 0.45,
+      "child_mastery": 0.6,
+      "gap": 0.1
+    },
+    {
+      "parent_node": "math:命题与逻辑",
+      "child_node": "discrete_math:命题与联结词",
+      "parent_mastery": 0.45,
+      "child_mastery": 0.6,
+      "gap": 0.1
+    }
+  ],
+  "backtrack_recommended": [
+    "discrete_math:合取范式与析取范式",
+    "higher_math:映射与函数",
+    "math:命题与逻辑",
+    "math:充分必要条件",
+    "physics:抛体运动"
+  ],
+  "computed_at": "2026-07-17T12:03:16.962940+00:00"
+}
+```
+
+| 字段 | 类型 | 说明 | 软件层使用方式 |
+|------|------|------|--------------|
+| `alert_code` | string | "LVR_NORMAL" / "LVR_WARNING" / "LVR_CRITICAL" | 前端 switch 逻辑；映射颜色和文案 |
+| `alert_text` | string \| null | normal 时为 null；warning/critical 有英文描述 | 可翻译后展示，或传给 LLM |
+| `total_violations` | int | 先修违反总数 | 显示"存在 N 个知识断层" |
+| `limit` | int | 默认返回 10 条 | 可通过 `?limit=N` 参数调整上限 |
+| `violations[].parent_node` | string | 先修节点（应先掌握但掌握度低） | 图谱高亮；建议复习目标 |
+| `violations[].child_node` | string | 后置节点（掌握度反而更高） | 说明"超前学习"现象 |
+| `violations[].gap` | float | child_mastery - parent_mastery | 越大违反越严重 |
+| `backtrack_recommended` | array[string] | 建议回退复习的节点列表 | 直接传给 LLM："以下节点建议优先补足" |
+
+---
+
+### 10.3 GET /v1/user/gaps/{user_hash}
+
+```bash
+curl http://<TCN_HOST>:8001/v1/user/gaps/student_001
+```
+
+**真实响应（截取前3条，实际返回50条）**：
+```json
+{
+  "user_hash": "student_001",
+  "diagnosis_version": "rule",
+  "mastery_threshold": 0.6,
+  "total_gaps": 495,
+  "returned_gaps": 50,
+  "limit": 50,
+  "gaps": [
+    {
+      "node_id": "math:函数的概念与性质",
+      "domain": "math",
+      "mastery": 0.5,
+      "children_count": 12,
+      "is_visited": false
+    },
+    {
+      "node_id": "higher_math:导数概念",
+      "domain": "higher_math",
+      "mastery": 0.5,
+      "children_count": 8,
+      "is_visited": false
+    },
+    {
+      "node_id": "math:三角函数基础",
+      "domain": "math",
+      "mastery": 0.5,
+      "children_count": 8,
+      "is_visited": false
+    }
+  ],
+  "computed_at": "2026-07-17T12:03:16.970484+00:00"
+}
+```
+
+| 字段 | 类型 | 说明 | 软件层使用方式 |
+|------|------|------|--------------|
+| `mastery_threshold` | float | 低于此值判为断层（默认 0.6） | 可通过 `?threshold=0.5` 调整 |
+| `total_gaps` | int | 全图断层节点总数 | 显示"共 N 个知识薄弱点" |
+| `gaps[].node_id` | string | 断层节点 ID | 图谱高亮；点击显示详情 |
+| `gaps[].mastery` | float | 当前掌握度 | 进度条（红/橙色） |
+| `gaps[].children_count` | int | 该节点的后置节点数量 | **关键排序依据**：越大影响面越广，越应优先补足 |
+| `gaps[].is_visited` | bool | 用户是否做过该节点的题 | false=完全未接触；true=做过但不足 |
+
+**排序规则**：按 `children_count` 降序——影响面最大的断层排在最前，LLM 应优先引导用户补这些节点。
+
+---
+
+### 10.4 GET /v1/user/vulnerabilities/{user_hash}
+
+```bash
+curl http://<TCN_HOST>:8001/v1/user/vulnerabilities/student_001
+```
+
+**真实响应**（触发条件：节点掌握度 ≥ 0.7 但先修节点掌握度低）：
+```json
+{
+  "user_hash": "student_001",
+  "diagnosis_version": "rule",
+  "mastery_threshold_high": 0.7,
+  "total_vulnerabilities": 1,
+  "returned_vulnerabilities": 1,
+  "limit": 50,
+  "vulnerabilities": [
+    {
+      "node_id": "discrete_math:命题与联结词",
+      "domain": "discrete_math",
+      "mastery": 1.0,
+      "fragility_score": 0.533333,
+      "weak_prerequisites": [
+        {"node_id": "math:命题与逻辑",   "mastery": 0.3,  "gap": 0.65},
+        {"node_id": "math:逻辑联结词",   "mastery": 0.5,  "gap": 0.45},
+        {"node_id": "math:充分必要条件", "mastery": 0.45, "gap": 0.5}
+      ]
+    }
+  ],
+  "computed_at": "2026-07-17T12:03:44.435728+00:00"
+}
+```
+
+| 字段 | 类型 | 说明 | 软件层使用方式 |
+|------|------|------|--------------|
+| `mastery_threshold_high` | float | 高于此值才判为"高掌握"（默认 0.7） | 了解判定条件，无需传参 |
+| `total_vulnerabilities` | int | 脆弱点总数 | 0=无风险；>0 时触发"伪掌握预警"流程 |
+| `vulnerabilities[].node_id` | string | 伪掌握节点 ID | 对话中主动提出："你在 X 节点可能存在伪掌握" |
+| `vulnerabilities[].mastery` | float | 该节点掌握度（≥0.7） | 展示："表面上 X 掌握度很高" |
+| `vulnerabilities[].fragility_score` | float [0,1] | 脆弱性得分（先修 gap 加权均值） | 越高越危险；列表排序依据 |
+| `weak_prerequisites[].node_id` | string | 掌握度低的先修节点 | LLM 使用："但先修 Y、Z 还很薄弱，需先夯实" |
+| `weak_prerequisites[].gap` | float | 当前节点与先修掌握度之差 | gap 越大，伪掌握风险越高 |
+
+**触发时机**：`total_vulnerabilities > 0` 时，LLM 下一轮对话中**主动**插入预警，不必等用户提问。

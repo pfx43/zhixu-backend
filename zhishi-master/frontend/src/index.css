@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   知拾 Web 端 · 设计令牌
+   来源：知拾 Web 端 UI/UX 设计方案 第 5–7 节
+   所有页面只允许使用这些令牌，禁止硬编码颜色值。
+   ============================================================ */
+@layer base {
+  :root {
+    /* 主色 - 紫色强调 */
+    --color-primary: 239 84% 67%;          /* #6366F1 */
+    --color-primary-hover: 244 80% 64%;    /* #5558E8 */
+    --color-primary-active: 244 75% 58%;   /* #4F46E5 */
+    --color-primary-soft: 233 100% 97%;    /* #EEF2FF */
+    --color-primary-subtle: 240 100% 98%;  /* #F4F5FF */
+
+    /* 中性色 - 背景 */
+    --color-bg: 240 20% 97%;               /* #F7F7FA */
+    --color-bg-subtle: 250 33% 98%;        /* #FAFAFC */
+    --color-surface: 0 0% 100%;            /* #FFFFFF */
+    --color-surface-soft: 220 14% 98%;     /* #F9FAFB */
+    --color-border: 220 13% 91%;           /* #E5E7EB */
+    --color-border-soft: 232 25% 94%;      /* #EEF0F4 */
+
+    /* 中性色 - 文字 */
+    --color-text-primary: 220 39% 11%;     /* #111827 */
+    --color-text-secondary: 220 9% 46%;    /* #6B7280 */
+    --color-text-tertiary: 217 19% 62%;    /* #9CA3AF */
+    --color-text-disabled: 226 8% 77%;     /* #C0C4CC */
+
+    /* 功能色 - 仅状态提示 */
+    --color-success: 142 71% 45%;          /* #22C55E */
+    --color-success-soft: 138 76% 97%;     /* #ECFDF3 */
+    --color-warning: 38 92% 50%;           /* #F59E0B */
+    --color-warning-soft: 48 100% 96%;     /* #FFFBEB */
+    --color-danger: 0 84% 60%;             /* #EF4444 */
+    --color-danger-soft: 0 94% 98%;        /* #FEF2F2 */
+    --color-info: 217 91% 60%;             /* #3B82F6 */
+    --color-info-soft: 214 100% 97%;       /* #EFF6FF */
+
+    /* 圆角 */
+    --radius-xs: 8px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 999px;
+
+    /* 阴影 - 比移动端更轻 */
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.08);
+    --shadow-primary: 0 12px 32px rgba(99, 102, 241, 0.08);
+
+    /* 兼容 shadcn 既有令牌 */
+    --background: var(--color-bg);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-primary);
+    --primary-foreground: 0 0% 100%;
+    --secondary: var(--color-surface-soft);
+    --secondary-foreground: var(--color-text-primary);
+    --muted: var(--color-surface-soft);
+    --muted-foreground: var(--color-text-secondary);
+    --accent: var(--color-primary-soft);
+    --accent-foreground: var(--color-primary-active);
+    --destructive: var(--color-danger);
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
+    --radius: 14px;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: var(--color-text-secondary);
+    --sidebar-primary: var(--color-primary);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: var(--color-primary-soft);
+    --sidebar-accent-foreground: var(--color-primary-active);
+    --sidebar-border: var(--color-border-soft);
+    --sidebar-ring: var(--color-primary);
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--color-border));
+  }
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    background-color: hsl(var(--color-bg));
+    color: hsl(var(--color-text-primary));
+    font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+/* ============================================================
+   工具类
+   ============================================================ */
+@layer utilities {
+  /* 渐变 - 仅主 CTA / AI 按钮 / 悬浮创建 */
+  .bg-gradient-primary {
+    background-image: linear-gradient(135deg, #6366F1 0%, #7C3AED 100%);
+  }
+  .bg-gradient-soft {
+    background-image: linear-gradient(135deg, #FFFFFF 0%, #F4F5FF 100%);
+  }
+  /* 重点卡片渐变底 */
+  .bg-card-elevated {
+    background-image: linear-gradient(135deg, #FFFFFF 0%, #F4F5FF 100%);
+  }
+  /* 毛玻璃侧边栏 */
+  .bg-sidebar-glass {
+    background-color: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  /* 文字渐隐单行 */
+  .truncate-1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* 文字渐隐两行 */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* 滚动条轻量化 */
+  .scroll-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--color-border));
+    border-radius: 999px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--color-text-tertiary));
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* 页面切换淡入上移 */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-page-in {
+  animation: page-in 180ms ease-out both;
+}
+
+/* 右侧面板滑入 */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-panel-in {
+  animation: panel-in 220ms ease-out both;
+}
+
+/* AI 回复逐段出现 */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-msg-in {
+  animation: msg-in 240ms ease-out both;
+}

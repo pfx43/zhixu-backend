@@ -1,0 +1,14 @@
+{
+  "ocr_max_parallel_pages": 1,
+  "pdf_ocr_max_pages": 50,
+  "pdf_max_pages": 0,
+  "pdf_ocr_render_dpi": 150,
+  "max_questions_per_document": 20,
+  "document_pipeline_async": true,
+  "question_gen_async": true,
+  "llm_async": true,
+  "image_ocr_async": true,
+  "upload_max_size_mb": 0,
+  "ocr_backend": "local",
+  "ocr_pages_dir_name": "pages"
+}
