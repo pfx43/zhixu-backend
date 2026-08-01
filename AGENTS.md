@@ -26,7 +26,7 @@ React/Vite 前端
             │    ├─ 文件解析/OCR → 分段 → Chroma 或 Dify RAG
             │    ├─ ZhishiAgent → OpenAI 兼容 LLM 接口
             │    └─ TCNClient → TCN 引擎 :8001
-            └─ MemoryCache + 本地文件（会话与运行态数据）
+            └─ auth_sessions + MemoryCache + 本地文件（鉴权与运行态数据）
 ```
 
 主要接缝：
@@ -57,7 +57,7 @@ React/Vite 前端
 
 ### 鉴权
 
-注册/登录生成 Token，并将用户快照写入 `app/core/redis.py` 的进程内 `MemoryCache`。`get_current_user` 把 Bearer Token 当作会话键查询，并非只靠 JWT 签名恢复用户；服务重启会使登录会话失效。前端 Token 存于 `localStorage`。受保护路由统一使用 `get_current_active_user`，所有用户资源查询必须同时过滤当前 `user_id`。
+注册/登录生成不透明 Token，数据库 `auth_sessions` 仅保存 SHA-256 哈希、用户 ID 和有效期。`get_current_user` 按哈希查询持久化会话并读取当前用户，因此服务重启不会丢失有效登录态；前端 Token 存于 `localStorage`。退出登录删除当前会话，修改密码、重置密码和注销账号删除该用户全部会话。受保护路由统一使用 `get_current_active_user`，所有用户资源查询必须同时过滤当前 `user_id`。
 
 ### 文档与 RAG
 
@@ -69,7 +69,7 @@ React/Vite 前端
 
 ## 5. 数据、配置与外部依赖
 
-- 默认数据库是 `zhishi-master/data/zhishi.db`；设置 `DATABASE_URL` 可切 MySQL。当前启动仍调用 `create_all()`，而 Alembic 仅有 onboarding migration，不能假定迁移覆盖全部表。
+- 默认数据库是 `zhishi-master/data/zhishi.db`；设置 `DATABASE_URL` 可切 MySQL。当前启动仍调用 `create_all()`；Alembic 已覆盖 onboarding 和 `auth_sessions` 增量，但未覆盖其余历史表，不能假定迁移可从空库建立完整业务 schema。
 - 非密钥运行参数来自 `backend/config.json`；环境变量优先覆盖相关项。密钥放在本地环境文件，参考 `backend/.env.example`。
 - `LOCAL_STORAGE_DIR` 是相对当前工作目录解析的；固定从 `backend/` 启动或显式设绝对路径，避免写入不同的 `storage/`。
 - 本地 RAG 默认目录为 `zhishi-master/data/chroma`，默认嵌入模型为 `BAAI/bge-small-zh-v1.5`。Dify、百度 OCR、TCN 和 LLM 都是可选/外部依赖，应为不可达、未配置和真实实现缺陷使用不同结论。
@@ -105,7 +105,7 @@ npm run build
 npm run preview
 ```
 
-后端自检：`GET http://127.0.0.1:8765/health`；OpenAPI：`http://127.0.0.1:8765/docs`。`requirements.txt` 当前未固定 pytest，因此测试环境需显式安装。前端没有 `npm test` 脚本；`npm run build` 会执行 `tsc -b && vite build`。根目录 `start_server.ps1` 含固定 `C:\zhixu-backend` 路径，不是可移植入口。
+后端自检：`GET http://127.0.0.1:8765/health`，部署还必须确认 `api_contract.status=ok`；OpenAPI：`http://127.0.0.1:8765/docs`。`requirements.txt` 当前未固定 pytest，因此测试环境需显式安装。前端没有 `npm test` 脚本；`npm run build` 会执行 `tsc -b && vite build`。根目录 `start_server.ps1` 使用自身目录定位后端，并在启动后校验 Onboarding 路由契约。
 
 ## 9. 测试策略
 

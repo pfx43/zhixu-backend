@@ -5,7 +5,6 @@ from datetime import timedelta, datetime, timezone
 
 from app.api.deps import get_db, get_current_active_user, oauth2_scheme
 from app.core.security import get_password_hash, verify_password
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.models import User, PlanTier
 from app.schemas import (
     UserCreate, UserRegistrationResponse, Token, UserResponse, UserWithPlan,
@@ -18,7 +17,6 @@ from app.schemas import (
 )
 from app.services.auth_service import AuthManager
 import app.crud as crud
-from app.core.redis import cache
 import logging
 
 logger = logging.getLogger(__name__)
@@ -110,22 +108,7 @@ def read_users_me(
         PlanTier.level == current_user["level"]
     ).first()
     
-    # Check expiry from DB if needed, or rely on Redis if we store expires_at
-    # For now, let's query DB for dynamic fields or accept that we need to hit DB for details
-    # But user wants decoupling. However, returning UserResponse requires these fields.
-    # The simplest way is to fetch user from DB here using ID, OR update Redis to store expires_at.
-    # Given the previous turn didn't add expires_at to Redis, we might need to fetch it or default it.
-    # Let's try to query the user briefly or use available data.
-    # Actually, we can just query the user from DB using the ID from Redis if we need up-to-date info.
-    # BUT, the goal is decoupling. 
-    # Let's assume for this endpoint we want fresh data from DB? 
-    # Or should we just return what we have? 
-    # The original code used current_user (User object).
-    # Let's query the user again for this specific endpoint to ensure accuracy of 'expires_at' 
-    # which might change (e.g. upgrade).
-    # Wait, decoupling means auth doesn't hit DB. But this is a business endpoint ("get my info").
-    # So hitting DB here is fine.
-    
+    # 套餐和资料可能在会话创建后变化，此接口始终读取最新用户记录。
     db_user = db.query(User).filter(User.id == current_user["user_id"]).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -207,20 +190,13 @@ def upgrade_my_plan(
     return {"message": "套餐升级成功", "new_plan_level": request.plan_level}
 
 @router.get("/test-token-info")
-def get_test_info(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    # Validate token via Redis
-    user_info = cache.get_session(token)
-    if not user_info:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    email = user_info.get("email")
-    user = crud.get_user_by_email(db, email=email)
+def get_test_info(current_user: dict = Depends(get_current_active_user)):
     return {
         "status": "验证成功",
-        "message": f"欢迎回来，{user.email}！",
+        "message": f"欢迎回来，{current_user['email']}！",
         "server_time": datetime.now(timezone.utc),
-        "your_user_id": user.id,
-        "hint": "如果你能看到这条消息，说明你的 Redis Token 机制完全跑通了！"
+        "your_user_id": current_user["user_id"],
+        "hint": "如果你能看到这条消息，说明持久化 Token 会话可用。",
     }
 
 
@@ -306,7 +282,7 @@ def logout(
     """
     退出登录
 
-    - 删除 Redis 中的当前 Session Token
+    - 删除数据库中的当前 Session Token
     """
     try:
         return AuthManager.logout(db=db, token=token)
@@ -359,8 +335,8 @@ def change_password(
     4. 返回成功消息
     
     **安全提示：**
-    - 修改密码后，建议用户在其他设备重新登录
-    - 旧 Token 仍然有效（直到过期），新 Token 需要重新登录获得
+    - 修改密码后，所有旧 Token 立即失效
+    - 用户需要使用新密码重新登录
     
     **示例请求：**
     ```json
@@ -401,7 +377,7 @@ def delete_account(
     """
     注销账号
 
-    删除当前登录用户账号，并清理所有 Redis 会话 Token。
+    删除当前登录用户账号，并在同一事务内清理所有持久化会话 Token。
     """
     try:
         return AuthManager.delete_account(db=db, user_id=current_user["user_id"])

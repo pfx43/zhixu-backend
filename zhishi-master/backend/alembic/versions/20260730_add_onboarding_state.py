@@ -1,7 +1,7 @@
 """add onboarding_state
 
-Revision ID: xxxx_onboarding
-Revises: REPLACE_WITH_DOWN_REVISION
+Revision ID: 20260730_onboarding
+Revises: None
 Create Date: 2026-07-30 00:00:00.000000
 """
 from alembic import op
@@ -14,6 +14,9 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
+    if sa.inspect(op.get_bind()).has_table("onboarding_state"):
+        return
+
     op.create_table(
         "onboarding_state",
         sa.Column("id", sa.Integer(), primary_key=True),

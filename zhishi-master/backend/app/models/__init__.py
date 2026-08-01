@@ -7,6 +7,7 @@ from .tag import QuestionTag
 from .note import UserNote
 from .training_plan import TrainingPlan
 from .onboarding import OnboardingState
+from .auth_session import AuthSession
 
 __all__ = [
     "User",
@@ -26,4 +27,5 @@ __all__ = [
     "UserNote",
     "TrainingPlan",
     "OnboardingState",
+    "AuthSession",
 ]

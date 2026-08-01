@@ -6,7 +6,7 @@ import json
 import os
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.models import (
     User,
@@ -30,6 +30,12 @@ from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, EMAIL_VERIFICATION_EXPI
 from app.core.email_service import email_service
 from app.services.dify_kb import DifyKB
 from app.crud.kb import seed_default_collections
+from app.services.auth_session_service import (
+    create_auth_session,
+    delete_auth_session,
+    delete_user_auth_sessions,
+    rotate_auth_session,
+)
 import app.crud as crud
 
 logger = logging.getLogger(__name__)
@@ -137,7 +143,7 @@ class AuthManager:
         except HTTPException as he:
             if he.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
                 logger.warning(
-                    f"用户注册成功，但 Redis 服务不可用，未生成登录 Token: {email}"
+                    f"用户注册成功，但登录会话不可用，未生成 Token: {email}"
                 )
                 return {
                     "id": new_user.id,
@@ -148,7 +154,7 @@ class AuthManager:
                     "created_at": new_user.created_at,
                     "access_token": None,
                     "token_type": None,
-                    "message": "注册成功，Redis 服务不可用，登录 Token 未生成。请稍后登录。"
+                    "message": "注册成功，登录会话暂时不可用。请稍后登录。"
                 }
             raise
 
@@ -158,7 +164,7 @@ class AuthManager:
         登录逻辑 — 支持邮箱 + 手机号双登录
         1. 验证: 邮箱或手机号 + 密码
         2. 生成: token = secrets.token_hex(16)
-        3. 同步: 将用户信息写入 Redis
+        3. 将 Token 哈希和有效期持久化到数据库
         """
         user = None
         if email:
@@ -190,35 +196,23 @@ class AuthManager:
         # 2. 生成 Token (32 chars hex string)
         token = secrets.token_hex(16)
         
-        # 3. 同步 (写入 Redis)
-        # 构造用户数据 (保持与之前一致的结构)
-        user_data = {
-            "user_id": user.id,
-            "email": user.email,
-            "nickname": user.nickname,
-            "level": user.plan_level,
-            "is_active": user.is_active,
-            "created_at": user.created_at.isoformat() if user.created_at else None,
-            "dataset_id": user.dataset_id,
-            "user_hash": user.user_hash,
-            "api_limit_daily": user.api_limit_daily,
-            "token_limit_monthly": user.token_limit_monthly,
-            "knowledge_base_limit": user.knowledge_base_limit,
-            "model_access": user.model_access,
-            "concurrent_limit": user.concurrent_limit
-        }
-        
         # Calculate TTL (seconds)
         ttl = ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        
-        # Store in Redis
+
         try:
-            cache.set_session(token, user_data, ttl=ttl)
-        except ConnectionError as exc:
-            logger.error(f"Redis 服务不可用: {exc}")
+            create_auth_session(
+                db,
+                token=token,
+                user_id=user.id,
+                ttl_seconds=ttl,
+            )
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            logger.error(f"持久化登录会话失败: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Redis 服务不可用，请启动 Redis 后重试"
+                detail="登录会话暂时不可用，请稍后重试",
             )
         
         return {
@@ -448,6 +442,7 @@ class AuthManager:
 
         user.password_hash = get_password_hash(new_password)
         try:
+            delete_user_auth_sessions(db, user.id)
             db.commit()
             db.refresh(user)
         except Exception as e:
@@ -463,22 +458,7 @@ class AuthManager:
         except ConnectionError as exc:
             logger.warning(f"无法删除密码重置缓存: {exc}")
 
-        # 使该用户所有旧会话失效
-        try:
-            keys = cache.scan_keys("auth:token:*")
-        except ConnectionError as exc:
-            logger.warning(f"无法扫描 Redis 会话键: {exc}")
-            keys = []
-
-        for key in keys:
-            try:
-                data = cache.get_value(key)
-                if data:
-                    payload = json.loads(data)
-                    if payload.get("user_id") == user.id:
-                        cache.delete_key(key)
-            except Exception:
-                continue
+        AuthManager._invalidate_user_tokens(user.id)
 
         return {
             "message": "密码重置成功，请使用新密码登录",
@@ -488,7 +468,7 @@ class AuthManager:
     @staticmethod
     def logout(db: Session, token: str):
         """
-        删除 Redis 中的当前会话 Token
+        删除当前持久化会话 Token。
         """
         if not token:
             raise HTTPException(
@@ -497,17 +477,20 @@ class AuthManager:
             )
 
         try:
-            if cache.get_session(token):
-                cache.delete_key(f"auth:token:{token}")
-        except ConnectionError as exc:
-            logger.error(f"Redis 服务不可用: {exc}")
+            delete_auth_session(db, token)
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            logger.error(f"删除持久化会话失败: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Redis 服务不可用，请启动 Redis 后重试"
+                detail="登录会话暂时不可用，请稍后重试",
             )
 
+        cache.delete_key(f"auth:token:{token}")
+
         return {
-            "message": "已退出登录，当前会话已从 Redis 移除"
+            "message": "已退出登录，当前会话已失效"
         }
 
     @staticmethod
@@ -517,10 +500,8 @@ class AuthManager:
         
         流程：
         1. 验证旧 Token 是否有效
-        2. 从 Redis 获取用户信息
-        3. 生成新 Token
-        4. 将用户信息存入 Redis（新 Token 作为 key）
-        5. 删除旧 Token
+        2. 验证用户仍存在且处于启用状态
+        3. 在同一事务内删除旧会话并创建新会话
         
         Args:
             db: 数据库会话
@@ -529,53 +510,34 @@ class AuthManager:
         Returns:
             dict: { "access_token": "新token", "token_type": "bearer", "expires_in": ... }
         """
-        # 1. 从 Redis 获取用户信息
-        user_data = cache.get_session(old_token)
-        if not user_data:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token 已过期或无效，请重新登录"
-            )
-        
-        # 2. 检查用户是否仍然存在于数据库（防止用户被删除但 Token 仍有效的情况）
-        user = db.query(User).filter(User.id == user_data["user_id"]).first()
-        if not user or not user.is_active:
-            # 删除失效的 Token
-            try:
-                cache.delete_key(f"auth:token:{old_token}")
-            except ConnectionError as exc:
-                logger.warning(f"无法删除旧 Token 缓存: {exc}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户已被禁用或删除，请重新登录"
-            )
-        
-        # 3. 生成新 Token
         new_token = secrets.token_hex(16)
-        
-        # 4. 更新用户数据中的时间戳，保持原有结构
-        updated_user_data = user_data.copy()
-        
-        # 计算 TTL（秒）
         ttl = ACCESS_TOKEN_EXPIRE_MINUTES * 60
-        
-        # 5. 将用户信息存入 Redis，使用新 Token 作为 key
+
         try:
-            cache.set_session(new_token, updated_user_data, ttl=ttl)
-        except ConnectionError as exc:
-            logger.error(f"Redis 服务不可用: {exc}")
+            user = rotate_auth_session(
+                db,
+                old_token=old_token,
+                new_token=new_token,
+                ttl_seconds=ttl,
+            )
+            if user is None:
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token 已过期或无效，请重新登录",
+                )
+            db.commit()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            db.rollback()
+            logger.error(f"刷新持久化会话失败: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Redis 服务不可用，请启动 Redis 后重试"
+                detail="登录会话暂时不可用，请稍后重试",
             )
 
-        # 6. 删除旧 Token（可选：也可保留旧 Token 一段时间以便兼容）
-        try:
-            cache.delete_key(f"auth:token:{old_token}")
-        except ConnectionError as exc:
-            logger.warning(f"无法删除旧 Token 缓存: {exc}")
-        
-        logger.info(f"✅ Token 刷新成功: 用户 ID = {user_data['user_id']}")
+        logger.info(f"✅ Token 刷新成功: 用户 ID = {user.id}")
         
         return {
             "access_token": new_token,
@@ -586,7 +548,7 @@ class AuthManager:
 
     @staticmethod
     def _invalidate_user_tokens(user_id: int, preserve_token: str = None):
-        """根据 user_id 清理 Redis 中该用户的旧 Token"""
+        """清理升级前可能残留在 MemoryCache 中的旧会话。"""
         try:
             keys = cache.scan_keys("auth:token:*")
         except ConnectionError as exc:
@@ -665,6 +627,11 @@ class AuthManager:
         user.updated_at = datetime.now(timezone.utc)
         
         try:
+            delete_user_auth_sessions(
+                db,
+                user_id,
+                preserve_token=current_token,
+            )
             db.commit()
             db.refresh(user)
             logger.info(f"✅ 用户密码修改成功: ID = {user_id}")
@@ -676,8 +643,7 @@ class AuthManager:
                 detail="密码修改失败，请稍后重试"
             )
         
-        # 5. 删除所有旧 Token（使用户在其他设备上登出）
-        # 这是为了安全起见，防止已盗取的 Token 继续被使用
+        # 数据库提交后再清理升级前可能残留的内存会话。
         try:
             AuthManager._invalidate_user_tokens(user_id, preserve_token=current_token)
             if current_token:
@@ -697,9 +663,9 @@ class AuthManager:
         注销账号并删除关联数据。
 
         主流程：
-        1. 删除与用户相关的业务数据和用户主记录
+        1. 删除业务数据、持久化会话和用户主记录
         2. 提交数据库事务
-        3. 失效用户的所有 token
+        3. 清理旧内存会话
         4. 删除 Dify 知识库（弱依赖，失败不阻断）
         """
         user = db.query(User).filter(User.id == user_id).first()
@@ -709,7 +675,6 @@ class AuthManager:
                 detail="用户不存在"
             )
 
-        email = user.email
         dataset_id = user.dataset_id
 
         try:
@@ -775,6 +740,7 @@ class AuthManager:
 
             # 阶段 4 — 其余独立表（无 FK 到上述已清理表）+ 用户主记录
             db.query(OnboardingState).filter(OnboardingState.user_id == user_id).delete(synchronize_session=False)
+            delete_user_auth_sessions(db, user_id)
 
             # 4. 删除用户主记录
             db.delete(user)

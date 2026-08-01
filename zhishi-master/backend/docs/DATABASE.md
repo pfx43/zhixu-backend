@@ -10,7 +10,8 @@
 | 组件 | 方案 | 说明 |
 |------|------|------|
 | 业务数据库 | **SQLite**（本地）/ MySQL（团队） | 使用 **同步** SQLAlchemy `Session`，与 FastAPI 路由兼容 |
-| 会话 / Token | Redis 或 `CACHE_BACKEND=memory` | 与 DB 引擎无关 |
+| 登录会话 / Token | `auth_sessions`（SQLite / MySQL） | 仅保存 Token 哈希，服务重启后仍有效 |
+| 短期运行态缓存 | 进程内 `MemoryCache` | 验证码、密码重置令牌、聊天热数据等 |
 | 向量检索 | Dify | 不在 SQLite 做全文/向量 |
 | LLM / Agent | Tina `predict` / `apredict` | 异步在网络 I/O 层，不依赖 DB 异步 |
 
@@ -44,6 +45,7 @@ erDiagram
     users ||--o{ user_question_refs : owns
     users ||--o{ quiz_sessions : owns
     users ||--o{ quiz_answers : submits
+    users ||--o{ auth_sessions : authenticates
 
     kb_collections ||--o{ documents : contains
 
@@ -86,6 +88,22 @@ erDiagram
 ### 3.2 `plan_tiers`
 
 现有字段不变。
+
+### 3.3 `auth_sessions` — 持久化登录会话
+
+登录和刷新 Token 时写入。客户端持有原始 Token，数据库仅保存 SHA-256 哈希；
+鉴权时按哈希查询并校验 `expires_at`，因此后端进程重启不会丢失有效会话。
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `token_hash` | VARCHAR(64) | PK | 原始 Token 的 SHA-256 十六进制摘要 |
+| `user_id` | INTEGER FK → users.id | NOT NULL, INDEX, ON DELETE CASCADE | 会话所属用户 |
+| `expires_at` | DATETIME | NOT NULL, INDEX | 会话过期时间（UTC） |
+| `created_at` | DATETIME | NOT NULL | 会话创建时间（UTC） |
+
+刷新 Token 会通过条件更新原子替换旧 Token 哈希，两个并发刷新请求最多一个成功。
+退出登录删除当前会话；修改密码、重置密码和注销账号删除该用户全部会话。每次
+创建登录会话时会顺带清理已过期记录。
 
 ---
 
@@ -367,6 +385,7 @@ INSERT kb_collections (zone=life,  name='生活区', is_default=0)
 |------|------|------|
 | users | 账号 | §4.1 |
 | plan_tiers | 套餐 | 已有 |
+| auth_sessions | 持久化鉴权会话 | §3.3 |
 | kb_collections | 知识库分区 / 对话选择 | §2.1, §3.1 |
 | global_documents | 全局文件去重 | §2.4 |
 | documents | 用户文档 | §1, §2 |
@@ -379,7 +398,7 @@ INSERT kb_collections (zone=life,  name='生活区', is_default=0)
 | quiz_answers | 答题记录 | §1.5, §1.6 |
 | tutor_sessions | 辅导上下文 | §1.5 |
 
-**共新增 10 张表**（不含 users/plan_tiers）。
+**业务模型新增 10 张表**（不含 users/plan_tiers），另有 `auth_sessions` 鉴权基础表。
 
 ---
 

@@ -1,5 +1,37 @@
 # KT 后端部署指南
 
+## 应用后端部署（Windows 云服务器）
+
+生产入口为 `zhishi-master/backend/server.py:app`。更新代码后必须安装依赖、执行
+迁移并重新启动进程，不能只确认旧进程仍占用 8765 端口。
+
+```powershell
+cd C:\zhixu-backend\zhishi-master\backend
+..\.venv\Scripts\python.exe -m pip install -r requirements.txt
+..\.venv\Scripts\alembic.exe upgrade head
+
+cd C:\zhixu-backend
+.\start_server.ps1
+```
+
+`20260802_auth_sessions` 迁移会创建持久化会话表；若历史服务已通过 `create_all()`
+创建相关表，迁移会接管并写入版本记录，不会重复建表。升级前已有内存 Token 无法
+恢复，用户需要登录一次；此后有效 Token 不会因服务重启丢失。
+
+`start_server.ps1` 使用脚本所在目录解析路径，启动前拒绝复用已占用的 8765 端口。
+启动校验默认等待 60 秒，可通过 `ZHISHI_STARTUP_TIMEOUT_SECONDS` 调整。只有
+`/health` 返回 `api_contract.status=ok`，确认以下 4 个接口均已加载后才报告成功：
+
+```text
+/api/v1/onboarding/state
+/api/v1/onboarding/step
+/api/v1/onboarding/complete
+/api/v1/onboarding/restart
+```
+
+若提示端口被旧进程占用，先确认并停止旧后端，再重新执行脚本。
+端口默认是 8765；需要临时改端口时可设置 `ZHISHI_BACKEND_PORT`。
+
 ## 环境要求
 
 | 项目 | 要求 |
@@ -70,7 +102,7 @@ start_server.bat
 
 ```bash
 curl http://127.0.0.1:8765/health
-# 预期: {"status":"ok","skills_count":7,"model_loaded":true}
+# 关键字段: {"api_contract":{"status":"ok","missing_paths":[]}}
 ```
 
 浏览器打开 `http://127.0.0.1:8765/docs` 查看交互式 API 文档。

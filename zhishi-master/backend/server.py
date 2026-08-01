@@ -114,14 +114,30 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # ─── 健康检查 ───
 
+REQUIRED_DEPLOYMENT_PATHS = (
+    "/api/v1/onboarding/complete",
+    "/api/v1/onboarding/restart",
+    "/api/v1/onboarding/state",
+    "/api/v1/onboarding/step",
+)
+
 @app.get("/health")
 async def health(request: Request):
     tcn_healthy = getattr(request.app.state, "tcn_healthy", False)
     tcn_nodes = getattr(request.app.state, "tcn_nodes", 0)
+    available_paths = request.app.openapi().get("paths", {})
+    missing_paths = [
+        path for path in REQUIRED_DEPLOYMENT_PATHS if path not in available_paths
+    ]
     return {
-        "status": "ok" if tcn_healthy else "degraded",
+        "status": "ok" if tcn_healthy and not missing_paths else "degraded",
         "skills_count": tcn_nodes,
         "model_loaded": tcn_healthy,
+        "api_contract": {
+            "status": "ok" if not missing_paths else "invalid",
+            "required_paths": list(REQUIRED_DEPLOYMENT_PATHS),
+            "missing_paths": missing_paths,
+        },
     }
 
 

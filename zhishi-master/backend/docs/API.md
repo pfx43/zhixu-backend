@@ -35,8 +35,12 @@
 除登录和注册外，所有接口均需在请求头中携带 Token：
 
 ```
-Authorization: Bearer eyJhbGciOi...
+Authorization: Bearer 7f1d8c4a9b2e6f0135a7c9d0e2b4f681
 ```
+
+Token 是服务端生成的不透明随机值，数据库仅保存其 SHA-256 哈希和有效期。
+登录会话默认有效 7 天，后端进程重启不会使有效会话丢失。退出登录只失效当前
+Token；修改密码、重置密码和注销账号会失效该账号的全部 Token。
 
 ### 错误响应格式
 
@@ -96,7 +100,7 @@ POST /api/v1/auth/register
   "username": null,
   "is_active": true,
   "created_at": "2025-01-01T00:00:00",
-  "access_token": "eyJhbGci...",
+  "access_token": "7f1d8c4a9b2e6f0135a7c9d0e2b4f681",
   "token_type": "bearer",
   "message": "注册成功"
 }
@@ -123,7 +127,7 @@ POST /api/v1/auth/token
 
 ```json
 {
-  "access_token": "eyJhbGci...",
+  "access_token": "7f1d8c4a9b2e6f0135a7c9d0e2b4f681",
   "token_type": "bearer",
   "expires_in": 604800
 }
@@ -152,12 +156,14 @@ POST /api/v1/auth/refresh-token
 
 ```json
 {
-  "access_token": "eyJhbGci...",
+  "access_token": "b5c4a3d2e1f09876543210abcdef9876",
   "token_type": "bearer",
   "expires_in": 604800,
   "message": "Token 刷新成功"
 }
 ```
+
+刷新成功后旧 Token 立即失效，新 Token 的有效期重新按 7 天计算。
 
 ---
 
@@ -428,6 +434,8 @@ POST /api/v1/auth/change-password
 }
 ```
 
+修改成功后该账号的全部现有 Token 立即失效，需要重新登录。
+
 ---
 
 ### 1.14 更新个人资料
@@ -475,6 +483,8 @@ POST /api/v1/auth/logout
 }
 ```
 
+退出成功后当前请求使用的 Token 立即失效。
+
 ---
 
 ### 1.16 注销账号
@@ -493,7 +503,7 @@ DELETE /api/v1/auth/account
 }
 ```
 
-数据库关联数据在同一事务内删除。事务提交失败时会回滚并保留账号、现有 Token 与外部 Dify 知识库；提交成功后才失效该用户全部 Token，并以非阻断方式清理外部 Dify 知识库。
+数据库关联数据、账号记录和全部持久化会话在同一事务内删除。事务提交失败时会回滚并保留账号、现有 Token 与外部 Dify 知识库；提交成功后再以非阻断方式清理旧内存会话和外部 Dify 知识库。
 
 ---
 
@@ -513,7 +523,7 @@ GET /api/v1/auth/test-token-info
   "message": "欢迎回来，user@example.com！",
   "server_time": "2025-01-01T00:00:00",
   "your_user_id": 1,
-  "hint": "如果你能看到这条消息，说明你的 Redis Token 机制完全跑通了！"
+  "hint": "如果你能看到这条消息，说明持久化 Token 会话可用。"
 }
 ```
 
@@ -2547,7 +2557,39 @@ GET /api/v1/dashboard/suggestions
 
 ## 15. 系统/测试接口
 
-### 15.1 测试套餐查询
+### 15.1 健康检查与部署契约
+
+```
+GET /health
+```
+
+**成功响应** (200)：
+
+```json
+{
+  "status": "degraded",
+  "skills_count": 0,
+  "model_loaded": false,
+  "api_contract": {
+    "status": "ok",
+    "required_paths": [
+      "/api/v1/onboarding/complete",
+      "/api/v1/onboarding/restart",
+      "/api/v1/onboarding/state",
+      "/api/v1/onboarding/step"
+    ],
+    "missing_paths": []
+  }
+}
+```
+
+`status=degraded` 可能仅表示 TCN 不可达；部署必须同时检查
+`api_contract.status=ok`。若必需路由缺失，`missing_paths` 会列出差异，Windows
+启动脚本将停止刚启动的进程并以失败退出。
+
+---
+
+### 15.2 测试套餐查询
 
 ```
 GET /test-plan-query/{user_id}
@@ -2577,4 +2619,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.0 · **更新时间**: 2026-08-01 · **维护团队**: 知拾 (Zhishi) 后端组
+> **文档版本**: v2.1 · **更新时间**: 2026-08-02 · **维护团队**: 知拾 (Zhishi) 后端组
