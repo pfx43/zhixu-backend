@@ -114,3 +114,17 @@ npm run preview
 ## 10. Git、PR 与收尾
 
 保护脏工作区，不回滚或格式化无关改动；暂存使用明确路径。历史目前只有初始提交，尚无稳定惯例，建议采用 `feat(backend): ...`、`fix(kb): ...`、`test(auth): ...` 等 Conventional Commits。PR 必须说明目的、架构/接口/迁移/配置影响、验证命令与结果、外部依赖未验证项，并关联 issue；前端视觉变化附截图。提交前至少运行 `git diff --check` 和与改动范围匹配的测试/构建。不得提交 `.env`、`tina.env`、密钥、日志、数据库、上传文件、向量索引或无关生成产物。
+
+## Agent skills
+
+### Issue tracker
+
+工程议题和 PRD 使用 GitHub Issues 管理。详见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+使用五个默认 triage 标签：`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human` 和 `wontfix`。详见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+采用单上下文布局；领域术语使用根目录 `CONTEXT.md`，架构决策使用 `docs/adr/`，均按需创建。详见 `docs/agents/domain.md`。
