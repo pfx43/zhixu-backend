@@ -448,6 +448,30 @@ def test_search_returns_only_exact_lexical_matches_without_vector_fallback(searc
     assert payload["items"][0]["match_source"] == "content"
 
 
+def test_search_title_hit_has_readable_subtitle_when_note_body_is_empty(search_client):
+    client, SessionLocal, users = search_client
+    with SessionLocal() as db:
+        db.add(
+            UserNote(
+                user_id=users["first"],
+                title="中国近代史标题笔记",
+                content_md="",
+            )
+        )
+        db.commit()
+
+    response = client.get(
+        "/api/v1/search",
+        params={"q": "中国近代史"},
+        headers=_auth("first"),
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["match_source"] == "title"
+    assert item["subtitle"].strip()
+
+
 def test_search_openapi_declares_response_model(search_client):
     client, _, _ = search_client
 

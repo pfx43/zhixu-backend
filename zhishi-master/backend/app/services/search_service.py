@@ -62,12 +62,15 @@ def search_knowledge(
             collection_id=collection_id,
         ):
             title_matches = _contains(note.title, query)
+            subtitle = _snippet(note.content_md, query)
+            if not subtitle and title_matches:
+                subtitle = "笔记标题命中"
             items.append(
                 SearchItemOut(
                     id=note.id,
                     type="note",
                     title=note.title,
-                    subtitle=_snippet(note.content_md, query),
+                    subtitle=subtitle,
                     updated_at=note.updated_at,
                     collection_id=note.collection_id,
                     match_source="title" if title_matches else "content",
