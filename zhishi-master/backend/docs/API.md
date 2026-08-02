@@ -2432,11 +2432,19 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
     "content_md": "# 监督学习\n\n监督学习是...",
     "note_type": "manual",
     "collection_id": "col_001",
+    "revision": 1,
     "created_at": "2025-01-01T10:00:00",
     "updated_at": "2025-01-01T10:30:00"
   }
 ]
 ```
+
+`revision` 是笔记的稳定整数版本令牌：创建时为 `1`，每次成功的 `PATCH` 恰好递增
+`1`。列表、详情、创建和更新响应均返回它，客户端应把该值持久化为离线 outbox
+操作的基线。
+
+`created_at` / `updated_at` 仅用于展示。历史 SQLite 数据可能为 `null`，且当前服务
+沿用无偏移量的 UTC ISO 8601 表示；客户端不得根据时间戳精度、时区或空值推导版本。
 
 ---
 
@@ -2493,16 +2501,34 @@ PATCH /api/v1/notes/{note_id}
 |------|------|:---:|------|
 | `note_id` | string | ✓ | 笔记 ID |
 
-**请求 Body**（所有字段可选，传 `null` 表示不更新）：
+**请求 Body**（`expected_revision` 必填；其他字段可选，传 `null` 表示不更新）：
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
+| `expected_revision` | int | ✓ | 客户端最后读取到的稳定版本，必须 ≥ 1 |
 | `title` | string | | 新标题 |
 | `content_md` | string | | 新 Markdown 内容 |
 | `collection_id` | string | | 新分区 ID |
 | `note_type` | string | | 新笔记类型 |
 
 **成功响应** (200)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
+
+**版本冲突** (409)：当该用户的笔记已被其他成功写入推进版本时，服务不会写入请求
+内容，也不会回传最新笔记正文、标题或标签。响应固定只含错误码、可展示说明和当前
+版本元数据：
+
+```json
+{
+  "detail": {
+    "code": "note_revision_conflict",
+    "detail": "笔记已被更新，请使用最新版本重试",
+    "current_revision": 2
+  }
+}
+```
+
+`note_id` 不存在或不属于当前用户时仍返回普通 `404`，不返回 `current_revision`，
+避免通过冲突接口探测其他用户资源。
 
 ---
 

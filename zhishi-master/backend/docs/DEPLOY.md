@@ -14,9 +14,11 @@ cd C:\zhixu-backend
 .\start_server.ps1
 ```
 
-`20260802_auth_sessions` 迁移会创建持久化会话表；若历史服务已通过 `create_all()`
-创建相关表，迁移会接管并写入版本记录，不会重复建表。升级前已有内存 Token 无法
-恢复，用户需要登录一次；此后有效 Token 不会因服务重启丢失。
+`20260802_auth_sessions` 迁移会创建持久化会话表；
+`20260802_note_revision` 会为既有 `user_notes` 增加非空 `revision` 并以 `1`
+初始化历史行。若历史服务已通过 `create_all()` 创建相关表，迁移会接管并写入版本
+记录，不会重复建表；必须在部署包含版本化 PATCH 的代码前执行 `alembic upgrade head`。
+升级前已有内存 Token 无法恢复，用户需要登录一次；此后有效 Token 不会因服务重启丢失。
 
 `start_server.ps1` 使用脚本所在目录解析路径，启动前拒绝复用已占用的 8765 端口。
 启动校验默认等待 60 秒，可通过 `ZHISHI_STARTUP_TIMEOUT_SECONDS` 调整。只有

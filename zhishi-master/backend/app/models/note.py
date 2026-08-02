@@ -15,5 +15,7 @@ class UserNote(Base):
     title = Column(String(255), nullable=False)
     content_md = Column(Text, nullable=False)
     note_type = Column(String(20), nullable=False, default="manual")
+    # 稳定的乐观锁令牌，刻意独立于展示时间，避免受数据库精度和时区表示影响。
+    revision = Column(Integer, nullable=False, default=1, server_default="1")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

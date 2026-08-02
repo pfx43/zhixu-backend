@@ -46,6 +46,7 @@ erDiagram
     users ||--o{ quiz_sessions : owns
     users ||--o{ quiz_answers : submits
     users ||--o{ auth_sessions : authenticates
+    users ||--o{ user_notes : owns
 
     kb_collections ||--o{ documents : contains
 
@@ -104,6 +105,31 @@ erDiagram
 刷新 Token 会通过条件更新原子替换旧 Token 哈希，两个并发刷新请求最多一个成功。
 退出登录删除当前会话；修改密码、重置密码和注销账号删除该用户全部会话。每次
 创建登录会话时会顺带清理已过期记录。
+
+---
+
+### 3.4 `user_notes` — 用户笔记与离线写入版本
+
+每行笔记只属于一个 `user_id`。读取、更新和删除均必须同时按 `id` 与 `user_id`
+过滤，避免跨用户访问或通过版本冲突泄露元数据。
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| `id` | VARCHAR(36) PK | | UUID 笔记 ID |
+| `user_id` | INTEGER FK → users.id | NOT NULL, INDEX | 所属用户 |
+| `collection_id` | VARCHAR(36) FK → kb_collections.id | NULL | 所属知识库分区 |
+| `title` | VARCHAR(255) | NOT NULL | 标题 |
+| `content_md` | TEXT | NOT NULL | Markdown 正文 |
+| `note_type` | VARCHAR(20) | NOT NULL | 默认 `manual` |
+| `revision` | INTEGER | NOT NULL, DEFAULT 1 | 稳定乐观锁令牌 |
+| `created_at` | DATETIME | NULL（历史兼容） | 展示时间 |
+| `updated_at` | DATETIME | NULL（历史兼容） | 展示时间，不能作并发令牌 |
+
+**版本规则**：新建笔记的 `revision=1`；更新必须在单条 SQL 条件中同时校验
+`id`、`user_id` 和客户端 `expected_revision`，且成功时 `revision = revision + 1`。
+时钟精度、SQLite/MySQL 的时间表示、时区以及历史空时间都不参与冲突判断。既有
+`user_notes` 由 Alembic `20260802_note_revision` 增列并将已有行初始化为 `1`；
+该列禁止为 `NULL`。
 
 ---
 
@@ -386,6 +412,7 @@ INSERT kb_collections (zone=life,  name='生活区', is_default=0)
 | users | 账号 | §4.1 |
 | plan_tiers | 套餐 | 已有 |
 | auth_sessions | 持久化鉴权会话 | §3.3 |
+| user_notes | 用户笔记与离线写入版本 | Notes |
 | kb_collections | 知识库分区 / 对话选择 | §2.1, §3.1 |
 | global_documents | 全局文件去重 | §2.4 |
 | documents | 用户文档 | §1, §2 |

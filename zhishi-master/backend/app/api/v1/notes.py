@@ -1,7 +1,10 @@
 """笔记系统路由"""
 
+from datetime import datetime
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
@@ -16,10 +19,35 @@ class NoteCreate(BaseModel):
 
 
 class NoteUpdate(BaseModel):
+    expected_revision: int = Field(
+        ge=1,
+        description="客户端读取到的笔记 revision；用于乐观并发控制。",
+    )
     title: str | None = None
     content_md: str | None = None
     collection_id: str | None = None
     note_type: str | None = None
+
+
+class NoteResponse(BaseModel):
+    id: str
+    title: str
+    content_md: str
+    note_type: str
+    collection_id: str | None = None
+    revision: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class NoteRevisionConflictDetail(BaseModel):
+    code: Literal["note_revision_conflict"]
+    detail: str
+    current_revision: int
+
+
+class NoteRevisionConflictResponse(BaseModel):
+    detail: NoteRevisionConflictDetail
 
 
 router = APIRouter(tags=["笔记系统"])
@@ -32,12 +60,13 @@ def _note_response(r):
         "content_md": r.content_md,
         "note_type": r.note_type,
         "collection_id": r.collection_id,
+        "revision": r.revision,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
     }
 
 
-@router.get("")
+@router.get("", response_model=list[NoteResponse])
 def list_notes(
     page: int = Query(1, ge=1),
     limit: int = Query(100, ge=1, le=200),
@@ -52,7 +81,7 @@ def list_notes(
     return [_note_response(r) for r in rows]
 
 
-@router.get("/{note_id}")
+@router.get("/{note_id}", response_model=NoteResponse)
 def get_note(
     note_id: str,
     db: Session = Depends(get_db),
@@ -65,7 +94,7 @@ def get_note(
     return _note_response(row)
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=NoteResponse)
 def create_note(
     payload: NoteCreate,
     db: Session = Depends(get_db),
@@ -84,7 +113,16 @@ def create_note(
     return _note_response(row)
 
 
-@router.patch("/{note_id}")
+@router.patch(
+    "/{note_id}",
+    response_model=NoteResponse,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "客户端基于的笔记版本已过期。",
+            "model": NoteRevisionConflictResponse,
+        }
+    },
+)
 def update_note(
     note_id: str,
     payload: NoteUpdate,
@@ -92,17 +130,30 @@ def update_note(
     current_user: dict = Depends(get_current_active_user),
 ):
     """更新笔记"""
-    row = note_crud.update_note(
-        db, current_user["user_id"], note_id,
+    result = note_crud.update_note(
+        db,
+        current_user["user_id"],
+        note_id,
+        expected_revision=payload.expected_revision,
         title=payload.title,
         content_md=payload.content_md,
         collection_id=payload.collection_id,
         note_type=payload.note_type,
     )
-    if not row:
+    if result.note is None:
+        if result.current_revision is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "note_revision_conflict",
+                    "detail": "笔记已被更新，请使用最新版本重试",
+                    "current_revision": result.current_revision,
+                },
+            )
         raise HTTPException(status_code=404, detail="笔记不存在")
+    response = _note_response(result.note)
     db.commit()
-    return _note_response(row)
+    return response
 
 
 @router.delete("/{note_id}")
