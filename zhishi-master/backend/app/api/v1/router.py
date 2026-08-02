@@ -1,5 +1,22 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, plan, chat, kt, kb, dashboard, questions, quiz, tutor, analytics, reports, training, notes, onboarding
+
+from app.api.v1 import (
+    analytics,
+    auth,
+    chat,
+    dashboard,
+    kb,
+    kt,
+    notes,
+    onboarding,
+    plan,
+    questions,
+    quiz,
+    reports,
+    search,
+    training,
+    tutor,
+)
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["账号认证"])
@@ -15,4 +32,5 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["学习�
 api_router.include_router(reports.router, prefix="/reports", tags=["学习报告"])
 api_router.include_router(training.router, prefix="/training", tags=["针对训练"])
 api_router.include_router(notes.router, prefix="/notes", tags=["笔记系统"])
+api_router.include_router(search.router, prefix="/search", tags=["知识搜索"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["引导"])

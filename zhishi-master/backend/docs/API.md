@@ -23,8 +23,9 @@
 - [11. 学习报告 (Reports)](#11-学习报告-reports---apiv1reports)
 - [12. 针对训练 (Training)](#12-针对训练-training---apiv1training)
 - [13. 笔记系统 (Notes)](#13-笔记系统-notes---apiv1notes)
-- [14. 首页建议 (Dashboard)](#14-首页建议-dashboard---apiv1dashboard)
-- [15. 系统/测试接口](#15-系统测试接口)
+- [14. 独立知识搜索 (Search)](#14-独立知识搜索-search---apiv1search)
+- [15. 首页建议 (Dashboard)](#15-首页建议-dashboard---apiv1dashboard)
+- [16. 系统/测试接口](#16-系统测试接口)
 
 ---
 
@@ -2529,9 +2530,88 @@ DELETE /api/v1/notes/{note_id}
 
 ---
 
-## 14. 首页建议 (Dashboard) — `/api/v1/dashboard`
+## 14. 独立知识搜索 (Search) — `/api/v1/search`
 
-### 14.1 获取个性化学习建议
+### 14.1 关键词搜索
+
+```
+GET /api/v1/search?q=中国近代史&scope=all&page=1&limit=20&collection_id=col_001
+```
+
+**需要鉴权**：是
+
+这是独立的关键词检索接口，不调用 LLM、Dify 或 embedding 向量检索。所有查询都先按
+当前 Bearer 用户隔离，再使用词法子串匹配；因此 embedding 模型不可用时，精确关键词
+仍可稳定命中。
+
+**Query 参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `q` | string | ✓ | 非空关键词；空字符串或仅空白返回 422 |
+| `scope` | string | | `all`（默认）、`notes` 或 `documents`；其他值返回 422 |
+| `page` | int | | 页码，范围 ≥ 1，默认 `1` |
+| `limit` | int | | 每页条数，范围 1-100，默认 `20` |
+| `collection_id` | string | | 可选；仅检索当前用户该分区内的资料和笔记 |
+
+**成功响应** (200)：
+
+```json
+{
+  "query": "中国近代史",
+  "items": [
+    {
+      "id": "note_001",
+      "type": "note",
+      "title": "复习安排",
+      "subtitle": "本周复习中国近代史的关键事件。",
+      "updated_at": "2026-08-02T10:00:00",
+      "collection_id": "col_001",
+      "match_source": "content",
+      "indexing_status": null
+    },
+    {
+      "id": "doc_001",
+      "type": "document",
+      "title": "历史课程资料.pdf",
+      "subtitle": "中国近代史从鸦片战争开始。",
+      "updated_at": "2026-08-02T09:30:00",
+      "collection_id": "col_001",
+      "match_source": "content",
+      "indexing_status": "completed"
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "limit": 20,
+  "partial": false,
+  "pending_document_count": 0
+}
+```
+
+`items` 字段说明：
+
+| 字段 | 说明 |
+|------|------|
+| `type` | `note` 或 `document` |
+| `subtitle` | 笔记摘要、资料标题说明或命中正文片段 |
+| `match_source` | `title` 表示笔记标题/资料名命中；`content` 表示笔记正文或允许检索的资料片段命中 |
+| `indexing_status` | 资料的当前索引状态；笔记为 `null` |
+
+笔记始终只匹配当前用户的 `title` 与 `content_md`。资料名 `display_name` 可以直接匹配；
+只有同时满足 `zone=study`、`segment_status=completed`、`indexing_status=completed` 的资料，
+其分段正文才会以 `match_source=content` 返回。处理中的资料若资料名匹配，仍可作为
+`title` 命中返回，但不会被宣称为正文可检索。
+
+`scope=all` 或 `scope=documents` 时，`pending_document_count` 统计当前用户及可选分区内、
+尚未完成分段或索引的学习区资料；大于 0 时 `partial=true`，表示资料正文搜索可能不完整。
+`scope=notes` 时这两个字段固定为 `0` / `false`。无命中是正常的 `200` 与空 `items`。
+
+---
+
+## 15. 首页建议 (Dashboard) — `/api/v1/dashboard`
+
+### 15.1 获取个性化学习建议
 
 ```
 GET /api/v1/dashboard/suggestions
@@ -2555,9 +2635,9 @@ GET /api/v1/dashboard/suggestions
 
 ---
 
-## 15. 系统/测试接口
+## 16. 系统/测试接口
 
-### 15.1 健康检查与部署契约
+### 16.1 健康检查与部署契约
 
 ```
 GET /health
@@ -2589,7 +2669,7 @@ GET /health
 
 ---
 
-### 15.2 测试套餐查询
+### 16.2 测试套餐查询
 
 ```
 GET /test-plan-query/{user_id}
@@ -2619,4 +2699,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.1 · **更新时间**: 2026-08-02 · **维护团队**: 知拾 (Zhishi) 后端组
+> **文档版本**: v2.2 · **更新时间**: 2026-08-02 · **维护团队**: 知拾 (Zhishi) 后端组
