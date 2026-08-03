@@ -13,7 +13,7 @@ from typing import List, Optional
 import numpy as np
 
 from app.core.config import CHROMA_PERSIST_DIR
-from app.services.embedding_service import EMBEDDING_DIM, embed_texts
+from app.services.llm.embedding_service import EMBEDDING_DIM, embed_texts
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from app.schemas.quiz import (
     QuizSessionCreate,
     QuizSessionOut,
 )
-from app.services import quiz_service
+from app.services.quiz import quiz_service
 
 router = APIRouter(tags=["刷题"])
 

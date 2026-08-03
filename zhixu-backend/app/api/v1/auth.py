@@ -15,7 +15,7 @@ from app.schemas import (
     ResetPasswordRequest, ResetPasswordResponse,
     UpdateProfileRequest
 )
-from app.services.auth_service import AuthManager
+from app.services.auth.auth_service import AuthManager
 import app.crud as crud
 import logging
 

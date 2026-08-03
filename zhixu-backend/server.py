@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 
     # 2. 探测 TCN 引擎
     try:
-        from app.services.tcn_client import tcn_client
+        from app.services.tcn.tcn_client import tcn_client
         from app.core.tcn_config import TCN_BASE_URL
 
         print(f"[Server] 正在探测 TCN 引擎 ({TCN_BASE_URL})...")
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
             print(f"[Server] TCN 引擎就绪，{health.get('nodes', '?')} 个技能节点")
 
             # 3. 加载图谱缓存（node_id → 中文名称 + 先修/后继关系）
-            from app.services.graph_cache import init_graph_cache, get_graph_cache
+            from app.services.tcn.graph_cache import init_graph_cache, get_graph_cache
 
             print("[Server] 正在加载图谱数据缓存...")
             await init_graph_cache()
@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
 
     # 退出时清理资源
     try:
-        from app.services.tcn_client import tcn_client
+        from app.services.tcn.tcn_client import tcn_client
         await tcn_client.close()
     except Exception:
         pass

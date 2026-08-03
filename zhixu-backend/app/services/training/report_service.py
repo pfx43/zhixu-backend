@@ -10,8 +10,8 @@ from sqlalchemy.orm import Session
 from app.crud import kb as kb_crud
 from app.crud import note as note_crud
 from app.schemas.report import LearningReportGenerateOut, ReportOut
-from app.services import analytics_service
-from app.services.llm_runner import llm_predict_no_stream
+from app.services.training import analytics_service
+from app.services.llm.llm_runner import llm_predict_no_stream
 
 logger = logging.getLogger(__name__)
 

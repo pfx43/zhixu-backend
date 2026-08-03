@@ -30,9 +30,9 @@ from app.schemas.question import (
     QuestionOut,
     ProvenanceOut,
 )
-from app.services.page_service import get_pages_by_numbers
-from app.services.question_hash import compute_content_hash
-from app.services.llm_runner import llm_predict_no_stream
+from app.services.knowledge.page_service import get_pages_by_numbers
+from app.services.quiz.question_hash import compute_content_hash
+from app.services.llm.llm_runner import llm_predict_no_stream
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ def _template_questions_for_page(page: dict) -> List[dict]:
 
 
 def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") -> List[dict]:
-    from app.services.question_gen_agent import agent_generate_for_page
+    from app.services.quiz.question_gen_agent import agent_generate_for_page
 
     result = agent_generate_for_page(page, count=count, tag_hint=tag_hint)
     if result:
@@ -215,7 +215,7 @@ def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") ->
 
 
 def _llm_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
-    from app.services.question_gen_agent import agent_extract_for_page
+    from app.services.quiz.question_gen_agent import agent_extract_for_page
 
     result = agent_extract_for_page(page, tag_hint=tag_hint)
     if result:
@@ -289,7 +289,7 @@ def _template_questions(segment: DocumentSegment) -> List[dict]:
 
 
 def _llm_generate(segment: DocumentSegment, *, tag_hint: str = "") -> List[dict]:
-    from app.services.question_gen_agent import agent_generate_for_segment
+    from app.services.quiz.question_gen_agent import agent_generate_for_segment
 
     result = agent_generate_for_segment(segment, tag_hint=tag_hint)
     if result:

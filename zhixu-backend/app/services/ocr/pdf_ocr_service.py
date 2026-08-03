@@ -20,7 +20,7 @@ from app.core.config import (
     PDF_OCR_MAX_PAGES,
     PDF_OCR_RENDER_DPI,
 )
-from app.services.ocr_service import (
+from app.services.ocr.ocr_service import (
     extract_text_from_image_bytes,
     is_baidu_ocr_configured,
     is_paddle_ocr_available,
@@ -135,7 +135,7 @@ def parse_pdf_with_ocr_fallback(
     Returns:
         ParseOutcome（延迟导入避免与 file_parser 循环依赖）
     """
-    from app.services.file_parser import ParseOutcome
+    from app.services.knowledge.file_parser import ParseOutcome
     try:
         import fitz
     except ImportError:

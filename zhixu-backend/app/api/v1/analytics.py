@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_active_user, get_db
 from app.schemas.analytics import LearningStatsOut, TagStatsListOut
 from app.schemas.report import LearningReportGenerateOut
-from app.services import analytics_service, report_service
+from app.services.training import analytics_service, report_service
 
 router = APIRouter(tags=["学习分析"])
 
@@ -36,4 +36,4 @@ def generate_learning_report(
     result = report_service.generate_learning_report(db, current_user["user_id"])
     db.commit()
     return result
-
+

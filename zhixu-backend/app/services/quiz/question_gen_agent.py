@@ -12,7 +12,7 @@ from tina import Agent
 from tina.agent.core.tools import Tools
 from tina.llm import BaseAPI
 
-from app.services.llm_runner import agent_predict_no_stream
+from app.services.llm.llm_runner import agent_predict_no_stream
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class QuestionGenAgent:
                 result_data = {}
             if result_data.get("status") != "ok":
                 return tool_name, tool_arguments, tool_result
-            from app.services.question_gen_service import _normalize_question
+            from app.services.quiz.question_gen_service import _normalize_question
 
             options = []
             for key, arg_key in [
@@ -150,7 +150,7 @@ class QuestionGenAgent:
                     options.append({"key": key, "text": text.strip()})
 
             tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-            from app.services.question_gen_service import _normalize_question
+            from app.services.quiz.question_gen_service import _normalize_question
 
             raw = {
                 "stem": stem.strip(),

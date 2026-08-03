@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.schemas.search import SearchResponseOut, SearchScope
-from app.services import search_service
+from app.services.tcn import search_service
 
 router = APIRouter(tags=["知识搜索"])
 

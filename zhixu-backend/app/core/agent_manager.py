@@ -36,7 +36,7 @@ class AgentManager:
         Returns:
             ZhishiAgent 实例
         """
-        from app.services.zhishi_agent import ZhishiAgent
+        from app.services.chat.zhishi_agent import ZhishiAgent
 
         with self._lock:
             agent = self._agents.get(user_id)

@@ -23,7 +23,7 @@ from app.schemas.tutor import (
     TutorSessionOut,
 )
 from app.utils.tina_loader import tina_env_path
-from app.services.llm_runner import agent_predict_no_stream, iter_agent_predict_stream
+from app.services.llm.llm_runner import agent_predict_no_stream, iter_agent_predict_stream
 
 logger = logging.getLogger(__name__)
 

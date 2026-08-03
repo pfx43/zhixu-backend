@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.crud import segment as segment_crud
 from app.models import Document
-from app.services.chroma_store import chroma_store
+from app.services.knowledge.chroma_store import chroma_store
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.schemas.report import LearningReportGenerateOut, ReportListOut, ReportOut
-from app.services import report_service
+from app.services.training import report_service
 
 router = APIRouter(tags=["学习报告"])
 

@@ -12,8 +12,8 @@ from app.crud import kb as kb_crud
 from app.crud import segment as segment_crud
 from app.models import Document
 from app.schemas.segment import SegmentListOut, SegmentOut
-from app.services.file_parser import parse_file_detailed
-from app.services.storage_service import storage_service
+from app.services.knowledge.file_parser import parse_file_detailed
+from app.services.knowledge.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +163,7 @@ def segment_document(document_id: str, db: Session) -> int:
 
         from app.core.config import is_local_rag
         if is_local_rag():
-            from app.services.index_service import index_document_segments
+            from app.services.knowledge.index_service import index_document_segments
 
             try:
                 index_document_segments(db, doc)

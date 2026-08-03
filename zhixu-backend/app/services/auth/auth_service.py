@@ -28,9 +28,9 @@ from app.core.security import get_password_hash, verify_password
 from app.core.redis import cache
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, EMAIL_VERIFICATION_EXPIRE_MINUTES, PASSWORD_RESET_EXPIRE_MINUTES, FRONTEND_URL, is_local_rag
 from app.core.email_service import email_service
-from app.services.dify_kb import DifyKB
+from app.services.knowledge.dify_kb import DifyKB
 from app.crud.kb import seed_default_collections
-from app.services.auth_session_service import (
+from app.services.auth.auth_session_service import (
     create_auth_session,
     delete_auth_session,
     delete_user_auth_sessions,
@@ -44,7 +44,7 @@ class AuthManager:
     @staticmethod
     def _gen_user_hash() -> str:
         """生成 TCN 用户哈希"""
-        from app.services.tcn_client import tcn_client
+        from app.services.tcn.tcn_client import tcn_client
         return tcn_client.generate_user_hash(secrets.randbits(32))
 
     @staticmethod

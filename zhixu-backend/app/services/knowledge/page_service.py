@@ -16,9 +16,9 @@ from app.schemas.page import (
     DocumentPageListOut,
     DocumentPageOut,
 )
-from app.services.file_parser import get_pdf_page_count
-from app.services.segment_service import _load_document_text, _resolve_parsed_path
-from app.services.storage_service import storage_service
+from app.services.knowledge.file_parser import get_pdf_page_count
+from app.services.knowledge.segment_service import _load_document_text, _resolve_parsed_path
+from app.services.knowledge.storage_service import storage_service
 
 PAGE_HEADING_PATTERN = re.compile(r"^##\s+第\s+(\d+)\s+页\s*$", re.MULTILINE)
 BUILTIN_Q_PATTERNS = (

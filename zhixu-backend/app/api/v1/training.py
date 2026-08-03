@@ -14,7 +14,7 @@ from app.schemas.training import (
     TrainingTutorMessageCreate,
     TrainingTutorReplyOut,
 )
-from app.services import training_service
+from app.services.training import training_service
 
 router = APIRouter(tags=["针对训练"])
 

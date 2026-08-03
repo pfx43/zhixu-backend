@@ -17,7 +17,7 @@ from app.schemas.question import (
     QuestionGenerateResponse,
     QuestionListOut,
 )
-from app.services import question_gen_service
+from app.services.quiz import question_gen_service
 
 router = APIRouter(tags=["题目"])
 

@@ -5,13 +5,13 @@ KT 知识追踪路由 — TCN 引擎层对接版
 
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from app.api.deps import get_current_active_user
-from app.services.kt_service import (
+from app.services.tcn.kt_service import (
     recommend_learning_path,
     get_prerequisites,
     get_skill_graph,
     get_skill_states,
 )
-from app.services.tcn_client import tcn_client
+from app.services.tcn.tcn_client import tcn_client
 from app.schemas.tcn_response import (
     TCNSummaryResponse,
     TCNGapsResponse,

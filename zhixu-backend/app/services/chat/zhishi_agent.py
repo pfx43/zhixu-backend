@@ -12,15 +12,15 @@ from dotenv import dotenv_values
 from app.core.config import is_local_rag
 from app.utils.tina_loader import tina_env_path
 
-from app.services.citation_service import build_citations_from_hits
-from app.services.local_retrieval_service import search as local_search
+from app.services.tutor.citation_service import build_citations_from_hits
+from app.services.chat.local_retrieval_service import search as local_search
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 if not is_local_rag():
-    from app.services.citation_service import filter_hits_by_collection
-    from app.services.dify_kb import DifyKB
+    from app.services.tutor.citation_service import filter_hits_by_collection
+    from app.services.knowledge.dify_kb import DifyKB
 
 logger = logging.getLogger(__name__)
 

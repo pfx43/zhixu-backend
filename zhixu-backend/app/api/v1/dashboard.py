@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_active_user
 from app.core.config import LLM_ASYNC, is_local_rag
-from app.services.dify_kb import DifyKB
-from app.services.llm_runner import llm_predict_no_stream
+from app.services.knowledge.dify_kb import DifyKB
+from app.services.llm.llm_runner import llm_predict_no_stream
 from app.utils.tina_loader import tina_env_path
 from tina.llm import BaseAPI
 

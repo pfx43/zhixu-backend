@@ -11,11 +11,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_active_user, get_db
 from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag
 from app.schemas.kb import CollectionCreate, CollectionUpdate
-from app.services import kb_service
-from app.services import page_service
-from app.services import segment_service
+from app.services.knowledge import kb_service
+from app.services.knowledge import page_service
+from app.services.knowledge import segment_service
 from app.crud import kb as kb_crud
-from app.services.file_parser import SUPPORTED_EXTENSIONS
+from app.services.knowledge.file_parser import SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ def get_document_status(
             raise HTTPException(status_code=404, detail="文档不存在")
         return kb_service.document_status_payload(doc, batch_id)
 
-    from app.services.dify_kb import DifyKB
+    from app.services.knowledge.dify_kb import DifyKB
 
     dataset_id = current_user.get("dataset_id")
     if not dataset_id:

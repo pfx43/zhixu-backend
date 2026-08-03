@@ -16,13 +16,14 @@ from app.schemas.training import (
     TargetedTrainingStartOut,
     WeakTagOut,
 )
-from app.services import analytics_service, quiz_service
-from app.services.training_agent import (
+from app.services.training import analytics_service
+from app.services.quiz import quiz_service
+from app.services.training.training_agent import (
     MAX_TRAINING_QUESTIONS,
     TrainingPlanResult,
     training_agent_manager,
 )
-from app.services.training_tools import (
+from app.services.training.training_tools import (
     get_user_wrong_stats_by_tag,
     search_questions_by_tags,
 )
@@ -242,7 +243,7 @@ def start_targeted_training(
 def _resolve_coach_agent(
     db: Session, user_id: int, agent_session_id: str
 ):
-    from app.services.training_agent import TrainingCoachAgent
+    from app.services.training.training_agent import TrainingCoachAgent
 
     coach = training_agent_manager.get_agent(agent_session_id, user_id)
     if coach:

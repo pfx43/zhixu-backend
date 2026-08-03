@@ -3,8 +3,8 @@
 核实依据：TCN_API_CONFIRMATION_REPLY.md v1.4
 """
 
-from app.services.tcn_client import tcn_client
-from app.services.graph_cache import get_graph_cache
+from app.services.tcn.tcn_client import tcn_client
+from app.services.tcn.graph_cache import get_graph_cache
 
 
 async def recommend_learning_path(user_hash: str, top_k: int = 5) -> dict:

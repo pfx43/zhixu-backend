@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.api.v1 import kt as kt_router_module
 from app.api.v1.router import api_router
-from app.services.tcn_client import tcn_client
+from app.services.tcn.tcn_client import tcn_client
 
 
 @pytest.fixture()

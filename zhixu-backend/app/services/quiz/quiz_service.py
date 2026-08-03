@@ -74,8 +74,8 @@ def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) ->
         if hit >= max(1, len(key_parts) // 2):
             return "correct"
     try:
-        from app.services.question_gen_service import _get_llm
-        from app.services.llm_runner import llm_predict_no_stream
+        from app.services.quiz.question_gen_service import _get_llm
+        from app.services.llm.llm_runner import llm_predict_no_stream
 
         llm = _get_llm()
         if llm:

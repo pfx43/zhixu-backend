@@ -14,8 +14,8 @@ from app.api.deps import get_db
 from app.core.database import Base
 from app.core.redis import cache
 from app.models import AuthSession, User
-from app.services import auth_service
-from app.services.auth_session_service import create_auth_session, hash_token
+from app.services.auth import auth_service
+from app.services.auth.auth_session_service import create_auth_session, hash_token
 from server import app
 
 

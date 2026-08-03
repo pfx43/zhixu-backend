@@ -31,16 +31,16 @@ from app.schemas.kb import (
     DocumentOut,
     UploadResponse,
 )
-from app.services.dify_kb import DifyKB
-from app.services.file_parser import (
+from app.services.knowledge.dify_kb import DifyKB
+from app.services.knowledge.file_parser import (
     IMAGE_EXTENSIONS,
     SUPPORTED_EXTENSIONS,
     is_scanned_pdf,
     parse_file_detailed,
 )
-from app.services.ocr_progress import get_ocr_progress, set_ocr_progress
-from app.services.ocr_service import extract_text_from_image
-from app.services.storage_service import storage_service
+from app.services.ocr.ocr_progress import get_ocr_progress, set_ocr_progress
+from app.services.ocr.ocr_service import extract_text_from_image
+from app.services.knowledge.storage_service import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def _maybe_trigger_segment(db: Session, document: Document) -> None:
     """学习区文档上传后分段（及本地 RAG 索引）。"""
     if document.zone != "study":
         return
-    from app.services.segment_service import segment_document
+    from app.services.knowledge.segment_service import segment_document
 
     try:
         segment_document(document.id, db)
@@ -203,7 +203,7 @@ def _run_document_pipeline(
     后台线程：OCR（可选）→ 解析 → 分段 → 索引。
     与扫描 PDF / 图片异步 OCR 共用同一入口。
     """
-    from app.services.pdf_ocr_service import parse_pdf_with_ocr_fallback
+    from app.services.ocr.pdf_ocr_service import parse_pdf_with_ocr_fallback
 
     def on_page_progress(current: int, total: int) -> None:
         set_ocr_progress(
@@ -1128,7 +1128,7 @@ def delete_document(
                 )
 
         if is_local_rag():
-            from app.services.index_service import delete_document_index
+            from app.services.knowledge.index_service import delete_document_index
 
             delete_document_index(doc.id)
 

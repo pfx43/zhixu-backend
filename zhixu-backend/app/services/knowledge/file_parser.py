@@ -347,7 +347,7 @@ def _pdf_parse_result(
     file_path: str = "",
 ) -> ParseOutcome:
     """将按页文本转为带页码标记的 markdown 与 page_texts。"""
-    from app.services.pdf_ocr_service import build_shadow_markdown
+    from app.services.ocr.pdf_ocr_service import build_shadow_markdown
 
     display_name = original_filename or Path(file_path).name or "document.pdf"
     markdown = build_shadow_markdown(display_name, pages_text)
@@ -448,7 +448,7 @@ def _parse_pdf(
 
     logger.info("file_parser - 常规 PDF 提取无文本，尝试 OCR 回退: %s", file_path)
 
-    from app.services.pdf_ocr_service import parse_pdf_with_ocr_fallback
+    from app.services.ocr.pdf_ocr_service import parse_pdf_with_ocr_fallback
 
     ocr_outcome = parse_pdf_with_ocr_fallback(file_path, original_filename)
 

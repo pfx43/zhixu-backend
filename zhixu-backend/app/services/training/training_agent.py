@@ -16,11 +16,11 @@ from tina import Agent
 from tina.agent.core.tools import Tools
 from tina.llm import BaseAPI
 
-from app.services.llm_runner import (
+from app.services.llm.llm_runner import (
     agent_predict_no_stream,
     iter_agent_continue_stream,
 )
-from app.services.training_tools import (
+from app.services.training.training_tools import (
     get_user_wrong_stats_by_tag,
     search_questions_by_tags,
 )

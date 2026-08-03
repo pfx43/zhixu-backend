@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.crud import question as question_crud
-from app.services import analytics_service
+from app.services.training import analytics_service
 
 
 def search_questions_by_tags(

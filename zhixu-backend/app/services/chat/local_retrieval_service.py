@@ -3,7 +3,7 @@
 """
 from typing import List, Optional
 
-from app.services.chroma_store import chroma_store
+from app.services.knowledge.chroma_store import chroma_store
 
 
 def search(

@@ -10,8 +10,8 @@ from app.schemas.onboarding import (
     OnboardingIdentityCode,
     OnboardingUsePurpose,
 )
-from app.services.onboarding_service import restart_onboarding, OnboardingAlreadyInProgress, OnboardingRevisionConflict
-from app.services.onboarding_service import get_onboarding_state, submit_onboarding_step, complete_onboarding
+from app.services.onboarding.onboarding_service import restart_onboarding, OnboardingAlreadyInProgress, OnboardingRevisionConflict
+from app.services.onboarding.onboarding_service import get_onboarding_state, submit_onboarding_step, complete_onboarding
 
 router = APIRouter(tags=["引导"])
 

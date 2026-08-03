@@ -16,8 +16,8 @@ from app.models import (
     QuizSession, QuizSessionQuestion, QuizAnswer,
     TutorSession, UserNote, TrainingPlan, QuestionTag, OnboardingState,
 )
-from app.services import auth_service
-from app.services.auth_service import AuthManager
+from app.services.auth import auth_service
+from app.services.auth.auth_service import AuthManager
 
 
 @pytest.fixture()

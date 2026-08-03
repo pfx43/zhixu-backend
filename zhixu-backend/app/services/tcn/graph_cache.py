@@ -19,7 +19,7 @@ def get_graph_cache() -> dict:
 async def init_graph_cache():
     """启动时加载所有域的图谱数据到缓存"""
     global _graph_cache
-    from app.services.tcn_client import tcn_client
+    from app.services.tcn.tcn_client import tcn_client
 
     _graph_cache = {}
 

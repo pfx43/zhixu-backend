@@ -14,7 +14,7 @@ from app.schemas.tutor import (
     TutorSessionCreate,
     TutorSessionOut,
 )
-from app.services import tutor_service
+from app.services.tutor import tutor_service
 
 router = APIRouter(tags=["辅导"])
 

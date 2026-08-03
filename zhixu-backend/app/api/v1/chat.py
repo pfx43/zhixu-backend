@@ -19,9 +19,9 @@ from app.schemas.common import (
     ChatSession,
     ChatSessionList,
 )
-from app.services.citation_service import resolve_chat_collection
-from app.services.storage_service import storage_service
-from app.services.tcn_client import tcn_client
+from app.services.tutor.citation_service import resolve_chat_collection
+from app.services.knowledge.storage_service import storage_service
+from app.services.tcn.tcn_client import tcn_client
 import asyncio
 
 logger = logging.getLogger(__name__)

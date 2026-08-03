@@ -2,7 +2,7 @@
 OCR 服务 — 图片转文本（本地 PaddleOCR / 百度云端）
 
 使用方式：
-    from app.services.ocr_service import extract_text_from_image
+    from app.services.ocr.ocr_service import extract_text_from_image
     text = extract_text_from_image(image_path)
 
 后端选择（config.OCR_BACKEND）：

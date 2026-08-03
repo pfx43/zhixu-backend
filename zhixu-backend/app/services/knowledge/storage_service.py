@@ -2,7 +2,7 @@
 文件存储服务 — 统一存取接口
 
 使用方式：
-    from app.services.storage_service import storage_service
+    from app.services.knowledge.storage_service import storage_service
 
     # 保存文件
     path = storage_service.save_file(user_id, filename, content_bytes)

@@ -17,7 +17,7 @@ from app.schemas.analytics import (
     TagStatsListOut,
     TagStatsOut,
 )
-from app.services import question_gen_service
+from app.services.quiz import question_gen_service
 
 
 def _accuracy_rate(correct: int, wrong: int) -> Optional[int]:
