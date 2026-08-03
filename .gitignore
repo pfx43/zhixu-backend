@@ -1,110 +1,95 @@
-# ============================================================
-# .gitignore - zhixu-backend
-# ============================================================
-
-# ------------------------------
-# 操作系统生成的文件
-# ------------------------------
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-*.lnk
-
-# ------------------------------
-# IDE 和编辑器配置文件
-# ------------------------------
-.vscode/
-.idea/
-*.swp
-*.swo
-*.swn
-*.swm
-*.bak
-*.sublime-project
-*.sublime-workspace
-.project
-.classpath
-.settings/
-
-# ------------------------------
-# 依赖目录
-# ------------------------------
+# ─── Node / Frontend ───────────────────────
 node_modules/
-vendor/
+frontend/dist/
+*.tsbuildinfo
+
+# ─── Flutter（若后续加入 zhishi_app）────────
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+
+# ─── Python ───────────────────────────────
 __pycache__/
-.venv/
-venv/
-env/
-.pip/
-.npm/
-.yarn/
-
-# ------------------------------
-# 环境变量文件
-# ------------------------------
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-.env.test
-
-# ------------------------------
-# 构建输出目录
-# ------------------------------
-dist/
-build/
-out/
+*.py[cod]
+*$py.class
 *.egg-info/
 .eggs/
-develop-eggs/
-sdist/
-wheels/
+*.egg
+.Python
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
 
-# ------------------------------
-# 日志文件
-# ------------------------------
+# Python 打包产物（勿与 frontend/dist 混淆时用 frontend/dist/ 已单独列出）
+build/
+dist/
+
+# 虚拟环境
+env/
+venv/
+.venv/
+
+# ─── OS ────────────────────────────────────
+Thumbs.db
+.DS_Store
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ─── IDE ───────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# ─── 环境配置（含密钥）────────────────────
+.env
+.env.*
+!.env.example
+!backend/.env.example
+*.env.local
+backend/tina.env
+backend/.env
+assets/config/llm_config.json
+assets/config/dify_config.json
+
+# ─── 日志 ──────────────────────────────────
 *.log
 logs/
+backend/logs/
 
-# ------------------------------
-# 临时文件
-# ------------------------------
-*.tmp
-*.temp
-tmp/
+# ─── 本地运行时数据 ────────────────────────
+storage/
+backend/storage/
+backend/content_cache/
+backend/upload_hashes.json
 
-# ------------------------------
-# Python 编译文件
-# ------------------------------
-*.pyc
-*.pyo
-*.pyd
-*.so
+# Chroma 向量索引
+data/chroma/
 
-# ------------------------------
-# 测试与覆盖率
-# ------------------------------
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
+# SQLite / 本地数据库
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+releases/
+# ─── LEKT 本地编译产物（按需提交则注释掉）──
+# backend/*.pyd
+# backend/logic_matrix.npy
 
-# ------------------------------
-# 数据库文件
-# ------------------------------
-*.sqlite3
-*.db
-
-# ------------------------------
-# 本地工具与项目数据
-# ------------------------------
-.workbuddy/
-.agents/
-.codegraph/
+# ─── 大文件 ────────────────────────────────
+*.zip
+*.rar
+*.7z
+# ������ ��Ƶ��Ⱦ���� �������������������������������������� 
+renders/ 
+zhishi-web/renders/ 
+zhishi-web/video/
