@@ -35,6 +35,14 @@ class _FailOnWriteDb:
         raise AssertionError("fixed fallback must be rejected before db.flush")
 
 
+class _FlushOnlyDb:
+    def __init__(self):
+        self.flush_count = 0
+
+    def flush(self):
+        self.flush_count += 1
+
+
 class QuestionGenerationFailureTests(unittest.TestCase):
     def test_exact_fallback_signature_is_detected(self):
         self.assertTrue(
@@ -140,6 +148,124 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 sys.modules[
                     "app.services.quiz.question_gen_agent"
                 ] = original_module
+
+    def test_failed_generation_sets_failed_and_never_persists(self):
+        document = SimpleNamespace(
+            id="document-1",
+            zone="study",
+            segment_status="completed",
+            question_gen_status="not_started",
+        )
+        segment = SimpleNamespace(
+            id="segment-1",
+            title="第一章",
+            content="真实资料内容",
+        )
+
+        for reason in (
+            "agent_unavailable",
+            "llm_timeout",
+            "llm_error",
+            "invalid_output",
+        ):
+            with self.subTest(reason=reason):
+                db = _FlushOnlyDb()
+                document.question_gen_status = "not_started"
+                with (
+                    patch.object(
+                        question_gen_service.kb_crud,
+                        "get_document_by_id_or_dify",
+                        return_value=document,
+                    ),
+                    patch.object(
+                        question_gen_service.segment_crud,
+                        "list_segments_for_document",
+                        return_value=[segment],
+                    ),
+                    patch.object(
+                        question_gen_service.tag_crud,
+                        "list_tags_for_user",
+                        return_value=[],
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "_llm_generate",
+                        return_value=[
+                            {"_question_generation_failure": reason}
+                        ],
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "_persist_question",
+                        side_effect=AssertionError(
+                            "failed generation must not persist"
+                        ),
+                    ),
+                ):
+                    response = question_gen_service.generate_questions(
+                        db,
+                        user_id=1,
+                        document_id=document.id,
+                    )
+
+                self.assertEqual(response.question_gen_status, "failed")
+                self.assertEqual(response.total_questions, 0)
+                self.assertEqual(response.questions_created, 0)
+                self.assertEqual(response.questions_reused, 0)
+                self.assertEqual(document.question_gen_status, "failed")
+                self.assertGreaterEqual(db.flush_count, 2)
+
+    def test_provider_exception_sets_failed_and_never_persists(self):
+        document = SimpleNamespace(
+            id="document-1",
+            zone="study",
+            segment_status="completed",
+            question_gen_status="not_started",
+        )
+        segment = SimpleNamespace(
+            id="segment-1",
+            title="第一章",
+            content="真实资料内容",
+        )
+        db = _FlushOnlyDb()
+
+        def timeout_provider(_segment):
+            raise TimeoutError("provider timed out")
+
+        with (
+            patch.object(
+                question_gen_service.kb_crud,
+                "get_document_by_id_or_dify",
+                return_value=document,
+            ),
+            patch.object(
+                question_gen_service.segment_crud,
+                "list_segments_for_document",
+                return_value=[segment],
+            ),
+            patch.object(
+                question_gen_service.tag_crud,
+                "list_tags_for_user",
+                return_value=[],
+            ),
+            patch.object(
+                question_gen_service,
+                "_persist_question",
+                side_effect=AssertionError(
+                    "provider failure must not persist"
+                ),
+            ),
+        ):
+            response = question_gen_service.generate_questions(
+                db,
+                user_id=1,
+                document_id=document.id,
+                provider=timeout_provider,
+            )
+
+        self.assertEqual(response.question_gen_status, "failed")
+        self.assertEqual(response.total_questions, 0)
+        self.assertEqual(document.question_gen_status, "failed")
 
     def test_page_batch_discards_failure_marker(self):
         pages = [
