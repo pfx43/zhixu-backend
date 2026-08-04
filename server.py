@@ -121,6 +121,26 @@ REQUIRED_DEPLOYMENT_PATHS = (
     "/api/v1/onboarding/step",
 )
 
+
+def _question_generation_readiness() -> dict:
+    """独立探测 Question Agent/LLM，不复用 TCN 的 model_loaded。"""
+    try:
+        from app.services.quiz.question_gen_agent import (
+            get_question_agent_readiness,
+        )
+
+        return get_question_agent_readiness(probe=True)
+    except Exception:
+        logger.exception(
+            "Question Agent readiness 探测失败: classification=agent_unavailable"
+        )
+        return {
+            "ready": False,
+            "status": "unavailable",
+            "reason": "agent_unavailable",
+        }
+
+
 @app.get("/health")
 async def health(request: Request):
     tcn_healthy = getattr(request.app.state, "tcn_healthy", False)
@@ -132,7 +152,9 @@ async def health(request: Request):
     return {
         "status": "ok" if tcn_healthy and not missing_paths else "degraded",
         "skills_count": tcn_nodes,
+        # 仅表示 TCN 模型健康；题目生成 readiness 见 question_generation。
         "model_loaded": tcn_healthy,
+        "question_generation": _question_generation_readiness(),
         "api_contract": {
             "status": "ok" if not missing_paths else "invalid",
             "required_paths": list(REQUIRED_DEPLOYMENT_PATHS),
