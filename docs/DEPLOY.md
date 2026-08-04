@@ -2,15 +2,13 @@
 
 ## 应用后端部署（Windows 云服务器）
 
-生产入口为 `zhishi-master/backend/server.py:app`。更新代码后必须安装依赖、执行
+生产入口为项目根目录下的 `server.py:app`。更新代码后必须安装依赖、执行
 迁移并重新启动进程，不能只确认旧进程仍占用 8765 端口。
 
 ```powershell
-cd C:\zhixu-backend\zhishi-master\backend
-..\.venv\Scripts\python.exe -m pip install -r requirements.txt
-..\.venv\Scripts\alembic.exe upgrade head
-
 cd C:\zhixu-backend
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\alembic.exe upgrade head
 .\start_server.ps1
 ```
 
@@ -55,40 +53,14 @@ conda activate xzs
 ### 2. 安装依赖
 
 ```bash
-cd kt_backend
+cd C:\zhixu-backend
 pip install -r requirements.txt
 ```
 
-`requirements.txt` 内容：
-```
-torch>=1.12.0
-numpy>=1.21.0
-scikit-learn>=1.0.0
-tqdm>=4.60.0
-pandas>=1.3.0
-openai>=1.0.0
-fastapi>=0.100.0
-uvicorn>=0.20.0
-```
+### 3. 准备先修矩阵
 
-### 3. 生成先修矩阵
-
-使用内置 7 技能数学示例：
-```bash
-python generate_matrix.py
-```
-
-或从 CSV 导入自定义学科数据：
-```bash
-# 先导出模板
-python generate_matrix.py --template > my_skills.csv
-
-# 编辑 my_skills.csv（用 Excel 或文本编辑器）
-# 格式: 先修技能,后续技能
-
-# 生成矩阵
-python generate_matrix.py --csv my_skills.csv -o logic_matrix.npy
-```
+先修矩阵 `logic_matrix.npy` 位于 `data/knowledge_graph/` 目录下。
+如需重新生成，参见 `3rdParty/lekt_release_cython(3)/` 目录中的脚本。
 
 ### 4. 启动服务
 
@@ -113,25 +85,17 @@ curl http://127.0.0.1:8765/health
 
 ## 二、配置说明
 
-### 技能名称映射
+### OCR 后端配置
 
-编辑 `server.py` 中的 `SKILL_NAMES` 字典：
+OCR 后端通过 `.env` 文件中的 `OCR_BACKEND` 配置：
 
-```python
-SKILL_NAMES = {
-    0: "加法",
-    1: "减法",
-    # ... 与 logic_matrix.npy 索引一一对应
-}
-```
+| 值 | 说明 |
+|----|------|
+| `local` | PaddleOCR 本地识别（默认，需安装 paddleocr） |
+| `baidu` | 百度云 OCR API（需配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY`） |
+| `auto` | 优先 PaddleOCR，不可用时回退百度 OCR |
 
-### LADL 参数（lekt_service.py）
-
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `epsilon` | 0.05 | 容忍裕度，允许微小违反 |
-| `lambda_logic` | 0.1 | 正则化强度（训练用） |
-| `beta` | 1.0 | LADL 修正强度 |
+详见 `.env.example` 模板文件。
 
 ### 修改端口
 
