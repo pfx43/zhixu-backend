@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional, List
+import re
 
 # Token 响应模型
 class Token(BaseModel):
@@ -176,6 +177,13 @@ class DeleteAccountResponse(BaseModel):
 
 # ============ 个人资料更新模型 ============
 
+# 中国大陆手机号正则
+_PHONE_PATTERN = re.compile(r"^1\d{10}$")
+
+# gender 允许值（空值表示不公开）
+_GENDER_ALLOWED = {"男", "女"}
+
+
 class UpdateProfileRequest(BaseModel):
     """更新个人资料 — 只允许白名单字段"""
     phone: Optional[str] = None
@@ -183,6 +191,30 @@ class UpdateProfileRequest(BaseModel):
     gender: Optional[str] = None
     signature: Optional[str] = None
     tags: Optional[str] = None  # JSON 字符串数组
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        # 空字符串视为清除
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        if not isinstance(v, str) or not _PHONE_PATTERN.match(v):
+            raise ValueError("phone 必须是 11 位中国大陆手机号（1 开头）")
+        return v
+
+    @field_validator("gender", mode="before")
+    @classmethod
+    def validate_gender(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        # 空字符串视为清除（不公开）
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        if not isinstance(v, str) or v not in _GENDER_ALLOWED:
+            raise ValueError("gender 仅接受 '男' 或 '女'")
+        return v
 
 
 # ============ 聊天相关模型 ============

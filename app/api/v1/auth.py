@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from datetime import timedelta, datetime, timezone
 
 from app.api.deps import get_db, get_current_active_user, oauth2_scheme
@@ -405,7 +406,7 @@ def update_profile(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    updates = req.model_dump(exclude_none=True)
+    updates = req.model_dump(exclude_unset=True)
     for field, value in updates.items():
         if field not in _PROFILE_WHITELIST:
             continue
@@ -415,6 +416,12 @@ def update_profile(
         db.commit()
         db.refresh(user)
         return {"message": "资料更新成功", "updated_fields": list(updates.keys())}
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="该手机号已被其他账号绑定",
+        )
     except Exception as e:
         db.rollback()
         logger.error(f"更新资料失败: {e}")
