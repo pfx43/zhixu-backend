@@ -56,13 +56,15 @@ class TCNSummaryResponse(BaseModel):
     user_hash: str = ""
     diagnosis_version: str = "rule"
     total_steps: int = 0
-    overall_mastery: float = 0.5
-    global_lvr: float = 0.0
+    overall_mastery: Optional[float] = 0.5
+    global_lvr: Optional[float] = 0.0
     lvr_level: str = "normal"
     graph_version: int = 0
     domain_summary: list[TCNSummaryDomainItem] = []
     last_active_node: Optional[str] = None
     computed_at: Optional[str] = None
+    _degraded: Optional[bool] = None
+    _degraded_reason: Optional[str] = None
 
 
 class TCNGapsItem(BaseModel):
@@ -77,11 +79,13 @@ class TCNGapsResponse(BaseModel):
     user_hash: str = ""
     diagnosis_version: str = "rule"
     mastery_threshold: float = 0.6
-    total_gaps: int = 0
+    total_gaps: Optional[int] = 0
     returned_gaps: int = 0
     limit: int = 50
     gaps: list[TCNGapsItem] = []
     computed_at: Optional[str] = None
+    _degraded: Optional[bool] = None
+    _degraded_reason: Optional[str] = None
 
 
 class TCNVulnerabilityWeakPrereq(BaseModel):
@@ -102,11 +106,13 @@ class TCNVulnerabilitiesResponse(BaseModel):
     user_hash: str = ""
     diagnosis_version: str = "rule"
     mastery_threshold_high: float = 0.7
-    total_vulnerabilities: int = 0
+    total_vulnerabilities: Optional[int] = 0
     returned_vulnerabilities: int = 0
     limit: int = 50
     vulnerabilities: list[TCNVulnerabilityItem] = []
     computed_at: Optional[str] = None
+    _degraded: Optional[bool] = None
+    _degraded_reason: Optional[str] = None
 
 
 class TCNLvrViolation(BaseModel):
@@ -120,13 +126,15 @@ class TCNLvrViolation(BaseModel):
 class TCNLvrAlertResponse(BaseModel):
     user_hash: str = ""
     diagnosis_version: str = "rule"
-    global_lvr: float = 0.0
+    global_lvr: Optional[float] = 0.0
     lvr_level: str = "normal"
     alert_code: str = "LVR_NORMAL"
     alert_text: Optional[str] = None
-    total_violations: int = 0
+    total_violations: Optional[int] = 0
     returned_violations: int = 0
     limit: int = 10
     violations: list[TCNLvrViolation] = []
     backtrack_recommended: list[str] = []
     computed_at: Optional[str] = None
+    _degraded: Optional[bool] = None
+    _degraded_reason: Optional[str] = None

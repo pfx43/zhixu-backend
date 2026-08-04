@@ -26,6 +26,15 @@ from app.schemas.tcn_knowledge import (
 router = APIRouter(tags=["知识追踪"])
 
 
+def _check_tcn_available():
+    """检查 TCN 是否可用，不可用则返回 503"""
+    if not tcn_client.is_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="TCN 引擎不可达，该功能暂时不可用",
+        )
+
+
 def _user_hash_or_503(current_user: dict) -> str:
     """从 current_user 中提取 user_hash，未就绪时返回 503。
 
@@ -91,6 +100,7 @@ async def kt_summary(
     current_user: dict = Depends(get_current_active_user),
 ):
     """用户知识状态摘要（LLM System Prompt 注入用）。"""
+    _check_tcn_available()
     user_hash = _user_hash_or_503(current_user)
     try:
         return await tcn_client.get_summary(user_hash)
@@ -108,6 +118,7 @@ async def kt_gaps(
     current_user: dict = Depends(get_current_active_user),
 ):
     """先修断层查询。"""
+    _check_tcn_available()
     user_hash = _user_hash_or_503(current_user)
     try:
         return await tcn_client.get_gaps(user_hash, limit=limit, threshold=threshold)
@@ -124,6 +135,7 @@ async def kt_vulnerabilities(
     current_user: dict = Depends(get_current_active_user),
 ):
     """认知脆弱点（伪掌握）预警。"""
+    _check_tcn_available()
     user_hash = _user_hash_or_503(current_user)
     try:
         return await tcn_client.get_vulnerabilities(user_hash, limit=limit)
@@ -140,6 +152,7 @@ async def kt_lvr_alert(
     current_user: dict = Depends(get_current_active_user),
 ):
     """LVR 预警状态（含回溯建议）。"""
+    _check_tcn_available()
     user_hash = _user_hash_or_503(current_user)
     try:
         return await tcn_client.get_lvr_alert(user_hash, limit=limit)

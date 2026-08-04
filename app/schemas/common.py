@@ -195,6 +195,8 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     stream: bool = False
     collection_id: Optional[str] = None
+    # 对话模式: qa / learning / classroom_note / verify
+    mode: Optional[str] = "qa"
     # TCN 集成字段（可选，不传则跳过知识状态更新）
     tc_node_id: Optional[str] = None
     tc_user_action: Optional[str] = None  # "correct" | "incorrect"
