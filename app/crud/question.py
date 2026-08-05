@@ -1,9 +1,17 @@
 import json
+import logging
 from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 from app.models import GlobalQuestion, QuestionProvenance, UserQuestionRef
+from app.services.quiz.question_generation_guard import (
+    FallbackTemplateRejected,
+    is_fixed_fallback_template,
+    is_quarantined_question,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def get_question_by_content_hash(
@@ -17,7 +25,12 @@ def get_question_by_content_hash(
 
 
 def get_question_by_id(db: Session, question_id: str) -> Optional[GlobalQuestion]:
-    return db.query(GlobalQuestion).filter(GlobalQuestion.id == question_id).first()
+    question = (
+        db.query(GlobalQuestion).filter(GlobalQuestion.id == question_id).first()
+    )
+    if question and is_quarantined_question(question):
+        return None
+    return question
 
 
 def create_global_question(
@@ -32,6 +45,20 @@ def create_global_question(
     tags_json: Optional[str],
     source_type: str = "generated",
 ) -> GlobalQuestion:
+    if source_type == "generated" and is_fixed_fallback_template(
+        stem=stem,
+        options=options_json,
+        answer=answer,
+        question_type=question_type,
+        explanation=explanation,
+    ):
+        logger.warning(
+            "拒绝固定占位模板写入 global_questions: classification=invalid_output"
+        )
+        raise FallbackTemplateRejected(
+            "generated question matched the fixed fallback template signature"
+        )
+
     row = GlobalQuestion(
         content_hash=content_hash,
         stem=stem,
@@ -118,6 +145,17 @@ def create_user_ref(
     segment_id: Optional[str],
     collection_id: Optional[str],
 ) -> UserQuestionRef:
+    question = (
+        db.query(GlobalQuestion).filter(GlobalQuestion.id == question_id).first()
+    )
+    if question and is_quarantined_question(question):
+        logger.warning(
+            "拒绝固定占位模板进入用户题库: classification=invalid_output"
+        )
+        raise FallbackTemplateRejected(
+            "fallback question cannot be referenced by a formal user library"
+        )
+
     row = UserQuestionRef(
         user_id=user_id,
         question_id=question_id,
@@ -163,7 +201,9 @@ def list_user_questions(
         query = query.filter(UserQuestionRef.document_id == document_id)
     if collection_id:
         query = query.filter(UserQuestionRef.collection_id == collection_id)
-    return query.order_by(UserQuestionRef.added_at.desc()).all()
+
+    rows = query.order_by(UserQuestionRef.added_at.desc()).all()
+    return [(ref, question) for ref, question in rows if not is_quarantined_question(question)]
 
 
 def list_provenance_for_question(
