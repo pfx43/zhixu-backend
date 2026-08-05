@@ -3,14 +3,12 @@
 """
 import json
 import logging
-import os
 from typing import Generator, List, Optional, TYPE_CHECKING
 
 import requests
-from dotenv import dotenv_values
 
 from app.core.config import is_local_rag
-from app.utils.tina_loader import tina_env_path
+from app.services.llm.llm_config import load_llm_settings
 
 from app.services.tutor.citation_service import build_citations_from_hits
 from app.services.chat.local_retrieval_service import search as local_search
@@ -108,11 +106,13 @@ MODE_PROMPTS = {
 
 
 def _load_llm_config() -> dict:
-    """从 tina.env 读取 LLM 配置"""
-    env_path = tina_env_path()
-    if os.path.exists(env_path):
-        return dict(dotenv_values(env_path))
-    return {}
+    """从统一配置源读取 LLM 配置。"""
+    settings = load_llm_settings()
+    return {
+        "LLM_API_KEY": settings.api_key,
+        "BASE_URL": settings.base_url,
+        "MODEL_NAME": settings.model_name,
+    }
 
 
 class ZhishiAgent:

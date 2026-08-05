@@ -2,11 +2,11 @@
 Tina 导入辅助 — 统一将 backend/3rdParty 加入 sys.path，业务代码无需再手写 sys.path。
 
 用法:
-    from app.utils.tina_loader import tina, tina_env_path
+    from app.services.llm.llm_config import create_base_api
+    from app.utils.tina_loader import tina
     from tina import Agent
-    from tina.llm import BaseAPI
 
-    llm = BaseAPI(env_path=tina_env_path())
+    llm = create_base_api()
 """
 from __future__ import annotations
 

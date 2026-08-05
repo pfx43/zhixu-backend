@@ -10,11 +10,11 @@ import json
 import logging
 from typing import List, Optional
 
-from app.utils.tina_loader import tina_env_path
+from app.utils import tina_loader  # noqa: F401
 from tina import Agent
 from tina.agent.core.tools import Tools
-from tina.llm import BaseAPI
 
+from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import agent_predict_no_stream
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ def get_question_agent_readiness(*, probe: bool = True) -> dict:
     服务尚未尝试初始化出题 Agent 时，health 探针可通过 ``probe=True`` 做一次轻量
     初始化检查。响应只暴露稳定分类，不包含密钥、上游地址或异常正文。
     """
-    if probe and _last_readiness["status"] == "unknown":
+    if probe and not _last_readiness["ready"]:
         QuestionGenAgent(mode="generate")
     return dict(_last_readiness)
 
@@ -100,7 +100,7 @@ class QuestionGenAgent:
         )
 
         try:
-            self.llm = BaseAPI(env_path=tina_env_path())
+            self.llm = create_base_api()
             self.tools = Tools(name="question_gen")
             self._register_tools()
 

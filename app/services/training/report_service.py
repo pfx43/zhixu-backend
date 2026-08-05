@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from app.crud import kb as kb_crud
 from app.crud import note as note_crud
 from app.schemas.report import LearningReportGenerateOut, ReportOut
-from app.services.training import analytics_service
+from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import llm_predict_no_stream
+from app.services.training import analytics_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,7 @@ def _get_llm():
     if _llm_instance is not None:
         return _llm_instance
     try:
-        from app.utils.tina_loader import tina_env_path
-        from tina.llm import BaseAPI
-
-        _llm_instance = BaseAPI(env_path=tina_env_path())
+        _llm_instance = create_base_api()
         return _llm_instance
     except Exception:
         logger.warning("Tina LLM 不可用，将使用模板报告", exc_info=True)

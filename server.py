@@ -116,9 +116,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # ─── 健康检查 ───
 
-import os
-from dotenv import dotenv_values
-
 REQUIRED_DEPLOYMENT_PATHS = (
     "/api/v1/onboarding/complete",
     "/api/v1/onboarding/restart",
@@ -149,16 +146,11 @@ def _question_generation_readiness() -> dict:
 def _check_llm_ready() -> bool:
     """检测 LLM 配置完整性：API Key / Base URL / Model Name 三者齐全才算就绪"""
     try:
-        from app.utils.tina_loader import tina_env_path
-        env_path = tina_env_path()
-        if os.path.exists(env_path):
-            cfg = dict(dotenv_values(env_path))
-            api_key = cfg.get("LLM_API_KEY", "").strip('"').strip("'")
-            base_url = cfg.get("BASE_URL", "").strip('"').strip("'")
-            model = cfg.get("MODEL_NAME", "").strip('"').strip("'")
-            return bool(api_key and base_url and model)
+        from app.services.llm.llm_config import load_llm_settings
+
+        return load_llm_settings().is_ready
     except Exception:
-        pass
+        logger.exception("LLM readiness 配置解析失败")
     return False
 
 

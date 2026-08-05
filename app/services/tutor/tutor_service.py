@@ -22,7 +22,7 @@ from app.schemas.tutor import (
     TutorSessionCreate,
     TutorSessionOut,
 )
-from app.utils.tina_loader import tina_env_path
+from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import agent_predict_no_stream, iter_agent_predict_stream
 
 logger = logging.getLogger(__name__)
@@ -230,13 +230,12 @@ class SocraticTutorAgent:
 
     def _init_agent(self) -> None:
         try:
+            self._llm = create_base_api()
             from tina import Agent
             from tina.agent.core.context_manager import ContextManager
-            from tina.llm import BaseAPI
 
             context_manager = ContextManager(max_length=80000, max_tool_result_length=4000)
             context_manager.set_system_message(self.system_prompt)
-            self._llm = BaseAPI(env_path=tina_env_path())
             self._agent = Agent(
                 llm=self._llm,
                 tools=None,

@@ -11,11 +11,11 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Generator, List, Optional, TYPE_CHECKING
 
-from app.utils.tina_loader import tina_env_path
+from app.utils import tina_loader  # noqa: F401
 from tina import Agent
 from tina.agent.core.tools import Tools
-from tina.llm import BaseAPI
 
+from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import (
     agent_predict_no_stream,
     iter_agent_continue_stream,
@@ -75,7 +75,7 @@ class TrainingCoachAgent:
         self.tools = None
 
         try:
-            self.llm = BaseAPI(env_path=tina_env_path())
+            self.llm = create_base_api()
             self.tools = Tools(name="training_coach")
             self._register_tools(db)
 

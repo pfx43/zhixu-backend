@@ -46,6 +46,7 @@ class BaseAPI:
         self.__api_key = api_key
         self.base_url = base_url
         self.model = model
+        self.env_reader = None
 
         params_to_load = any(param is None for param in [model, api_key, base_url])
 
