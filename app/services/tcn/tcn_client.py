@@ -7,6 +7,7 @@ OpenAPI 文档：http://127.0.0.1:8001/docs
 import asyncio
 import hashlib
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -49,6 +50,11 @@ class TCNClient:
     @property
     def is_enabled(self) -> bool:
         return self._enabled
+
+    @staticmethod
+    def _degraded_at() -> str:
+        """返回当前 UTC 时间 ISO 格式字符串"""
+        return datetime.now(timezone.utc).isoformat()
 
     @staticmethod
     def generate_user_hash(user_id: int) -> str:
@@ -198,15 +204,17 @@ class TCNClient:
 
         fallback = {
             "user_hash": user_hash,
-            "diagnosis_version": "rule",
+            "diagnosis_version": "degraded",
             "total_steps": 0,
-            "overall_mastery": 0.5,
-            "global_lvr": 0.0,
-            "lvr_level": "normal",
+            "overall_mastery": None,
+            "global_lvr": None,
+            "lvr_level": "unavailable",
             "graph_version": 0,
             "domain_summary": [],
             "last_active_node": None,
-            "computed_at": None,
+            "computed_at": self._degraded_at(),
+            "_degraded": True,
+            "_degraded_reason": "TCN 引擎不可达，此数据为降级占位，不可作为当前诊断依据",
         }
         return await self._call_with_retry("get_summary", _call, **{"_fallback": fallback}) or fallback
 
@@ -222,13 +230,15 @@ class TCNClient:
 
         fallback = {
             "user_hash": user_hash,
-            "diagnosis_version": "rule",
+            "diagnosis_version": "degraded",
             "mastery_threshold": threshold,
-            "total_gaps": 0,
+            "total_gaps": None,
             "returned_gaps": 0,
             "limit": limit,
             "gaps": [],
-            "computed_at": None,
+            "computed_at": self._degraded_at(),
+            "_degraded": True,
+            "_degraded_reason": "TCN 引擎不可达，此数据为降级占位，不可作为当前诊断依据",
         }
         return await self._call_with_retry("get_gaps", _call, **{"_fallback": fallback}) or fallback
 
@@ -244,13 +254,15 @@ class TCNClient:
 
         fallback = {
             "user_hash": user_hash,
-            "diagnosis_version": "rule",
+            "diagnosis_version": "degraded",
             "mastery_threshold_high": 0.7,
-            "total_vulnerabilities": 0,
+            "total_vulnerabilities": None,
             "returned_vulnerabilities": 0,
             "limit": limit,
             "vulnerabilities": [],
-            "computed_at": None,
+            "computed_at": self._degraded_at(),
+            "_degraded": True,
+            "_degraded_reason": "TCN 引擎不可达，此数据为降级占位，不可作为当前诊断依据",
         }
         return await self._call_with_retry("get_vulnerabilities", _call, **{"_fallback": fallback}) or fallback
 
@@ -266,17 +278,19 @@ class TCNClient:
 
         fallback = {
             "user_hash": user_hash,
-            "diagnosis_version": "rule",
-            "global_lvr": 0.0,
-            "lvr_level": "normal",
-            "alert_code": "LVR_NORMAL",
-            "alert_text": None,
-            "total_violations": 0,
+            "diagnosis_version": "degraded",
+            "global_lvr": None,
+            "lvr_level": "unavailable",
+            "alert_code": "LVR_UNAVAILABLE",
+            "alert_text": "TCN 引擎不可达，无法计算 LVR 预警",
+            "total_violations": None,
             "returned_violations": 0,
             "limit": limit,
             "violations": [],
             "backtrack_recommended": [],
-            "computed_at": None,
+            "computed_at": self._degraded_at(),
+            "_degraded": True,
+            "_degraded_reason": "TCN 引擎不可达，此数据为降级占位，不可作为当前诊断依据",
         }
         return await self._call_with_retry("get_lvr_alert", _call, **{"_fallback": fallback}) or fallback
 

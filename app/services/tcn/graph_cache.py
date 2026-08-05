@@ -46,7 +46,7 @@ async def init_graph_cache():
                     node_id = node["id"]
                     if node_id not in _graph_cache:
                         _graph_cache[node_id] = {
-                            "name": node.get("name", node_id),
+                            "name": node.get("label", node.get("name", node_id)),
                             "parents": [],
                             "dependents": [],
                         }

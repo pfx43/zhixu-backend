@@ -59,10 +59,12 @@ async def lifespan(app: FastAPI):
             print("[Server] 警告: TCN 引擎不可达，KT 功能将降级")
             app.state.tcn_healthy = False
             app.state.tcn_nodes = 0
+            tcn_client._enabled = False  # 同步客户端状态，使 KT 路由直接返回 503
     except Exception as e:
         logger.warning(f"TCN 探测失败: {e}")
         app.state.tcn_healthy = False
         app.state.tcn_nodes = 0
+        tcn_client._enabled = False  # 同步客户端状态，使 KT 路由直接返回 503
 
     # 4. 初始化 AgentManager（按用户维度管理 ZhishiAgent 实例）
     try:
@@ -114,6 +116,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # ─── 健康检查 ───
 
+import os
+from dotenv import dotenv_values
+
 REQUIRED_DEPLOYMENT_PATHS = (
     "/api/v1/onboarding/complete",
     "/api/v1/onboarding/restart",
@@ -141,6 +146,22 @@ def _question_generation_readiness() -> dict:
         }
 
 
+def _check_llm_ready() -> bool:
+    """检测 LLM 配置完整性：API Key / Base URL / Model Name 三者齐全才算就绪"""
+    try:
+        from app.utils.tina_loader import tina_env_path
+        env_path = tina_env_path()
+        if os.path.exists(env_path):
+            cfg = dict(dotenv_values(env_path))
+            api_key = cfg.get("LLM_API_KEY", "").strip('"').strip("'")
+            base_url = cfg.get("BASE_URL", "").strip('"').strip("'")
+            model = cfg.get("MODEL_NAME", "").strip('"').strip("'")
+            return bool(api_key and base_url and model)
+    except Exception:
+        pass
+    return False
+
+
 @app.get("/health")
 async def health(request: Request):
     tcn_healthy = getattr(request.app.state, "tcn_healthy", False)
@@ -149,14 +170,29 @@ async def health(request: Request):
     missing_paths = [
         path for path in REQUIRED_DEPLOYMENT_PATHS if path not in available_paths
     ]
+    llm_ready = _check_llm_ready()
+    api_ok = not missing_paths
+
+    # 综合判断：TCN + LLM + API 合约三者都 ok 才返回 ok
+    if tcn_healthy and llm_ready and api_ok:
+        overall = "ok"
+    elif not tcn_healthy and not llm_ready:
+        overall = "degraded"
+    else:
+        overall = "degraded"
+
     return {
-        "status": "ok" if tcn_healthy and not missing_paths else "degraded",
+        "status": overall,
         "skills_count": tcn_nodes,
-        # 仅表示 TCN 模型健康；题目生成 readiness 见 question_generation。
+        # HEAD: TCN 模型健康状态
         "model_loaded": tcn_healthy,
+        # fix/cyb-issue-6-7-tcn-chat: LLM 就绪 + TCN 单独状态
+        "llm_ready": llm_ready,
+        "tcn_status": "ok" if tcn_healthy else "unavailable",
+        # HEAD: Question Agent 独立探测
         "question_generation": _question_generation_readiness(),
         "api_contract": {
-            "status": "ok" if not missing_paths else "invalid",
+            "status": "ok" if api_ok else "invalid",
             "required_paths": list(REQUIRED_DEPLOYMENT_PATHS),
             "missing_paths": missing_paths,
         },

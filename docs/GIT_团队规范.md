@@ -145,7 +145,7 @@ git push
 ## 同步 main 更新（重要！）
 
 当你收到通知"main 有新的合并"时，立即执行：
-
+git fetch origin
 ```bash
 git checkout main
 git pull origin main

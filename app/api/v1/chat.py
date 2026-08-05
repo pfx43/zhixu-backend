@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
+VALID_MODES = {"qa", "learning", "classroom_note", "verify"}
+
 
 def _session_list_key(user_id: int) -> str:
     return f"chat:sessions:{user_id}"
@@ -211,6 +213,7 @@ def _stream_agent_response(
     tc_node_id: Optional[str] = None,
     tc_user_action: Optional[str] = None,
     tc_domain_id: Optional[str] = None,
+    mode: str = "qa",
 ):
     if not dataset_id and not is_local_rag():
         logger.warning(f"_stream_agent_response: user_id={user_id} 没有 dataset_id，使用 echo 回退")
@@ -241,7 +244,7 @@ def _stream_agent_response(
         tcn_result = None
 
         for chunk in agent.predict_stream(
-            message, history, collection_id=collection_id, db=db
+            message, history, collection_id=collection_id, db=db, mode=mode
         ):
             role = chunk.get("role", "assistant")
             content = chunk.get("content", "")
@@ -309,6 +312,13 @@ def send_chat(
     current_user: dict = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
+    mode = request.mode or "qa"
+    if mode not in VALID_MODES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"不支持的 mode: {mode}，支持的模式: {', '.join(sorted(VALID_MODES))}",
+        )
+
     user_id = current_user["user_id"]
     user_dataset_id = current_user.get("dataset_id")
     collection, dataset_id = resolve_chat_collection(
@@ -346,6 +356,7 @@ def send_chat(
                 tc_node_id=request.tc_node_id,
                 tc_user_action=request.tc_user_action,
                 tc_domain_id=request.tc_domain_id,
+                mode=mode,
             ),
             media_type="text/event-stream",
             headers={
@@ -361,6 +372,14 @@ def send_chat(
     if dataset_id or is_local_rag():
         try:
             agent = agent_manager.get_agent(user_id, dataset_id or "")
+
+            # qa / learning / classroom_note 三种 mode 下 agent 不可用 → 503
+            if mode in ("qa", "learning", "classroom_note") and not agent.is_ready:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI 服务暂时不可用，请稍后重试",
+                )
+
             if agent.is_ready:
                 history = _load_history(user_id, session_id)
                 if history:
@@ -371,6 +390,7 @@ def send_chat(
                     history,
                     collection_id=collection_id,
                     db=db,
+                    mode=mode,
                 ):
                     if chunk.get("citations"):
                         citations = chunk["citations"]
@@ -378,6 +398,8 @@ def send_chat(
                         full_content += chunk["content"]
                 if full_content:
                     assistant_content = full_content
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"非流式 chat Agent 调用失败: {e}")
 
