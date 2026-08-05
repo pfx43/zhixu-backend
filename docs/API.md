@@ -794,6 +794,7 @@ POST /api/v1/chat
 | `session_id` | string | | 会话 ID，不传则自动创建新会话 |
 | `stream` | bool | | 是否 SSE 流式返回，默认 `false` |
 | `collection_id` | string | | 知识库分区 ID（可选） |
+| `mode` | string | | 对话模式：`"qa"`（默认）、`"learning"`、`"classroom_note"`、`"verify"`。无效值 → 400 |
 | `tc_node_id` | string | | TCN 知识节点 ID（可选） |
 | `tc_user_action` | string | | TCN 用户动作：`correct` / `incorrect`（可选） |
 | `tc_domain_id` | string | | TCN 领域 ID（可选） |
@@ -1833,7 +1834,7 @@ POST /api/v1/tutor/sessions/{session_id}/messages
 
 ## 9. 知识追踪 (KT) — `/api/v1/kt`
 
-> 需要 TCN 服务就绪。若用户 `user_hash` 未初始化，返回 HTTP 503。
+> 需要 TCN 服务就绪。所有 KT 端点增加了前置 TCN 可用性检查，引擎不可达时统一返回 503。
 
 ### 9.1 推荐学习路径
 
@@ -2944,9 +2945,15 @@ GET /health
 
 ```json
 {
-  "status": "degraded",
-  "skills_count": 0,
-  "model_loaded": false,
+  "status": "ok",
+  "skills_count": 128,
+  "model_loaded": true,
+  "llm_ready": true,
+  "tcn_status": "ok",
+  "question_generation": {
+    "ready": true,
+    "status": "available"
+  },
   "api_contract": {
     "status": "ok",
     "required_paths": [
@@ -2996,4 +3003,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.4 · **更新时间**: 2026-08-05 · **维护团队**: 知序 (Zhixu) 后端组
+> **文档版本**: v2.5 · **更新时间**: 2026-08-05 · **维护团队**: 知拾 (Zhishi) 后端组
