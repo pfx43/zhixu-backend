@@ -449,13 +449,13 @@ PATCH /api/v1/auth/users/me
 
 **请求 Body**（所有字段均为可选，仅白名单内的字段会被更新）：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 字段 | 类型 | 必填 | 校验规则 |
 |------|------|:---:|------|
-| `phone` | string | | 手机号 |
-| `nickname` | string | | 昵称 |
-| `gender` | string | | 性别 |
-| `signature` | string | | 个性签名 |
-| `tags` | string | | JSON 字符串数组，如 `"[\"python\",\"ai\"]"` |
+| | `phone` | string | | 空字符串可清除；非空必须是 11 位中国大陆手机号（`1` 开头纯数字）。无效 → 422 |
+| | `nickname` | string | | 昵称 |
+| | `gender` | string | | 空字符串可清除；非空仅接受 `"男"` 或 `"女"`。无效 → 422 |
+| | `signature` | string | | 个性签名 |
+| | `tags` | string | | JSON 字符串数组，如 `"[\"python\",\"ai\"]"` |
 
 **成功响应** (200)：
 
@@ -463,6 +463,29 @@ PATCH /api/v1/auth/users/me
 {
   "message": "资料更新成功",
   "updated_fields": ["nickname", "signature"]
+}
+```
+
+**422 校验失败**（字段错误可由客户端通过 `loc` 稳定定位）：
+
+```json
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "phone"],
+      "msg": "Value error, phone 必须是 11 位中国大陆手机号（1 开头）",
+      "input": "12345"
+    }
+  ]
+}
+```
+
+**409 冲突**（手机号已被其他账号绑定）：
+
+```json
+{
+  "detail": "该手机号已被其他账号绑定"
 }
 ```
 
@@ -2406,6 +2429,10 @@ data: {"agent_session_id":"agent_sess_001","role":"assistant","content":"..."}
 
 ## 13. 笔记系统 (Notes) — `/api/v1/notes`
 
+> 笔记删除采用**软删除 + 7 天回收站**方案。删除后笔记移入回收站保留 7 天，
+> 期间可恢复；到期后服务端自动物理清理。删除和恢复均基于 `expected_revision`
+> 乐观锁，冲突返回 409。列表和详情默认排除已删除笔记。
+
 ### 13.1 列出笔记
 
 ```
@@ -2418,9 +2445,11 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `page` | int | | 页码（≥1），默认 1 |
-| `limit` | int | | 每页条数（1-200），默认 100 |
-| `note_type` | string | | 笔记类型：`manual` / `report` 等（可选过滤） |
+| | `page` | int | | 页码（≥1），默认 1 |
+| | `limit` | int | | 每页条数（1-200），默认 100 |
+| | `note_type` | string | | 笔记类型：`manual` / `report` 等（可选过滤） |
+
+> 默认排除已删除（`deleted_at IS NOT NULL`）的笔记。
 
 **成功响应** (200)：
 
@@ -2439,9 +2468,9 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
 ]
 ```
 
-`revision` 是笔记的稳定整数版本令牌：创建时为 `1`，每次成功的 `PATCH` 恰好递增
-`1`。列表、详情、创建和更新响应均返回它，客户端应把该值持久化为离线 outbox
-操作的基线。
+`revision` 是笔记的稳定整数版本令牌：创建时为 `1`，每次成功的 `PATCH`、
+`DELETE` 或 `POST /restore` 恰好递增 `1`。列表、详情、创建和更新响应均
+返回它，客户端应把该值持久化为离线 outbox 操作的基线。
 
 `created_at` / `updated_at` 仅用于展示。历史 SQLite 数据可能为 `null`，且当前服务
 沿用无偏移量的 UTC ISO 8601 表示；客户端不得根据时间戳精度、时区或空值推导版本。
@@ -2460,7 +2489,7 @@ GET /api/v1/notes/{note_id}
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `note_id` | string | ✓ | 笔记 ID |
+| | `note_id` | string | ✓ | 笔记 ID |
 
 **成功响应** (200)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
 
@@ -2478,10 +2507,10 @@ POST /api/v1/notes
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `title` | string | ✓ | 笔记标题 |
-| `content_md` | string | | Markdown 内容，默认 `""` |
-| `collection_id` | string | | 所属知识库分区 ID（可选） |
-| `note_type` | string | | 笔记类型，默认 `"manual"` |
+| | `title` | string | ✓ | 笔记标题 |
+| | `content_md` | string | | Markdown 内容，默认 `""` |
+| | `collection_id` | string | | 所属知识库分区 ID（可选） |
+| | `note_type` | string | | 笔记类型，默认 `"manual"` |
 
 **成功响应** (201)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
 
@@ -2499,17 +2528,17 @@ PATCH /api/v1/notes/{note_id}
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `note_id` | string | ✓ | 笔记 ID |
+| | `note_id` | string | ✓ | 笔记 ID |
 
 **请求 Body**（`expected_revision` 必填；其他字段可选，传 `null` 表示不更新）：
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `expected_revision` | int | ✓ | 客户端最后读取到的稳定版本，必须 ≥ 1 |
-| `title` | string | | 新标题 |
-| `content_md` | string | | 新 Markdown 内容 |
-| `collection_id` | string | | 新分区 ID |
-| `note_type` | string | | 新笔记类型 |
+| | `expected_revision` | int | ✓ | 客户端最后读取到的稳定版本，必须 ≥ 1 |
+| | `title` | string | | 新标题 |
+| | `content_md` | string | | 新 Markdown 内容 |
+| | `collection_id` | string | | 新分区 ID |
+| | `note_type` | string | | 新笔记类型 |
 
 **成功响应** (200)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
 
@@ -2530,9 +2559,11 @@ PATCH /api/v1/notes/{note_id}
 `note_id` 不存在或不属于当前用户时仍返回普通 `404`，不返回 `current_revision`，
 避免通过冲突接口探测其他用户资源。
 
+> 已软删除（`deleted_at IS NOT NULL`）的笔记不能通过 PATCH 更新，需先恢复。
+
 ---
 
-### 13.5 删除笔记
+### 13.5 删除笔记（软删除）
 
 ```
 DELETE /api/v1/notes/{note_id}
@@ -2544,15 +2575,112 @@ DELETE /api/v1/notes/{note_id}
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| `note_id` | string | ✓ | 笔记 ID |
+| | `note_id` | string | ✓ | 笔记 ID |
+
+**请求 Body**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| | `expected_revision` | int | ✓ | 客户端记录的 revision（≥1） |
 
 **成功响应** (200)：
 
 ```json
 {
-  "message": "笔记已删除"
+  "message": "笔记已移入回收站",
+  "revision": 3
 }
 ```
+
+笔记软删除后：
+- 从普通列表和详情中消失（默认过滤 `WHERE deleted_at IS NULL`）
+- 进入回收站，7 天内可通过 [13.7 恢复笔记](#137-恢复笔记) 恢复
+- `revision` 仍递增 `1`
+- 重复删除已移入回收站的笔记为**幂等操作**，返回相同结果
+
+**版本冲突** (409)：同 [13.4 更新笔记](#134-更新笔记) 的冲突格式。
+
+---
+
+### 13.6 回收站列表
+
+```
+GET /api/v1/notes/trash/items?page=1&limit=50
+```
+
+**需要鉴权**：是
+
+**Query 参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| | `page` | int | | 页码（≥1），默认 1 |
+| | `limit` | int | | 每页条数（1-200），默认 50 |
+
+**成功响应** (200)：
+
+```json
+[
+  {
+    "id": "note_001",
+    "title": "已删除的笔记",
+    "note_type": "manual",
+    "revision": 3,
+    "deleted_at": "2025-01-01T12:00:00",
+    "deleted_by_revision": 1
+  }
+]
+```
+
+> `revision` 是删除后的当前版本号，用于恢复时的乐观锁；`deleted_by_revision`
+> 是触发删除时的 revision（可审计用途）。
+
+---
+
+### 13.7 恢复笔记
+
+```
+POST /api/v1/notes/{note_id}/restore
+```
+
+**需要鉴权**：是
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| | `note_id` | string | ✓ | 笔记 ID |
+
+**请求 Body**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| | `expected_revision` | int | ✓ | 回收站中记录的 revision（≥1） |
+
+**成功响应** (200)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构，
+`revision` 递增 `1`，`deleted_at` 恢复为 `null`。
+
+恢复后笔记重新出现在普通列表中，并从回收站消失。
+
+**错误响应**：
+
+- `404`：笔记不存在、不属于当前用户或不在回收站中
+- `409`：revision 冲突（同 [13.4 更新笔记](#134-更新笔记) 格式）
+- 重复恢复已恢复的笔记为**幂等操作**，返回 200
+
+---
+
+### 13.8 软删除与回收站说明
+
+| 行为 | 说明 |
+|------|------|
+| 保留期 | 删除后服务端保留 7 天，到期自动物理清理 |
+| 并发安全 | 删除和恢复均基于 `expected_revision` 原子条件写入（`UPDATE ... WHERE revision=:expected`） |
+| 跨账号隔离 | 所有回收站操作均按 `user_id` 过滤，用户 A 无法查看或操作用户 B 的已删除笔记 |
+| 幂等性 | 重复删除已删除笔记 → 200；重复恢复已恢复笔记 → 200 |
+| 编辑限制 | 已删除笔记不能通过 PATCH 更新，必须先恢复 |
+| 迁移 | 新增 `deleted_at`（DateTime）和 `deleted_by_revision`（Integer）可空列；SQLite 回滚使用 batch mode |
+| 客户端注意 | 当前后端负责 7 天清理，客户端不应自行计算和展示"剩余恢复天数"计时器 |
 
 ---
 
@@ -2725,4 +2853,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.2 · **更新时间**: 2026-08-02 · **维护团队**: 知拾 (Zhishi) 后端组
+> **文档版本**: v2.3 · **更新时间**: 2026-08-05 · **维护团队**: 知拾 (Zhishi) 后端组
