@@ -19,3 +19,6 @@ class UserNote(Base):
     revision = Column(Integer, nullable=False, default=1, server_default="1")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # 软删除与回收站
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by_revision = Column(Integer, nullable=True)

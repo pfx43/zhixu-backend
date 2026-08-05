@@ -29,6 +29,20 @@ class NoteUpdate(BaseModel):
     note_type: str | None = None
 
 
+class NoteDelete(BaseModel):
+    expected_revision: int = Field(
+        ge=1,
+        description="客户端读取到的笔记 revision；用于乐观并发控制。",
+    )
+
+
+class NoteRestore(BaseModel):
+    expected_revision: int = Field(
+        ge=1,
+        description="回收站中记录的 revision；用于乐观并发控制。",
+    )
+
+
 class NoteResponse(BaseModel):
     id: str
     title: str
@@ -38,6 +52,15 @@ class NoteResponse(BaseModel):
     revision: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+
+class NoteTrashResponse(BaseModel):
+    id: str
+    title: str
+    note_type: str
+    revision: int
+    deleted_at: datetime | None = None
+    deleted_by_revision: int | None = None
 
 
 class NoteRevisionConflictDetail(BaseModel):
@@ -66,6 +89,17 @@ def _note_response(r):
     }
 
 
+def _trash_response(r):
+    return {
+        "id": r.id,
+        "title": r.title,
+        "note_type": r.note_type,
+        "revision": r.revision,
+        "deleted_at": r.deleted_at.isoformat() if r.deleted_at else None,
+        "deleted_by_revision": r.deleted_by_revision,
+    }
+
+
 @router.get("", response_model=list[NoteResponse])
 def list_notes(
     page: int = Query(1, ge=1),
@@ -74,21 +108,40 @@ def list_notes(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """列出当前用户的笔记"""
+    """列出当前用户的笔记（默认排除已删除）"""
     rows = note_crud.list_notes(
         db, current_user["user_id"], note_type=note_type, limit=limit
     )
     return [_note_response(r) for r in rows]
 
 
+# ── 静态路由必须在动态路由之前注册 ──────────────────────────
+
+@router.get("/trash/items", response_model=list[NoteTrashResponse])
+def list_trash(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """列出当前用户回收站中的已删除笔记"""
+    rows = note_crud.list_trash(
+        db, current_user["user_id"], page=page, limit=limit
+    )
+    return [_trash_response(r) for r in rows]
+
+
 @router.get("/{note_id}", response_model=NoteResponse)
 def get_note(
     note_id: str,
+    include_deleted: bool = Query(False),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
     """获取单条笔记详情"""
-    row = note_crud.get_note_by_id(db, current_user["user_id"], note_id)
+    row = note_crud.get_note_by_id(
+        db, current_user["user_id"], note_id, include_deleted=include_deleted
+    )
     if not row:
         raise HTTPException(status_code=404, detail="笔记不存在")
     return _note_response(row)
@@ -111,6 +164,44 @@ def create_note(
     )
     db.commit()
     return _note_response(row)
+
+
+@router.post(
+    "/{note_id}/restore",
+    response_model=NoteResponse,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "客户端基于的笔记版本已过期。",
+            "model": NoteRevisionConflictResponse,
+        }
+    },
+)
+def restore_note(
+    note_id: str,
+    payload: NoteRestore,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """从回收站恢复笔记（基于 revision 乐观锁）"""
+    result = note_crud.restore_note(
+        db,
+        current_user["user_id"],
+        note_id,
+        expected_revision=payload.expected_revision,
+    )
+    if not result.success:
+        if result.current_revision is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "note_revision_conflict",
+                    "detail": "笔记已被更新，请使用最新版本重试",
+                    "current_revision": result.current_revision,
+                },
+            )
+        raise HTTPException(status_code=404, detail="笔记不存在或不在回收站中")
+    db.commit()
+    return _note_response(result.note)
 
 
 @router.patch(
@@ -156,15 +247,41 @@ def update_note(
     return response
 
 
-@router.delete("/{note_id}")
+@router.delete(
+    "/{note_id}",
+    responses={
+        status.HTTP_409_CONFLICT: {
+            "description": "客户端基于的笔记版本已过期。",
+            "model": NoteRevisionConflictResponse,
+        }
+    },
+)
 def delete_note(
     note_id: str,
+    payload: NoteDelete,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """删除笔记"""
-    ok = note_crud.delete_note(db, current_user["user_id"], note_id)
-    if not ok:
+    """软删除笔记（基于 revision 乐观锁）"""
+    result = note_crud.delete_note(
+        db,
+        current_user["user_id"],
+        note_id,
+        expected_revision=payload.expected_revision,
+    )
+    if not result.success:
+        if result.current_revision is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "note_revision_conflict",
+                    "detail": "笔记已被更新，请使用最新版本重试",
+                    "current_revision": result.current_revision,
+                },
+            )
         raise HTTPException(status_code=404, detail="笔记不存在")
     db.commit()
-    return {"message": "笔记已删除"}
+    return {
+        "message": "笔记已移入回收站",
+        "revision": result.current_revision,
+    }
