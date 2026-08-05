@@ -18,6 +18,28 @@ cd C:\zhixu-backend
 记录，不会重复建表；必须在部署包含版本化 PATCH 的代码前执行 `alembic upgrade head`。
 升级前已有内存 Token 无法恢复，用户需要登录一次；此后有效 Token 不会因服务重启丢失。
 
+### 当前迁移链（v2.4）
+
+```
+20260802_note_revision
+    ├── 20260804_question_fallbacks   (隔离历史固定占位题模板)
+    └── 20260805_note_soft_delete     (笔记软删除：deleted_at / deleted_by_revision)
+            └── 20260805_note_attachments  (笔记附件表 note_attachments)
+```
+
+`alembic upgrade head` 会自动应用所有 head。部署后可通过 `alembic current` 验证
+所有 head 均已应用。
+
+### ⚠️ 部署前注意
+
+1. **迁移不可逆**：`20260804_question_fallbacks` 的 downgrade 为空（清理的引用数据
+   无法无损恢复）。**生产环境执行前请先备份数据库**。
+2. **存储目录**：笔记附件上传写入 `storage/notes/{user_id}/` 目录。确保服务器进程
+   对项目根目录下的 `storage/` 有读写权限。
+3. **Breaking Change**：`DELETE /api/v1/notes/{note_id}` 现在需要
+   `{"expected_revision": N}` body。旧 Flutter 客户端直接调用将返回 422。
+   详见 `docs/notes_前端对接文档.md`。
+
 `start_server.ps1` 使用脚本所在目录解析路径，启动前拒绝复用已占用的 8765 端口。
 启动校验默认等待 60 秒，可通过 `ZHISHI_STARTUP_TIMEOUT_SECONDS` 调整。只有
 `/health` 返回 `api_contract.status=ok`，确认以下 4 个接口均已加载后才报告成功：
