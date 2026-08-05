@@ -9,6 +9,20 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.crud import note as note_crud
+from app.crud.note import (
+    create_attachment,
+    get_attachment,
+    list_attachments as crud_list_attachments,
+    delete_attachment as crud_delete_attachment,
+    adopt_attachments,
+    cleanup_orphans,
+)
+from fastapi import UploadFile, File, Response
+from fastapi.responses import FileResponse
+import os as _os
+import tempfile as _tempfile
+from pathlib import Path as _Path
+import app.core.config as _app_config
 
 
 class NoteCreate(BaseModel):
@@ -73,6 +87,20 @@ class NoteRevisionConflictResponse(BaseModel):
     detail: NoteRevisionConflictDetail
 
 
+class AttachmentResponse(BaseModel):
+    id: str
+    note_id: str
+    media_type: str
+    mime_type: str
+    file_size: int
+    checksum: str
+    original_filename: str
+    width: int | None = None
+    height: int | None = None
+    duration_seconds: int | None = None
+    uploaded_at: datetime | None = None
+
+
 router = APIRouter(tags=["笔记系统"])
 
 
@@ -100,6 +128,26 @@ def _trash_response(r):
     }
 
 
+def _attachment_response(a):
+    return {
+        "id": a.id,
+        "note_id": a.note_id,
+        "media_type": a.media_type,
+        "mime_type": a.mime_type,
+        "file_size": a.file_size,
+        "checksum": a.checksum,
+        "original_filename": a.original_filename,
+        "width": a.width,
+        "height": a.height,
+        "duration_seconds": a.duration_seconds,
+        "uploaded_at": a.uploaded_at.isoformat() if a.uploaded_at else None,
+    }
+
+
+# ─────────────────────────────────────────────────────────────
+# 列表 (GET "")
+# ─────────────────────────────────────────────────────────────
+
 @router.get("", response_model=list[NoteResponse])
 def list_notes(
     page: int = Query(1, ge=1),
@@ -115,7 +163,9 @@ def list_notes(
     return [_note_response(r) for r in rows]
 
 
-# ── 静态路由必须在动态路由之前注册 ──────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# 静态路由（必须在动态路由 `/{note_id}` 之前注册）
+# ═══════════════════════════════════════════════════════════════
 
 @router.get("/trash/items", response_model=list[NoteTrashResponse])
 def list_trash(
@@ -130,6 +180,50 @@ def list_trash(
     )
     return [_trash_response(r) for r in rows]
 
+
+@router.get("/attachments/{attachment_id}")
+def download_attachment(
+    attachment_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """下载/预览附件。支持 Range 请求和条件缓存。"""
+    attachment = get_attachment(db, current_user["user_id"], attachment_id)
+    if not attachment:
+        raise HTTPException(status_code=404, detail="附件不存在")
+
+    full_path = _Path(_app_config.LOCAL_STORAGE_DIR) / attachment.storage_path
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="附件文件不存在")
+
+    return FileResponse(
+        str(full_path),
+        media_type=attachment.mime_type,
+        filename=attachment.original_filename,
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+
+@router.delete("/attachments/{attachment_id}")
+def delete_attachment_route(
+    attachment_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """删除附件（同时清理物理文件）。"""
+    ok = crud_delete_attachment(db, current_user["user_id"], attachment_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="附件不存在")
+    db.commit()
+    return {"message": "附件已删除"}
+
+
+# ═══════════════════════════════════════════════════════════════
+# 动态路由 (/{note_id})
+# ═══════════════════════════════════════════════════════════════
 
 @router.get("/{note_id}", response_model=NoteResponse)
 def get_note(
@@ -285,3 +379,88 @@ def delete_note(
         "message": "笔记已移入回收站",
         "revision": result.current_revision,
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+# 附件上传 / 列表 (/{note_id}/attachments)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post(
+    "/{note_id}/attachments",
+    status_code=status.HTTP_201_CREATED,
+    response_model=AttachmentResponse,
+)
+def upload_attachment(
+    note_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """上传笔记附件（图片/音频）。支持 SHA-256 去重。"""
+    user_id = current_user["user_id"]
+
+    note = note_crud.get_note_by_id(db, user_id, note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="笔记不存在")
+
+    existing = crud_list_attachments(db, user_id, note_id)
+    from app.crud.note import _MAX_ATTACHMENTS_PER_NOTE
+    if len(existing) >= _MAX_ATTACHMENTS_PER_NOTE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"笔记附件已达上限 ({_MAX_ATTACHMENTS_PER_NOTE} 个)",
+        )
+
+    suffix = _Path(file.filename or "file").suffix or ".bin"
+    fd, tmp_path = _tempfile.mkstemp(suffix=suffix)
+    _os.close(fd)
+    try:
+        with open(tmp_path, "wb") as f:
+            while True:
+                chunk = file.file.read(65536)
+                if not chunk:
+                    break
+                f.write(chunk)
+    except Exception:
+        try:
+            _os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+    try:
+        attachment = create_attachment(
+            db,
+            user_id=user_id,
+            note_id=note_id,
+            file_path=tmp_path,
+            original_filename=file.filename or "unknown",
+        )
+        db.commit()
+        return _attachment_response(attachment)
+    except ValueError as e:
+        try:
+            _os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        try:
+            _os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+@router.get(
+    "/{note_id}/attachments",
+    response_model=list[AttachmentResponse],
+)
+def list_note_attachments(
+    note_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """列出笔记的所有附件。"""
+    attachments = crud_list_attachments(db, current_user["user_id"], note_id)
+    return [_attachment_response(a) for a in attachments]

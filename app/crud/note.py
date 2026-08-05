@@ -5,7 +5,7 @@ from typing import List, Literal, Optional
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from app.models import UserNote
+from app.models import UserNote, NoteAttachment
 
 
 @dataclass(frozen=True)
@@ -321,3 +321,272 @@ def purge_expired_notes(db: Session) -> int:
     )
     db.flush()
     return result.rowcount
+
+
+# ═══════════════════════════════════════════════════════════════
+# 附件 CRUD
+# ═══════════════════════════════════════════════════════════════
+
+import hashlib
+import os as _os
+import mimetypes as _mimetypes
+from pathlib import Path as _Path
+
+from app.core.config import LOCAL_STORAGE_DIR
+
+# 附件存储根目录
+_ATTACHMENT_ROOT = _Path(LOCAL_STORAGE_DIR) / "notes"
+
+# 允许的媒体类型
+_ALLOWED_MEDIA = {
+    "image": {"image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"},
+    "audio": {"audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm"},
+}
+
+# 配额
+_MAX_FILE_SIZE_IMAGE = 10 * 1024 * 1024   # 10 MB
+_MAX_FILE_SIZE_AUDIO = 20 * 1024 * 1024   # 20 MB
+_MAX_ATTACHMENTS_PER_NOTE = 20
+
+
+def _classify_media(mime: str) -> str | None:
+    for media_type, mimes in _ALLOWED_MEDIA.items():
+        if mime in mimes:
+            return media_type
+    return None
+
+
+def _compute_sha256(file_path: str) -> str:
+    h = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def create_attachment(
+    db: Session,
+    *,
+    user_id: int,
+    note_id: str,
+    file_path: str,
+    original_filename: str,
+) -> NoteAttachment:
+    """上传附件并写入 DB。文件已暂存到 file_path。"""
+    mime_type, _ = _mimetypes.guess_type(original_filename)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    media_type = _classify_media(mime_type)
+    if media_type is None:
+        raise ValueError(f"不支持的媒体类型: {mime_type}")
+
+    file_size = _os.path.getsize(file_path)
+    max_size = _MAX_FILE_SIZE_AUDIO if media_type == "audio" else _MAX_FILE_SIZE_IMAGE
+    if file_size > max_size:
+        raise ValueError(
+            f"文件过大: {file_size} bytes, 上限 {max_size} bytes"
+        )
+
+    checksum = _compute_sha256(file_path)
+
+    # 去重：同一用户同一 checksum 的附件复用
+    existing = find_by_checksum(db, user_id, checksum)
+    if existing:
+        # 删除临时文件
+        try:
+            _os.unlink(file_path)
+        except OSError:
+            pass
+        # 创建新 DB 记录指向同一文件
+        attachment = NoteAttachment(
+            note_id=note_id,
+            user_id=user_id,
+            media_type=media_type,
+            mime_type=mime_type,
+            file_size=existing.file_size,
+            checksum=checksum,
+            storage_path=existing.storage_path,
+            original_filename=original_filename,
+            width=existing.width,
+            height=existing.height,
+            duration_seconds=existing.duration_seconds,
+        )
+        db.add(attachment)
+        db.flush()
+        return attachment
+
+    # 移动文件到目标路径
+    ext = _Path(original_filename).suffix.lower() or ".bin"
+    attachment_id = _os.urandom(16).hex()
+    target_dir = _ATTACHMENT_ROOT / str(user_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_name = f"{attachment_id}{ext}"
+    target_path = target_dir / target_name
+
+    _os.rename(file_path, str(target_path))
+
+    attachment = NoteAttachment(
+        id=attachment_id,
+        note_id=note_id,
+        user_id=user_id,
+        media_type=media_type,
+        mime_type=mime_type,
+        file_size=file_size,
+        checksum=checksum,
+        storage_path=str(_Path("notes") / str(user_id) / target_name),
+        original_filename=original_filename,
+    )
+    db.add(attachment)
+    db.flush()
+    return attachment
+
+
+def get_attachment(
+    db: Session,
+    user_id: int,
+    attachment_id: str,
+) -> NoteAttachment | None:
+    return (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.id == attachment_id,
+            NoteAttachment.user_id == user_id,
+        )
+        .first()
+    )
+
+
+def list_attachments(
+    db: Session,
+    user_id: int,
+    note_id: str,
+) -> List[NoteAttachment]:
+    return (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.note_id == note_id,
+            NoteAttachment.user_id == user_id,
+        )
+        .order_by(NoteAttachment.uploaded_at.asc())
+        .all()
+    )
+
+
+def delete_attachment(
+    db: Session,
+    user_id: int,
+    attachment_id: str,
+) -> bool:
+    """删除附件 DB 记录。若没有其他记录引用同一文件，则同时删除物理文件。"""
+    attachment = get_attachment(db, user_id, attachment_id)
+    if not attachment:
+        return False
+
+    storage_path = attachment.storage_path
+    db.delete(attachment)
+    db.flush()
+
+    # 检查是否有其他记录引用同一文件
+    others = (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.storage_path == storage_path,
+            NoteAttachment.id != attachment_id,
+        )
+        .first()
+    )
+    if not others:
+        full_path = _Path(LOCAL_STORAGE_DIR) / storage_path
+        try:
+            _os.unlink(str(full_path))
+        except OSError:
+            pass
+
+    return True
+
+
+def find_by_checksum(
+    db: Session,
+    user_id: int,
+    checksum: str,
+) -> NoteAttachment | None:
+    return (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.user_id == user_id,
+            NoteAttachment.checksum == checksum,
+        )
+        .first()
+    )
+
+
+def adopt_attachments(
+    db: Session,
+    user_id: int,
+    note_id: str,
+    revision: int,
+    attachment_ids: List[str],
+) -> int:
+    """将指定附件挂载到笔记 revision。返回挂载数量。"""
+    result = db.execute(
+        update(NoteAttachment)
+        .where(
+            NoteAttachment.id.in_(attachment_ids),
+            NoteAttachment.user_id == user_id,
+            NoteAttachment.note_id == note_id,
+        )
+        .values(note_revision=revision)
+        .execution_options(synchronize_session=False)
+    )
+    db.flush()
+    return result.rowcount
+
+
+def orphan_attachments(
+    db: Session,
+    user_id: int,
+    older_than_minutes: int = 60,
+) -> List[NoteAttachment]:
+    """列出超过指定时间未挂载的孤儿附件。"""
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(
+        minutes=older_than_minutes
+    )
+    return (
+        db.query(NoteAttachment)
+        .filter(
+            NoteAttachment.user_id == user_id,
+            NoteAttachment.note_revision.is_(None),
+            NoteAttachment.uploaded_at < cutoff,
+        )
+        .all()
+    )
+
+
+def cleanup_orphans(db: Session, user_id: int) -> int:
+    """物理删除孤儿附件（文件 + DB 记录）。返回删除数量。"""
+    orphans = orphan_attachments(db, user_id, older_than_minutes=60)
+    count = 0
+    for attachment in orphans:
+        storage_path = attachment.storage_path
+        others = (
+            db.query(NoteAttachment)
+            .filter(
+                NoteAttachment.storage_path == storage_path,
+                NoteAttachment.id != attachment.id,
+            )
+            .first()
+        )
+        db.delete(attachment)
+        if not others:
+            full_path = _Path(LOCAL_STORAGE_DIR) / storage_path
+            try:
+                _os.unlink(str(full_path))
+            except OSError:
+                pass
+        count += 1
+    db.flush()
+    return count

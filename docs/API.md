@@ -2682,6 +2682,149 @@ POST /api/v1/notes/{note_id}/restore
 | 迁移 | 新增 `deleted_at`（DateTime）和 `deleted_by_revision`（Integer）可空列；SQLite 回滚使用 batch mode |
 | 客户端注意 | 当前后端负责 7 天清理，客户端不应自行计算和展示"剩余恢复天数"计时器 |
 
+### 13.9 上传附件
+
+```
+POST /api/v1/notes/{note_id}/attachments
+```
+
+**需要鉴权**：是
+**Content-Type**：`multipart/form-data`
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `note_id` | string | ✓ | 笔记 ID |
+
+**表单字段**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `file` | file | ✓ | 图片或音频文件 |
+
+> 支持 SHA-256 去重：相同文件重复上传不会重复占用存储空间，直接复用已有文件。
+> 单文件上限：图片 10 MB、音频 20 MB；单笔记附件上限 20 个。
+
+**成功响应** (201)：
+
+```json
+{
+  "id": "att_3f8a7b2c",
+  "note_id": "note_001",
+  "media_type": "image",
+  "mime_type": "image/png",
+  "file_size": 245760,
+  "checksum": "a1b2c3d4e5f6...",
+  "original_filename": "screenshot.png",
+  "width": null,
+  "height": null,
+  "duration_seconds": null,
+  "uploaded_at": "2025-01-01T15:00:00"
+}
+```
+
+**错误响应**：
+
+- `404`：笔记不存在或不属于当前用户
+- `400`：文件类型不支持 / 超过大小限制 / 附件数量达上限
+
+### 13.10 下载/预览附件
+
+```
+GET /api/v1/notes/attachments/{attachment_id}
+```
+
+**需要鉴权**：是
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `attachment_id` | string | ✓ | 附件 ID |
+
+**成功响应** (200)：返回文件流（`image/png`、`audio/mp4` 等），响应头包含：
+
+```
+Cache-Control: private, max-age=3600
+Accept-Ranges: bytes
+```
+
+支持 HTTP `Range` 请求（206 Partial Content），客户端可按需分段加载音频。
+
+**错误响应**：
+
+- `404`：附件不存在、不属于当前用户或物理文件丢失
+
+### 13.11 删除附件
+
+```
+DELETE /api/v1/notes/attachments/{attachment_id}
+```
+
+**需要鉴权**：是
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `attachment_id` | string | ✓ | 附件 ID |
+
+**成功响应** (200)：
+
+```json
+{
+  "message": "附件已删除"
+}
+```
+
+> 删除 DB 记录同时清理物理文件；若其他记录引用同一文件（去重场景），则仅删除记录不删除文件。
+
+### 13.12 列出笔记附件
+
+```
+GET /api/v1/notes/{note_id}/attachments
+```
+
+**需要鉴权**：是
+
+**路径参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|:---:|------|
+| `note_id` | string | ✓ | 笔记 ID |
+
+**成功响应** (200)：
+
+```json
+[
+  {
+    "id": "att_3f8a7b2c",
+    "note_id": "note_001",
+    "media_type": "image",
+    "mime_type": "image/png",
+    "file_size": 245760,
+    "checksum": "a1b2c3d4e5f6...",
+    "original_filename": "screenshot.png",
+    "width": null,
+    "height": null,
+    "duration_seconds": null,
+    "uploaded_at": "2025-01-01T15:00:00"
+  }
+]
+```
+
+### 13.13 附件说明
+
+| 行为 | 说明 |
+|------|------|
+| 支持类型 | 图片：png / jpeg / gif / webp / svg；音频：mp4 / mpeg / ogg / wav / webm |
+| 去重 | 基于 SHA-256 校验和，同一用户相同文件只存一份 |
+| 孤儿清理 | 上传后若笔记未保存，超过 60 分钟的未挂载附件会被自动物理清理 |
+| 生命周期 | 附件随笔记软删除进入回收站，笔记物理删除时附件不自动清理（需手动删除或依赖孤儿机制） |
+| 安全 | 下载时检查 `user_id` 匹配；图片不内联返回原始二进制，统一使用 `Content-Disposition: inline` |
+| 迁移 | 新增 `note_attachments` 表；SQLite 回滚使用 batch mode |
+
 ---
 
 ## 14. 独立知识搜索 (Search) — `/api/v1/search`
@@ -2853,4 +2996,4 @@ GET /test-plan-query/{user_id}
 
 ---
 
-> **文档版本**: v2.3 · **更新时间**: 2026-08-05 · **维护团队**: 知拾 (Zhishi) 后端组
+> **文档版本**: v2.4 · **更新时间**: 2026-08-05 · **维护团队**: 知序 (Zhixu) 后端组
