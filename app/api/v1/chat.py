@@ -306,6 +306,20 @@ def _stream_agent_response(
         yield f"event: message\ndata: {data}\n\n"
 
 
+@router.get("")
+def chat_info():
+    """返回聊天服务状态与接口说明"""
+    return {
+        "service": "chat",
+        "endpoints": {
+            "send": "POST /api/v1/chat",
+            "history": "GET /api/v1/chat/history?session_id=xxx",
+            "sessions": "GET /api/v1/chat/sessions",
+            "delete_session": "DELETE /api/v1/chat/sessions/{session_id}",
+        },
+    }
+
+
 @router.post("", response_model=ChatResponse)
 def send_chat(
     request: ChatRequest,

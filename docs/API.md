@@ -778,6 +778,30 @@ POST /api/v1/onboarding/restart
 
 ## 4. 智能聊天 (Chat) — `/api/v1/chat`
 
+### 4.0 聊天服务信息
+
+```
+GET /api/v1/chat
+```
+
+> 无需鉴权，返回聊天服务的端点信息。
+
+**成功响应** (200)：
+
+```json
+{
+  "service": "chat",
+  "endpoints": {
+    "send": "POST /api/v1/chat",
+    "history": "GET /api/v1/chat/history?session_id=xxx",
+    "sessions": "GET /api/v1/chat/sessions",
+    "delete_session": "DELETE /api/v1/chat/sessions/{session_id}"
+  }
+}
+```
+
+---
+
 ### 4.1 发送对话消息
 
 ```
