@@ -5,6 +5,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from fastapi import FastAPI, HTTPException
+from fastapi.testclient import TestClient
+
+from app.api.v1 import questions as question_api
 from app.crud import question as question_crud
 from app.services.quiz import question_gen_service
 from app.services.quiz.question_generation_guard import (
@@ -44,6 +48,255 @@ class _FlushOnlyDb:
 
 
 class QuestionGenerationFailureTests(unittest.TestCase):
+    def test_question_api_returns_stable_503_when_agent_is_unavailable(self):
+        document = SimpleNamespace(
+            id="document-1",
+            zone="study",
+            segment_status="completed",
+            question_gen_status="not_started",
+        )
+        db = _FlushOnlyDb()
+        app = FastAPI()
+        app.include_router(question_api.router, prefix="/api/v1/questions")
+        app.dependency_overrides[question_api.get_db] = lambda: db
+        app.dependency_overrides[question_api.get_current_active_user] = lambda: {
+            "user_id": 1
+        }
+
+        with (
+            patch.object(
+                question_gen_service.kb_crud,
+                "get_document_by_id_or_dify",
+                return_value=document,
+            ),
+            patch.object(
+                question_gen_service,
+                "get_question_agent_readiness",
+                return_value={
+                    "ready": False,
+                    "status": "unavailable",
+                    "reason": "agent_unavailable",
+                },
+            ),
+            patch.object(
+                question_gen_service,
+                "is_question_gen_async",
+                return_value=True,
+            ),
+        ):
+            response = TestClient(app).post(
+                "/api/v1/questions/generate",
+                json={"document_id": document.id},
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json(),
+            {
+                "detail": {
+                    "code": "question_generation_unavailable",
+                    "message": "题目生成服务暂时不可用，请稍后重试。",
+                }
+            },
+        )
+        self.assertEqual(document.question_gen_status, "not_started")
+        self.assertEqual(db.flush_count, 0)
+
+    def test_async_schedule_rejects_unavailable_agent_before_processing(self):
+        document = SimpleNamespace(
+            id="document-1",
+            zone="study",
+            segment_status="completed",
+            question_gen_status="not_started",
+        )
+        db = _FlushOnlyDb()
+
+        with (
+            patch.object(
+                question_gen_service.kb_crud,
+                "get_document_by_id_or_dify",
+                return_value=document,
+            ),
+            patch.object(
+                question_gen_service,
+                "get_question_agent_readiness",
+                return_value={
+                    "ready": False,
+                    "status": "unavailable",
+                    "reason": "agent_unavailable",
+                },
+            ),
+            patch.object(
+                question_gen_service,
+                "_start_question_gen_thread",
+                side_effect=AssertionError("unavailable agent must not start a worker"),
+            ),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                question_gen_service.schedule_generate_questions(
+                    db,
+                    user_id=1,
+                    document_id=document.id,
+                )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertEqual(
+            raised.exception.detail,
+            {
+                "code": "question_generation_unavailable",
+                "message": "题目生成服务暂时不可用，请稍后重试。",
+            },
+        )
+        self.assertEqual(document.question_gen_status, "not_started")
+        self.assertEqual(db.flush_count, 0)
+
+    def test_sync_generation_rejects_unavailable_agent_before_processing(self):
+        document = SimpleNamespace(
+            id="document-1",
+            zone="study",
+            segment_status="completed",
+            question_gen_status="not_started",
+        )
+        segment = SimpleNamespace(id="segment-1", document_id=document.id)
+        db = _FlushOnlyDb()
+
+        with (
+            patch.object(
+                question_gen_service.kb_crud,
+                "get_document_by_id_or_dify",
+                return_value=document,
+            ),
+            patch.object(
+                question_gen_service.segment_crud,
+                "list_segments_for_document",
+                return_value=[segment],
+            ),
+            patch.object(
+                question_gen_service,
+                "get_question_agent_readiness",
+                return_value={"ready": False},
+            ),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                question_gen_service.generate_questions(
+                    db,
+                    user_id=1,
+                    document_id=document.id,
+                )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertEqual(document.question_gen_status, "not_started")
+        self.assertEqual(db.flush_count, 0)
+
+    def test_async_page_schedules_reject_unavailable_agent_before_processing(self):
+        for schedule in (
+            question_gen_service.schedule_generate_from_pages,
+            question_gen_service.schedule_extract_from_pages,
+        ):
+            with self.subTest(schedule=schedule.__name__):
+                document = SimpleNamespace(
+                    id="document-1",
+                    zone="study",
+                    question_gen_status="not_started",
+                )
+                db = _FlushOnlyDb()
+
+                with (
+                    patch.object(
+                        question_gen_service.kb_crud,
+                        "get_document_by_id_or_dify",
+                        return_value=document,
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "get_pages_by_numbers",
+                        return_value=[{"page_number": 1, "content": "资料内容"}],
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "get_question_agent_readiness",
+                        return_value={
+                            "ready": False,
+                            "status": "unavailable",
+                            "reason": "agent_unavailable",
+                        },
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "_start_question_gen_thread",
+                        side_effect=AssertionError(
+                            "unavailable agent must not start a worker"
+                        ),
+                    ),
+                ):
+                    with self.assertRaises(HTTPException) as raised:
+                        schedule(
+                            db,
+                            user_id=1,
+                            document_id=document.id,
+                            page_numbers=[1],
+                        )
+
+                self.assertEqual(raised.exception.status_code, 503)
+                self.assertEqual(document.question_gen_status, "not_started")
+                self.assertEqual(db.flush_count, 0)
+
+    def test_sync_page_operations_reject_unavailable_agent_before_processing(self):
+        for operation in (
+            question_gen_service.generate_from_pages,
+            question_gen_service.extract_from_pages,
+        ):
+            with self.subTest(operation=operation.__name__):
+                document = SimpleNamespace(
+                    id="document-1",
+                    zone="study",
+                    question_gen_status="not_started",
+                )
+                db = _FlushOnlyDb()
+                with (
+                    patch.object(
+                        question_gen_service.kb_crud,
+                        "get_document_by_id_or_dify",
+                        return_value=document,
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "get_pages_by_numbers",
+                        return_value=[{"page_number": 1, "content": "资料内容"}],
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "get_question_agent_readiness",
+                        return_value={"ready": False},
+                    ),
+                ):
+                    with self.assertRaises(HTTPException) as raised:
+                        operation(
+                            db,
+                            user_id=1,
+                            document_id=document.id,
+                            page_numbers=[1],
+                        )
+
+                self.assertEqual(raised.exception.status_code, 503)
+                self.assertEqual(document.question_gen_status, "not_started")
+                self.assertEqual(db.flush_count, 0)
+
+    def test_readiness_probe_error_is_reported_as_service_unavailable(self):
+        with patch.object(
+            question_gen_service,
+            "get_question_agent_readiness",
+            side_effect=RuntimeError("probe failed"),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                question_gen_service._require_question_generation_ready()
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertEqual(
+            raised.exception.detail["code"],
+            "question_generation_unavailable",
+        )
+
     def test_exact_fallback_signature_is_detected(self):
         self.assertTrue(
             is_fixed_fallback_template(
@@ -186,6 +439,11 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                         question_gen_service.tag_crud,
                         "list_tags_for_user",
                         return_value=[],
+                    ),
+                    patch.object(
+                        question_gen_service,
+                        "get_question_agent_readiness",
+                        return_value={"ready": True},
                     ),
                     patch.object(
                         question_gen_service,

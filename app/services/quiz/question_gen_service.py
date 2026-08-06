@@ -31,6 +31,7 @@ from app.schemas.question import (
     ProvenanceOut,
 )
 from app.services.knowledge.page_service import get_pages_by_numbers
+from app.services.llm.llm_config import create_base_api
 from app.services.quiz.question_hash import compute_content_hash
 from app.services.llm.llm_runner import llm_predict_no_stream
 
@@ -64,10 +65,7 @@ def _get_llm():
     if _llm_instance is not None:
         return _llm_instance
     try:
-        from app.utils.tina_loader import tina_env_path
-        from tina.llm import BaseAPI
-
-        _llm_instance = BaseAPI(env_path=tina_env_path())
+        _llm_instance = create_base_api()
         return _llm_instance
     except Exception:
         logger.warning("Tina LLM 不可用，将使用模板出题", exc_info=True)
@@ -519,10 +517,6 @@ def generate_questions(
         segments = segment_crud.list_segments_for_document(db, document.id)
         target_doc_id = document.id
 
-    tag_hint_global = _format_tag_hint(
-        _existing_tag_names(db, user_id, document_id=target_doc_id)
-    )
-
     if not segments:
         if document:
             document.question_gen_status = "failed"
@@ -535,6 +529,11 @@ def generate_questions(
             total_questions=0,
         )
 
+    if provider is None:
+        _require_question_generation_ready()
+    tag_hint_global = _format_tag_hint(
+        _existing_tag_names(db, user_id, document_id=target_doc_id)
+    )
     document.question_gen_status = "processing"
     db.flush()
 
@@ -598,6 +597,31 @@ def _start_question_gen_thread(worker) -> None:
     run_in_background(worker, name="question-gen")
 
 
+def get_question_agent_readiness(*, probe: bool = True) -> dict:
+    from app.services.quiz.question_gen_agent import (
+        get_question_agent_readiness as read_question_agent_readiness,
+    )
+
+    return read_question_agent_readiness(probe=probe)
+
+
+def _require_question_generation_ready() -> None:
+    try:
+        readiness = get_question_agent_readiness(probe=True)
+    except Exception:
+        logger.exception("Question Agent readiness 探测失败")
+        readiness = {"ready": False}
+    if readiness.get("ready"):
+        return
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "code": "question_generation_unavailable",
+            "message": "题目生成服务暂时不可用，请稍后重试。",
+        },
+    )
+
+
 def schedule_generate_questions(
     db: Session,
     user_id: int,
@@ -627,6 +651,7 @@ def schedule_generate_questions(
         document = _validate_document_for_generation(document)
         target_doc_id = document.id
 
+    _require_question_generation_ready()
     document.question_gen_status = "processing"
     db.flush()
 
@@ -677,6 +702,8 @@ def schedule_generate_from_pages(
     doc = _validate_document_for_page_ops(doc)
     get_pages_by_numbers(db, doc, page_numbers)
 
+    if provider is None:
+        _require_question_generation_ready()
     doc.question_gen_status = "processing"
     db.flush()
 
@@ -730,6 +757,8 @@ def schedule_extract_from_pages(
     doc = _validate_document_for_page_ops(doc)
     get_pages_by_numbers(db, doc, page_numbers)
 
+    if provider is None:
+        _require_question_generation_ready()
     doc.question_gen_status = "processing"
     db.flush()
 
@@ -908,6 +937,8 @@ def generate_from_pages(
     doc = _validate_document_for_page_ops(doc)
 
     pages = get_pages_by_numbers(db, doc, page_numbers)
+    if provider is None:
+        _require_question_generation_ready()
     created_count = 0
     reused_count = 0
     total_questions = 0
@@ -978,6 +1009,8 @@ def extract_from_pages(
     doc = _validate_document_for_page_ops(doc)
 
     pages = get_pages_by_numbers(db, doc, page_numbers)
+    if provider is None:
+        _require_question_generation_ready()
     extract_fn = provider or (lambda p: _llm_extract_for_page(
         p, tag_hint=_format_tag_hint(_existing_tag_names(db, user_id, document_id=doc.id))
     ))

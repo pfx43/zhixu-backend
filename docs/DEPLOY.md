@@ -18,6 +18,12 @@ cd C:\zhixu-backend
 记录，不会重复建表；必须在部署包含版本化 PATCH 的代码前执行 `alembic upgrade head`。
 升级前已有内存 Token 无法恢复，用户需要登录一次；此后有效 Token 不会因服务重启丢失。
 
+题目生成依赖 `LLM_API_KEY`、`BASE_URL`、`MODEL_NAME` 三项配置。生产环境应通过
+进程环境变量或项目根目录 `.env` 注入，进程环境变量优先；根目录 `tina.env` 只作为
+旧部署兼容回退。不要把真实密钥写入仓库。缺少任一项时，题目生成接口会在写入
+`question_gen_status=processing` 前返回 `503` 与稳定错误码
+`question_generation_unavailable`，不会启动必然失败的后台任务。
+
 ### 当前迁移链（v2.4）
 
 ```
@@ -53,6 +59,18 @@ cd C:\zhixu-backend
 
 若提示端口被旧进程占用，先确认并停止旧后端，再重新执行脚本。
 端口默认是 8765；需要临时改端口时可设置 `ZHISHI_BACKEND_PORT`。
+
+部署重启后必须同时核对 LLM 与 Question Agent readiness：
+
+```powershell
+$health = Invoke-RestMethod http://127.0.0.1:8765/health
+$health.llm_ready
+$health.question_generation.ready
+```
+
+两项都应为 `True`。readiness 只证明配置可解析且 Agent 可初始化；最终还要使用一次性
+正式账号执行“上传并完成分段 -> 生成题目 -> 等待 `completed` -> 读取非空题库”的
+真实链路，才能证明上游模型调用可用。
 
 ## 环境要求
 
@@ -159,6 +177,7 @@ Flutter 端配置：`设置页面 → KT 后端地址` 填入对应地址。
 | 连接被拒绝 | 防火墙拦截或地址绑定问题 | 允许 Python 通过防火墙，或使用 `--host 0.0.0.0` 监听 |
 | `torch` 安装失败 | 网络/平台问题 | `pip install torch --index-url https://download.pytorch.org/whl/cpu` |
 | `TCN 健康检查失败 / All connection attempts failed` | TCN 引擎服务未启动或地址错误 | 检查 `http://127.0.0.1:8001` 是否可访问；若 TCN 未部署，后端会自动降级，但部分 KT 能力不可用 |
+| 生成题目立即返回 503 | LLM 三项配置缺失，或 Question Agent 无法初始化 | 检查 `/health` 的 `llm_ready`、`question_generation.reason`，确认 `LLM_API_KEY`、`BASE_URL`、`MODEL_NAME` 已注入后重启服务 |
 | `401 Unauthorized` | 登录态失效或未携带有效 token | 先调用登录接口获取 token，并在后续请求头里带上 `Authorization: Bearer <token>` |
 | `500 Internal Server Error` | 业务代码异常，常见于数据库或请求参数问题 | 查看后端控制台日志，重点看 `app.services.tcn_client`、数据库初始化和 SQLAlchemy 异常 |
 
