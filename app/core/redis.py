@@ -1,6 +1,9 @@
 import fnmatch
 import json
+import os
 import time
+
+import redis
 
 
 class MemoryCache:
@@ -90,4 +93,68 @@ class MemoryCache:
         return removed
 
 
-cache = MemoryCache()
+class RedisCache:
+    """Redis 缓存，用于生产环境。
+
+    方法与 MemoryCache 对齐，调用方无需感知底层实现。
+    """
+
+    def __init__(self, redis_url: str):
+        self._client = redis.Redis.from_url(redis_url, decode_responses=True)
+
+    def set_session(self, token: str, user_data: dict, ttl: int = 604800):
+        self.set_value(f"auth:token:{token}", json.dumps(user_data), ttl)
+
+    def get_session(self, token: str):
+        data = self.get_value(f"auth:token:{token}")
+        return json.loads(data) if data else None
+
+    def set_value(self, key: str, value: str, ttl: int = None):
+        if ttl is not None:
+            self._client.setex(key, ttl, value)
+        else:
+            self._client.set(key, value)
+
+    def get_value(self, key: str):
+        return self._client.get(key)
+
+    def delete_key(self, key: str):
+        self._client.delete(key)
+
+    def scan_keys(self, pattern: str):
+        """使用 SCAN 遍历 key，客户端侧 fnmatch 过滤。
+
+        注意：fnmatch 与 Redis 的 glob 风格略有差异（如 [chars] 语法），
+        生产若需要完全一致的行为可改为使用 KEYS 配合哨兵或 lua 脚本。
+        """
+        cursor = 0
+        while True:
+            cursor, keys = self._client.scan(cursor=cursor, match="*", count=100)
+            for key in keys:
+                if fnmatch.fnmatch(key, pattern):
+                    yield key
+            if cursor == 0:
+                break
+
+    def lpush(self, key: str, *values):
+        return self._client.lpush(key, *values)
+
+    def rpush(self, key: str, *values):
+        return self._client.rpush(key, *values)
+
+    def lrange(self, key: str, start: int, end: int):
+        return self._client.lrange(key, start, end)
+
+    def lrem(self, key: str, count: int, value: str):
+        return self._client.lrem(key, count, value)
+
+
+# 模块级缓存实例，按 CACHE_BACKEND 切换
+
+CACHE_BACKEND = os.getenv("CACHE_BACKEND", "memory")
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+if CACHE_BACKEND == "redis":
+    cache = RedisCache(REDIS_URL)
+else:
+    cache = MemoryCache()

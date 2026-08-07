@@ -1,4 +1,18 @@
 {
+  "database": {
+    "url": "postgresql://zhixu:zhixu123@43.139.115.132:5433/zhixu",
+    "pool_size": 5,
+    "max_overflow": 10,
+    "pool_recycle": 3600,
+    "echo": false
+  },
+  "cache": {
+    "backend": "redis",
+    "redis": {
+      "url": "redis://:zhixu123@43.139.115.132:6379/0",
+      "ttl": 604800
+    }
+  },
   "ocr_max_parallel_pages": 1,
   "pdf_ocr_max_pages": 50,
   "pdf_max_pages": 0,

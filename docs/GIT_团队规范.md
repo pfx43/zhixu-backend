@@ -129,7 +129,14 @@ git commit -m "feat: 完成学习路径卡片组件"
 # 8. 推送到远程（每天至少一次！）
 git push
 ```
-
+# 1. 切主分支
+git checkout main
+# 2. 更新远端最新main
+git pull origin main
+# 3. 合并功能分支到main
+git merge feature/rj-fic-chat --no-edit
+# 4. 推送到远程main
+git push origin main
 ### 功能完成后提交 PR
 
 1. 确保自己分支已经合并了最新的 main（重复上面第 1-3 步）
