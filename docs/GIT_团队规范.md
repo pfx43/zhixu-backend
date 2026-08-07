@@ -111,7 +111,7 @@ git merge main
 # 如果有冲突，解决冲突后 git add . && git commit
 
 # ===== 开发中 =====
-
+# git merge feature/rj-P0 --no-edit
 # 4. 正常写代码...
 
 # ===== 一天结束 / 阶段性完成 =====
