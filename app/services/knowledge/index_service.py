@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.crud import segment as segment_crud
 from app.models import Document
-from app.services.knowledge.chroma_store import chroma_store
+from app.services.knowledge.vector_store import get_vector_store
+
+vector_store = get_vector_store()
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ def index_document_segments(db: Session, document: Document) -> int:
     if not segments:
         return 0
 
-    count = chroma_store.upsert_segments(
+    count = vector_store.upsert_segments(
         document_id=document.id,
         segments=segments,
         user_id=document.user_id,
@@ -36,4 +38,4 @@ def index_document_segments(db: Session, document: Document) -> int:
 
 
 def delete_document_index(document_id: str) -> None:
-    chroma_store.delete_by_document(document_id)
+    vector_store.delete_by_document(user_id=0, document_id=document_id)

@@ -3,7 +3,9 @@
 """
 from typing import List, Optional
 
-from app.services.knowledge.chroma_store import chroma_store
+from app.services.knowledge.vector_store import get_vector_store
+
+_vector_store = get_vector_store()
 
 
 def search(
@@ -20,7 +22,7 @@ def search(
     """
     if not query or not query.strip():
         return []
-    return chroma_store.search(
+    return _vector_store.search(
         query.strip(),
         user_id=user_id,
         collection_id=collection_id,

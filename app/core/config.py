@@ -76,8 +76,27 @@ DIFY_RERANKING_MODEL = os.getenv("DIFY_RERANKING_MODEL", "gte-rerank")
 WELCOME_DOC_PATH = os.getenv("WELCOME_DOC_PATH", "docs/欢迎使用知拾.md")
 
 # 文件存储配置
-USE_OSS = os.getenv("USE_OSS", "false").lower() == "true"
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").lower()  # local | cos
 LOCAL_STORAGE_DIR = os.getenv("LOCAL_STORAGE_DIR", "storage")
+
+# COS 存储配置
+COS_SECRET_ID = os.getenv("COS_SECRET_ID", "")
+COS_SECRET_KEY = os.getenv("COS_SECRET_KEY", "")
+COS_BUCKET = os.getenv("COS_BUCKET", "")
+COS_REGION = os.getenv("COS_REGION", "ap-guangzhou")
+
+# 上传大小限制（MB），优先环境变量，其次 config.json
+_env_upload_mb = os.getenv("UPLOAD_MAX_SIZE_MB")
+if _env_upload_mb is not None:
+    UPLOAD_MAX_SIZE_MB = int(_env_upload_mb)
+elif _app_cfg.upload_max_size_mb > 0:
+    UPLOAD_MAX_SIZE_MB = _app_cfg.upload_max_size_mb
+else:
+    UPLOAD_MAX_SIZE_MB = 0
+
+# 兼容旧 USE_OSS 变量
+if os.getenv("USE_OSS", "").lower() == "true" and STORAGE_BACKEND == "local":
+    STORAGE_BACKEND = "cos"
 
 # 上传文件大小上限（字节）；0 表示不限制
 # 优先 DEBUG_MAX_UPLOAD_SIZE 环境变量；否则 config.json upload_max_size_mb

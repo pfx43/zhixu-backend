@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.api.deps_quota import check_kb_quota
-from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag
+from app.core.config import DEBUG_MAX_UPLOAD_SIZE, STORAGE_BACKEND, is_local_rag
 from app.schemas.kb import CollectionCreate, CollectionUpdate
 from app.services.knowledge import kb_service
 from app.services.knowledge import page_service
@@ -169,7 +169,7 @@ async def upload_document(
             content_bytes=content_bytes,
             collection_id=collection_id,
             max_upload_size=DEBUG_MAX_UPLOAD_SIZE,
-            use_oss=USE_OSS,
+            use_oss=(STORAGE_BACKEND == "cos"),
         )
     except HTTPException:
         raise
@@ -334,10 +334,26 @@ def get_kb_config(
     """查询知识库配置（供前端展示提示等）"""
     return {
         "rag_backend": "local" if is_local_rag() else "dify",
-        "use_oss": USE_OSS,
+        "use_oss": (STORAGE_BACKEND == "cos"),
         "max_upload_size": DEBUG_MAX_UPLOAD_SIZE,
         "max_upload_size_display": (
             _format_size(DEBUG_MAX_UPLOAD_SIZE) if DEBUG_MAX_UPLOAD_SIZE else None
         ),
         "supported_extensions": list(SUPPORTED_EXTENSIONS.keys()),
     }
+
+
+# ─── 任务队列状态查询（P5 Worker）────────────────────────
+
+@router.get("/jobs/{job_id}")
+def get_job_status(
+    job_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """查询异步任务进度（OCR/解析/出题等）"""
+    from app.core.redis_queue import get_job_status
+
+    status = get_job_status(job_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="任务不存在或已过期")
+    return status
