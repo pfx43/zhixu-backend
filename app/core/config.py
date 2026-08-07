@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 
 from app.core.app_config import get_app_config
 
-load_dotenv()
+# 明确指定项目根目录下的 .env 路径，避免 uvicorn 子进程 CWD 不一致
+_ENV_PATH = Path(__file__).resolve().parent.parent.parent / ".env"
+load_dotenv(_ENV_PATH)
 
 _app_cfg = get_app_config()
 

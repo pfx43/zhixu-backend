@@ -650,10 +650,8 @@ class COSStorage:
 
     @staticmethod
     def is_parsed_pages_dir(path: str) -> bool:
-        """判断路径是否为按页解析目录（COS 中通过 manifest 存在性判断）"""
-        manifest_key = f"{path}/manifest.json"
-        # 在 COS 中通过 manifest 存在性判断
-        return True  # COS 中由调用方按约定处理，此处始终返回 True 保持兼容
+        """判断路径是否为按页解析目录（通过 manifest.json 存在性判断）"""
+        return True  # COS 中调用方按约定处理，此处始终返回 True 保持兼容（实际由业务侧按路径前缀判断）
 
     def read_parsed_manifest(self, parsed_path: str) -> Optional[dict]:
         """读取 manifest.json"""

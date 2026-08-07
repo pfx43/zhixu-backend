@@ -12,7 +12,7 @@ import sys
 import time
 
 from app.core.redis_queue import dequeue_job, update_job_status
-from app.worker.handlers import handle_ocr_job, handle_parse_job, handle_question_gen_job
+from app.worker.handlers import handle_ocr_job, handle_parse_job, handle_index_job, handle_question_gen_job
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +23,7 @@ logger = logging.getLogger("worker")
 HANDLERS = {
     "ocr": handle_ocr_job,
     "parse": handle_parse_job,
+    "index": handle_index_job,
     "question_gen": handle_question_gen_job,
 }
 

@@ -35,4 +35,4 @@ paddleocr>=2.7.0
 redis>=5.0.0
 tiktoken>=0.5.0
 psycopg2-binary>=2.9.0
-cos-python-sdk-v5>=1.9.0
+cos-python-sdk-v5>=1.9.44
