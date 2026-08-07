@@ -92,6 +92,42 @@ class MemoryCache:
                     removed += 1
         return removed
 
+    # ── 原子计数器（TinaGateway Key 池 / 用户并发用） ──
+
+    def incr(self, key: str, amount: int = 1) -> int:
+        """递增计数器，返回递增后的值。"""
+        current = self.get_value(key)
+        val = int(current) + amount if current else amount
+        self.set_value(key, str(val))
+        return val
+
+    def decr(self, key: str, amount: int = 1) -> int:
+        """递减计数器，返回递减后的值。"""
+        current = self.get_value(key)
+        val = int(current) - amount if current else -amount
+        self.set_value(key, str(val))
+        return val
+
+    def expire(self, key: str, seconds: int) -> None:
+        """设置 key 的过期时间（MemoryCache 通过 set_value 的 ttl 已支持，此处为兼容接口）。"""
+        val = self.get_value(key)
+        if val is not None:
+            self.set_value(key, val, ttl=seconds)
+
+    # ── ZSET 操作（仅 Redis 支持，MemoryCache 返回安全默认值） ──
+
+    def zadd(self, key: str, mapping: dict) -> int:
+        """ZSET 添加（MemoryCache 降级为无操作）。"""
+        return 0
+
+    def zcard(self, key: str) -> int:
+        """ZSET 基数（MemoryCache 始终返回 0 = 不限 RPM）。"""
+        return 0
+
+    def zremrangebyscore(self, key: str, min_score: float, max_score: float) -> int:
+        """ZSET 按分数范围删除（MemoryCache 降级为无操作）。"""
+        return 0
+
 
 class RedisCache:
     """Redis 缓存，用于生产环境。
@@ -147,6 +183,34 @@ class RedisCache:
 
     def lrem(self, key: str, count: int, value: str):
         return self._client.lrem(key, count, value)
+
+    # ── 原子计数器（TinaGateway Key 池 / 用户并发用） ──
+
+    def incr(self, key: str, amount: int = 1) -> int:
+        """递增计数器，返回递增后的值。"""
+        return self._client.incrby(key, amount)
+
+    def decr(self, key: str, amount: int = 1) -> int:
+        """递减计数器，返回递减后的值。"""
+        return self._client.decrby(key, amount)
+
+    def expire(self, key: str, seconds: int) -> None:
+        """设置 key 的过期时间（秒）。"""
+        self._client.expire(key, seconds)
+
+    # ── ZSET 操作（RPM 滑动窗口） ──
+
+    def zadd(self, key: str, mapping: dict) -> int:
+        """ZSET 添加成员。"""
+        return self._client.zadd(key, mapping)
+
+    def zcard(self, key: str) -> int:
+        """ZSET 基数。"""
+        return self._client.zcard(key)
+
+    def zremrangebyscore(self, key: str, min_score: float, max_score: float) -> int:
+        """ZSET 按分数范围删除。"""
+        return self._client.zremrangebyscore(key, min_score, max_score)
 
 
 # 模块级缓存实例，按 CACHE_BACKEND 切换

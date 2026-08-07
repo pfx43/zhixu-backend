@@ -193,6 +193,17 @@ class AuthManager:
         if not user.is_active:
              raise HTTPException(status_code=400, detail="User is inactive")
 
+        # 若 user_hash 缺失（存量用户），自动生成并持久化
+        if not user.user_hash:
+            try:
+                user.user_hash = AuthManager._gen_user_hash()
+                db.commit()
+                db.refresh(user)
+                logger.info("为存量用户生成 user_hash: user_id=%s", user.id)
+            except Exception:
+                db.rollback()
+                logger.warning("生成 user_hash 失败（不影响登录）: user_id=%s", user.id)
+
         # 2. 生成 Token (32 chars hex string)
         token = secrets.token_hex(16)
         
@@ -237,7 +248,7 @@ class AuthManager:
         """
         verification_code = ''.join(random.choices(string.digits, k=6))
         ttl = EMAIL_VERIFICATION_EXPIRE_MINUTES * 60
-        key = f"verification:{target}"
+        key = f"email_verification:{target}"
 
         try:
             cache.set_value(key, verification_code, ttl)
@@ -267,19 +278,13 @@ class AuthManager:
     @staticmethod
     def verify_code(target: str, code: str):
         """
-        校验验证码 — 同时检查 email 和 phone 两种 key
+        校验验证码
         - 成功后删除 Redis 中的验证码
         """
-        # 兼容旧 key 名
-        keys_to_check = [f"verification:{target}", f"email_verification:{target}"]
+        key = f"email_verification:{target}"
         stored = None
-        found_key = None
         try:
-            for k in keys_to_check:
-                stored = cache.get_value(k)
-                if stored:
-                    found_key = k
-                    break
+            stored = cache.get_value(key)
         except ConnectionError as exc:
             raise HTTPException(status_code=503, detail="Redis 不可用")
 
@@ -290,7 +295,7 @@ class AuthManager:
             raise HTTPException(status_code=400, detail="验证码错误")
 
         try:
-            cache.delete_key(found_key)
+            cache.delete_key(key)
         except ConnectionError:
             logger.warning(f"无法删除验证码 {target}")
 
@@ -368,13 +373,15 @@ class AuthManager:
     def send_password_reset(db: Session, email: str):
         """
         发送重置密码邮件
+        不暴露用户是否存在，始终返回相同提示。
         """
         user = crud.get_user_by_email(db, email=email)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="用户不存在"
-            )
+            # 不暴露用户不存在，返回统一成功消息
+            return {
+                "message": "如果该邮箱已注册，重置密码链接已发送，请在 30 分钟内完成重置",
+                "expires_in": PASSWORD_RESET_EXPIRE_MINUTES * 60,
+            }
 
         reset_token = secrets.token_hex(32)
         ttl = PASSWORD_RESET_EXPIRE_MINUTES * 60

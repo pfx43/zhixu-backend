@@ -32,6 +32,10 @@ def _clean_setting(value: object) -> str:
 
 
 def _default_env_path() -> Path:
+    """Tina 环境文件路径：优先 TINA_ENV_PATH 环境变量。"""
+    env_override = os.getenv("TINA_ENV_PATH", "")
+    if env_override:
+        return Path(env_override)
     return Path(__file__).resolve().parents[3] / "tina.env"
 
 
@@ -63,13 +67,23 @@ def load_llm_settings(
 
 
 def create_base_api(*, env_path: Optional[LlmEnvPath] = None):
-    """Create Tina ``BaseAPI`` with explicitly resolved settings."""
+    """Create Tina ``BaseAPI`` with key-pool rotation via TinaGateway.
+
+    生产环境通过 TinaGateway 进行多 key 轮换；
+    若 Gateway 未配置 key 池，回退到原有单 key 逻辑。
+    """
+    try:
+        from app.services.tina_gateway import tina_gateway
+        return tina_gateway.create_base_api()
+    except Exception:
+        pass
+
+    # 回退：原有单 key 逻辑
     path = Path(env_path) if env_path is not None else _default_env_path()
     settings = load_llm_settings(env_path=path)
     if not settings.is_ready:
         raise ValueError("LLM configuration is incomplete")
 
-    # Importing tina_loader registers the bundled Tina package on sys.path.
     from app.utils import tina_loader  # noqa: F401
     from tina.llm import BaseAPI
 

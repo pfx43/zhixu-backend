@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.api.deps_quota import check_kb_quota
 from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag
 from app.schemas.kb import CollectionCreate, CollectionUpdate
 from app.services.knowledge import kb_service
@@ -48,8 +49,9 @@ def create_collection(
     payload: CollectionCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    _kb_quota: dict = Depends(check_kb_quota),
 ):
-    """创建知识库分区"""
+    """创建知识库分区（受知识库数量配额限制）"""
     return kb_service.create_collection(
         db,
         current_user["user_id"],

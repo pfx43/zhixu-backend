@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import timedelta, datetime, timezone
 
-from app.api.deps import get_db, get_current_active_user, oauth2_scheme
+from app.api.deps import get_db, get_current_active_user, get_admin_or_internal, oauth2_scheme
 from app.core.security import get_password_hash, verify_password
 from app.models import User, PlanTier
 from app.schemas import (
@@ -180,10 +180,10 @@ def check_my_quota(
 @router.post("/users/me/upgrade-plan")
 def upgrade_my_plan(
     request: UpgradeRequest,
-    current_user: dict = Depends(get_current_active_user),
+    current_user: dict = Depends(get_admin_or_internal),
     db: Session = Depends(get_db)
 ):
-    """用户升级套餐"""
+    """管理员升级用户套餐（需管理员权限或 X-Internal-Key）"""
     upgraded_user = crud.upgrade_user_plan(db, current_user["user_id"], request.plan_level, request.months)
     if not upgraded_user:
         raise HTTPException(status_code=400, detail="套餐升级失败")
@@ -301,18 +301,22 @@ def check_email_verification(
 ):
     """
     检查邮箱验证状态（无需登录）
+    不暴露用户是否存在，始终返回相同结构。
     """
     user = crud.get_user_by_email(db, email=email)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="用户不存在"
-        )
+        # 不暴露用户不存在，返回统一格式
+        return {
+            "email": email,
+            "is_email_verified": False,
+            "email_verified_at": None,
+            "message": "如果该邮箱已注册，可查看其验证状态",
+        }
     
     return {
         "email": user.email,
         "is_email_verified": user.is_email_verified,
-        "email_verified_at": user.email_verified_at
+        "email_verified_at": user.email_verified_at,
     }
 
 

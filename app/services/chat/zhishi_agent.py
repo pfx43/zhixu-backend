@@ -1,14 +1,10 @@
 """
 知拾 Agent — 封装 LLM 调用 + 本地/Dify 检索，提供流式对话
 """
-import json
 import logging
 from typing import Generator, List, Optional, TYPE_CHECKING
 
-import requests
-
 from app.core.config import is_local_rag
-from app.services.llm.llm_config import load_llm_settings
 
 from app.services.tutor.citation_service import build_citations_from_hits
 from app.services.chat.local_retrieval_service import search as local_search
@@ -105,23 +101,13 @@ MODE_PROMPTS = {
 }
 
 
-def _load_llm_config() -> dict:
-    """从统一配置源读取 LLM 配置。"""
-    settings = load_llm_settings()
-    return {
-        "LLM_API_KEY": settings.api_key,
-        "BASE_URL": settings.base_url,
-        "MODEL_NAME": settings.model_name,
-    }
-
-
 class ZhishiAgent:
     """
     知拾智能体 — 每个用户一个实例
 
     职责：
         1. 持有检索后端（本地 Chroma 或 DifyKB）
-        2. 直接调用 LLM API（绕过 Tina 框架避免 Windows 兼容问题）
+        2. 通过 TinaGateway 统一调用 LLM（key 池 + 用量记账）
         3. 对话时自动检索知识库，注入上下文后流式输出
     """
 
@@ -135,19 +121,15 @@ class ZhishiAgent:
         if not is_local_rag() and dataset_id:
             self.kb = DifyKB(dataset_id)
 
-        # 直接加载 LLM 配置，不依赖 Tina 框架
+        # 通过 TinaGateway 判断 LLM 就绪状态
         self._llm_ready = False
         try:
-            cfg = _load_llm_config()
-            self._api_key = cfg.get("LLM_API_KEY", "").strip('"').strip("'")
-            self._base_url = cfg.get("BASE_URL", "").strip('"').strip("'")
-            self._model = cfg.get("MODEL_NAME", "").strip('"').strip("'")
-
-            if self._api_key and self._base_url and self._model:
-                self._llm_ready = True
+            from app.services.tina_gateway import tina_gateway
+            self._llm_ready = bool(tina_gateway._api_keys)
+            if self._llm_ready:
                 logger.info(
-                    "ZhishiAgent LLM 就绪: model=%s, url=%s, user_id=%s",
-                    self._model, self._base_url[:50], user_id,
+                    "ZhishiAgent LLM 就绪 (via Gateway): user_id=%s",
+                    user_id,
                 )
             else:
                 logger.warning("ZhishiAgent LLM 配置不完整: user_id=%s", user_id)
@@ -187,7 +169,7 @@ class ZhishiAgent:
         mode: str = "qa",
     ) -> Generator[dict, None, None]:
         """
-        流式对话 — 直接调用 DeepSeek API（requests 同步流式）
+        流式对话 — 通过 TinaGateway 调用 LLM（key 池轮换 + 自动用量记账）
         """
         self._active_collection_id = collection_id
         self._active_db = db
@@ -233,52 +215,25 @@ class ZhishiAgent:
                     messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": enhanced_message})
 
-        # 3. 调用 DeepSeek API（同步流式）
+        # 3. 通过 TinaGateway 流式调用（统一 key 池 + 用量记账）
         try:
-            headers = {
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": self._model,
-                "messages": messages,
-                "stream": True,
-                "temperature": 0.7,
-                "max_tokens": 2048,
-            }
+            from app.services.tina_gateway import tina_gateway
 
-            resp = requests.post(
-                self._base_url,
-                headers=headers,
-                json=payload,
-                stream=True,
-                timeout=120,
-            )
-            resp.raise_for_status()
+            for chunk in tina_gateway.stream_chat(
+                user_id=self.user_id,
+                instruction="",
+                messages=messages,
+                sys_prompt="",
+                temperature=0.7,
+                max_tokens=2048,
+            ):
+                content = chunk.get("content", "")
+                reasoning = chunk.get("reasoning_content", "")
+                if content:
+                    yield {"role": "assistant", "content": content}
+                if reasoning:
+                    yield {"role": "assistant", "content": "", "reasoning_content": reasoning}
 
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                line = line.decode("utf-8")
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        break
-                    try:
-                        data = json.loads(data_str)
-                        delta = data.get("choices", [{}])[0].get("delta", {})
-                        content = delta.get("content", "")
-                        reasoning = delta.get("reasoning_content", "")
-                        if content:
-                            yield {"role": "assistant", "content": content}
-                        if reasoning:
-                            yield {"role": "assistant", "content": "", "reasoning_content": reasoning}
-                    except json.JSONDecodeError:
-                        continue
-
-        except requests.exceptions.Timeout:
-            logger.error("ZhishiAgent LLM 请求超时")
-            yield {"role": "assistant", "content": "抱歉，AI 服务响应超时，请稍后重试。"}
         except Exception as e:
             logger.error(f"ZhishiAgent.predict_stream 错误: {e}")
             yield {"role": "assistant", "content": f"抱歉，生成回复时出错了，请稍后重试。"}
