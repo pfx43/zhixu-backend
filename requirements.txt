@@ -33,3 +33,5 @@ paddleocr>=2.7.0
 #   pip install paddlepaddle -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 # 或见 https://www.paddlepaddle.org.cn/install/quick
 redis>=5.0.0
+tiktoken>=0.5.0
+psycopg2-binary>=2.9.0

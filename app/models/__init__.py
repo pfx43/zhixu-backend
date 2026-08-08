@@ -8,6 +8,7 @@ from .note import UserNote, NoteAttachment
 from .training_plan import TrainingPlan
 from .onboarding import OnboardingState
 from .auth_session import AuthSession
+from .usage import UsageDaily, UsageToken
 
 __all__ = [
     "User",
@@ -29,4 +30,6 @@ __all__ = [
     "TrainingPlan",
     "OnboardingState",
     "AuthSession",
+    "UsageDaily",
+    "UsageToken",
 ]

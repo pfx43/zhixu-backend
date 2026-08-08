@@ -200,6 +200,19 @@ class TrainingCoachAgent:
         except Exception as e:
             logger.warning("TrainingCoachAgent.plan_training 失败: %s", e, exc_info=True)
 
+        # 用量记账（非流式，使用估算）
+        try:
+            from app.services.usage_service import record_turn_usage
+            record_turn_usage(
+                user_id=self.user_id,
+                prompt=instruction,
+                completion=(
+                    f"question_ids={self._submitted_plan.get('question_ids', []) if self._submitted_plan else []}"
+                ),
+            )
+        except Exception:
+            logger.exception("TrainingCoach 用量记账失败: user_id=%s", self.user_id)
+
         if self._submitted_plan:
             return TrainingPlanResult(
                 question_ids=self._submitted_plan.get("question_ids") or [],
@@ -231,11 +244,15 @@ class TrainingCoachAgent:
             yield {"role": "assistant", "content": "抱歉，AI 教练暂时不可用，请稍后重试。"}
             return
 
+        completion_parts: list[str] = []
         try:
             for chunk in iter_agent_continue_stream(self.agent, message):
+                content = chunk.get("content", "")
+                if content:
+                    completion_parts.append(content)
                 yield {
                     "role": chunk.get("role", "assistant"),
-                    "content": chunk.get("content", ""),
+                    "content": content,
                     **(
                         {"reasoning_content": chunk["reasoning_content"]}
                         if chunk.get("reasoning_content")
@@ -246,6 +263,17 @@ class TrainingCoachAgent:
         except Exception as e:
             logger.error("TrainingCoachAgent.tutor_stream 错误: %s", e)
             yield {"role": "assistant", "content": f"抱歉，生成回复时出错了：{str(e)}"}
+
+        # 用量记账（流式结束后）
+        try:
+            from app.services.usage_service import record_turn_usage
+            record_turn_usage(
+                user_id=self.user_id,
+                prompt=message,
+                completion="".join(completion_parts),
+            )
+        except Exception:
+            logger.exception("TrainingCoach 流式用量记账失败: user_id=%s", self.user_id)
 
 
 class TrainingAgentManager:

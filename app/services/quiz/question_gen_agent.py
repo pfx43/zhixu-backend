@@ -250,6 +250,7 @@ class QuestionGenAgent:
         content: str,
         tag_hint: str = "",
         count: int = 1,
+        user_id: int = 0,
     ) -> List[dict]:
         """根据文档内容生成题目，返回结构化题目列表。"""
         self._submitted_questions = []
@@ -303,6 +304,18 @@ class QuestionGenAgent:
                 status="ok",
                 reason=None,
             )
+
+        # 用量记账（非流式，使用估算）
+        if user_id and (self._submitted_questions or self.failure_reason):
+            try:
+                from app.services.usage_service import record_turn_usage
+                record_turn_usage(
+                    user_id=user_id,
+                    prompt=instruction,
+                    completion=f"generated {len(self._submitted_questions)} questions",
+                )
+            except Exception:
+                logger.exception("QuestionGen 用量记账失败: user_id=%s", user_id)
 
         return list(self._submitted_questions)
 

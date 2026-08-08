@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.api.deps_quota import check_quota
 from app.core.config import is_local_rag
 from app.core.redis import cache
 from app.core.agent_manager import agent_manager
@@ -324,6 +325,7 @@ def chat_info():
 def send_chat(
     request: ChatRequest,
     current_user: dict = Depends(get_current_active_user),
+    _quota: dict = Depends(check_quota),
     db: Session = Depends(get_db),
 ):
     mode = request.mode or "qa"

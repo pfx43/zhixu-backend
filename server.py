@@ -68,9 +68,9 @@ async def lifespan(app: FastAPI):
 
     # 4. 初始化 AgentManager（按用户维度管理 ZhishiAgent 实例）
     try:
-        from app.core.agent_manager import AgentManager
+        from app.core.agent_manager import agent_manager as _agent_mgr
 
-        app.state.agent_manager = AgentManager()
+        app.state.agent_manager = _agent_mgr
         print("[Server] AgentManager 就绪")
     except Exception as e:
         logger.error(f"AgentManager 初始化失败: {e}")
@@ -89,9 +89,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="知拾 KT 后端", version="2.1.0", lifespan=lifespan)
 
+# ── CORS 配置 ──
+import os as _os
+_cors_origins_env = _os.getenv("CORS_ALLOWED_ORIGINS", "")
+if _cors_origins_env:
+    _allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+else:
+    _allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

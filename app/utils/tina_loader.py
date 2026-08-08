@@ -7,9 +7,13 @@ Tina 导入辅助 — 统一将 backend/3rdParty 加入 sys.path，业务代码�
     from tina import Agent
 
     llm = create_base_api()
+
+环境变量:
+    TINA_ENV_PATH — 覆盖默认的 backend/tina.env 路径（生产部署用）
 """
 from __future__ import annotations
 
+import os
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -31,7 +35,13 @@ class TinaImport:
 
     @classmethod
     def tina_env_path(cls) -> str:
-        """backend/tina.env 绝对路径。"""
+        """Tina 环境文件路径。
+
+        优先使用 TINA_ENV_PATH 环境变量，否则回退到 backend/tina.env。
+        """
+        env_override = os.getenv("TINA_ENV_PATH", "")
+        if env_override:
+            return env_override
         return str(cls.backend_dir() / "tina.env")
 
     @classmethod

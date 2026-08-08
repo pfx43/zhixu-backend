@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.api.deps_quota import check_quota
 from app.schemas.training import (
     TargetedTrainingActiveSessionOut,
     TargetedTrainingStartIn,
@@ -28,6 +29,7 @@ def start_targeted_training(
     payload: TargetedTrainingStartIn = TargetedTrainingStartIn(),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    _quota: dict = Depends(check_quota),
 ):
     """Agent 制定训练计划：选题 + rationale，并创建刷题会话。支持 report_id 与恢复未完成会话。"""
     result = training_service.start_targeted_training(
@@ -79,6 +81,7 @@ def training_tutor_message(
     payload: TrainingTutorMessageCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    _quota: dict = Depends(check_quota),
 ) -> Union[TrainingTutorReplyOut, StreamingResponse]:
     """针对训练页 AI 辅导 — 复用制定计划时的 Agent 上下文。"""
     user_id = current_user["user_id"]
