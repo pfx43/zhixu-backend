@@ -199,7 +199,7 @@ def get_monthly_token_usage(user_id: int, db: Session) -> int:
     yyyymm = _current_yyyymm()
     row = db.execute(
         text(
-            "SELECT total_tokens FROM usage_token WHERE user_id = :uid AND yyyymm = :ym"
+            "SELECT total_tokens FROM usage_token WHERE user_id = :uid AND yyyymm = :yyyymm"
         ),
         {"uid": user_id, "yyyymm": yyyymm},
     ).fetchone()
