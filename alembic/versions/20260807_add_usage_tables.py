@@ -1,7 +1,7 @@
 """添加用量表 usage_daily / usage_token
 
 Revision ID: 20260807_add_usage_tables
-Revises: 20260805_add_note_soft_delete
+Revises: 20260805_note_attachments
 Create Date: 2026-08-07 00:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260807_add_usage_tables"
-down_revision = "20260805_add_note_soft_delete"
+down_revision = "20260805_note_attachments"
 branch_labels = None
 depends_on = None
 

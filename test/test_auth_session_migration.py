@@ -83,7 +83,7 @@ def test_alembic_upgrade_adopts_existing_create_all_database(tmp_path):
         revision = connection.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert revision == "20260802_note_revision"
+    assert revision == "20260807_add_usage_tables"
 
 
 def test_alembic_upgrade_adds_non_null_initial_revision_to_legacy_notes(tmp_path):

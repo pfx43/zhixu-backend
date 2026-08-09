@@ -84,6 +84,10 @@ def client(monkeypatch):
     monkeypatch.setattr(tcn_client, "get_vulnerabilities", fake_vulnerabilities)
     monkeypatch.setattr(tcn_client, "get_lvr_alert", fake_lvr_alert)
 
+    # 全量测试运行时，其他测试可能因本机无 TCN 服务把单例 _enabled 置 False，
+    # 导致本文件路由检查 is_enabled 时返回 503；这里显式恢复可用状态。
+    monkeypatch.setattr(tcn_client, "_enabled", True)
+
     return TestClient(app)
 
 

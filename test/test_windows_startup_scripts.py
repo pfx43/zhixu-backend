@@ -1,10 +1,18 @@
 import json
 import os
 import subprocess
+import sys
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="PowerShell 启动脚本测试仅在 Windows 环境运行",
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
