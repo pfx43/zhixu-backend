@@ -18,6 +18,7 @@ from app.core.config import (
     DOCUMENT_PIPELINE_ASYNC,
     IMAGE_OCR_ASYNC,
     is_local_rag,
+    is_keyword_rag,
 )
 from app.core.database import SessionLocal
 from app.core.job_runner import run_in_background
@@ -1130,7 +1131,8 @@ def delete_document(
         if is_local_rag():
             from app.services.knowledge.index_service import delete_document_index
 
-            delete_document_index(doc.id)
+            if not is_keyword_rag():
+                delete_document_index(doc.id)
 
         content_hash = doc.content_hash
         global_doc = doc.global_document

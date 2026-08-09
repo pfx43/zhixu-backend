@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.api.deps_quota import check_kb_quota
-from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag
+from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag, is_keyword_rag
 from app.schemas.kb import CollectionCreate, CollectionUpdate
 from app.services.knowledge import kb_service
 from app.services.knowledge import page_service
@@ -332,8 +332,11 @@ def get_kb_config(
     current_user: dict = Depends(get_current_active_user),
 ):
     """查询知识库配置（供前端展示提示等）"""
+    rag_backend = "keyword" if is_keyword_rag() else (
+        "local" if is_local_rag() else "dify"
+    )
     return {
-        "rag_backend": "local" if is_local_rag() else "dify",
+        "rag_backend": rag_backend,
         "use_oss": USE_OSS,
         "max_upload_size": DEBUG_MAX_UPLOAD_SIZE,
         "max_upload_size_display": (

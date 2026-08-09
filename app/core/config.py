@@ -149,8 +149,8 @@ MAX_QUESTIONS_PER_DOCUMENT = int(
 # 显式设置 DIFY_MAX_UPLOAD_SIZE 后才拦截；实际能否入库仍受 Dify Cloud 侧限制
 DIFY_MAX_UPLOAD_SIZE = int(os.getenv("DIFY_MAX_UPLOAD_SIZE", "0"))
 
-# 本地向量 RAG（Chroma + sentence-transformers）
-RAG_BACKEND = os.getenv("RAG_BACKEND", "local").lower()  # local | dify
+# 检索后端：local（Chroma 本地向量）| keyword（纯关键词检索，不走向量）| dify
+RAG_BACKEND = os.getenv("RAG_BACKEND", "local").lower()
 _CHROMA_DEFAULT = _REPO_ROOT / "data" / "chroma"
 _CHROMA_ENV = os.getenv("CHROMA_PERSIST_DIR", "")
 if _CHROMA_ENV:
@@ -164,7 +164,17 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
 
 
 def is_local_rag() -> bool:
-    return RAG_BACKEND == "local"
+    # local（Chroma 向量）与 keyword（纯词法）均不依赖 Dify，走本地存储/分段管线
+    return RAG_BACKEND in ("local", "keyword")
+
+
+def is_keyword_rag() -> bool:
+    """纯关键词检索：不写/不读 Chroma 向量，直接对 document_segments 做词法匹配。"""
+    return RAG_BACKEND == "keyword"
+
+
+def is_dify_rag() -> bool:
+    return RAG_BACKEND == "dify"
 
 # 百度 OCR 配置（从 zhishi_app/assets/config/baidu_ocr.json 读取）
 import json as _json

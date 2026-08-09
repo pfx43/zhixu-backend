@@ -4,10 +4,11 @@
 import logging
 from typing import Generator, List, Optional, TYPE_CHECKING
 
-from app.core.config import is_local_rag
+from app.core.config import is_local_rag, is_keyword_rag
 
 from app.services.tutor.citation_service import build_citations_from_hits
 from app.services.chat.local_retrieval_service import search as local_search
+from app.services.chat.keyword_retrieval_service import search as keyword_search
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -141,6 +142,15 @@ class ZhishiAgent:
         return self._llm_ready
 
     def _retrieve(self, query: str, top_k: int = 5) -> List[dict]:
+        if is_keyword_rag():
+            # 纯关键词检索：不走向量，直接对 document_segments 做词法匹配
+            return keyword_search(
+                self._active_db,
+                query,
+                user_id=self.user_id,
+                collection_id=self._active_collection_id,
+                top_k=top_k,
+            )
         if is_local_rag():
             return local_search(
                 query,
