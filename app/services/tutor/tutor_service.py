@@ -231,8 +231,7 @@ class SocraticTutorAgent:
     def _init_agent(self) -> None:
         try:
             self._llm = create_base_api()
-            from tina import Agent
-            from tina.agent.core.context_manager import ContextManager
+            from tina import Agent, ContextManager
 
             context_manager = ContextManager(max_length=80000, max_tool_result_length=4000)
             context_manager.set_system_message(self.system_prompt)
@@ -447,9 +446,12 @@ def send_tutor_message(
         m for m in history if m.get("role") in ("user", "assistant")
     ][:-1]
 
-    reply = _call_tutor_agent(
-        system_prompt, content, conv_history, stream=False
-    )
+    from app.services.llm.usage_tracking import usage_context
+
+    with usage_context(user_id):
+        reply = _call_tutor_agent(
+            system_prompt, content, conv_history, stream=False
+        )
     if not isinstance(reply, str):
         reply = "抱歉，未能生成辅导回复。"
 
@@ -484,23 +486,26 @@ def stream_tutor_message(
         m for m in history if m.get("role") in ("user", "assistant")
     ][:-1]
 
-    stream = _call_tutor_agent(
-        system_prompt, content, conv_history, stream=True
-    )
-    full_content = ""
-    if hasattr(stream, "__iter__"):
-        for chunk in stream:
-            role = chunk.get("role", "assistant")
-            part = chunk.get("content", "")
-            if part:
-                full_content += part
-            payload = {
-                "session_id": session_id,
-                "role": role,
-                "content": part,
-            }
-            data = json.dumps(payload, ensure_ascii=False)
-            yield f"event: message\ndata: {data}\n\n"
+    from app.services.llm.usage_tracking import usage_context
+
+    with usage_context(user_id):
+        stream = _call_tutor_agent(
+            system_prompt, content, conv_history, stream=True
+        )
+        full_content = ""
+        if hasattr(stream, "__iter__"):
+            for chunk in stream:
+                role = chunk.get("role", "assistant")
+                part = chunk.get("content", "")
+                if part:
+                    full_content += part
+                payload = {
+                    "session_id": session_id,
+                    "role": role,
+                    "content": part,
+                }
+                data = json.dumps(payload, ensure_ascii=False)
+                yield f"event: message\ndata: {data}\n\n"
 
     if full_content:
         _save_message(user_id, chat_id, "assistant", full_content)

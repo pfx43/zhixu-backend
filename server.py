@@ -135,7 +135,7 @@ REQUIRED_DEPLOYMENT_PATHS = (
 def _question_generation_readiness() -> dict:
     """独立探测 Question Agent/LLM，不复用 TCN 的 model_loaded。"""
     try:
-        from app.services.quiz.question_gen_agent import (
+        from app.services.agents.question_gen_agent import (
             get_question_agent_readiness,
         )
 

@@ -13,16 +13,11 @@ from app.schemas.report import LearningReportGenerateOut, ReportOut
 from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import llm_predict_no_stream
 from app.services.training import analytics_service
+from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
-REPORT_SYSTEM_PROMPT = """你是知拾学习分析助手。根据用户的学习统计数据，生成一份清晰、可执行的 Markdown 学习报告。
-报告结构建议：
-1. ## 学习概览
-2. ## 薄弱知识点（按 tag）
-3. ## 题型表现
-4. ## 建议与下一步
-使用中文，语气鼓励但具体；列出优先复习的 tag 名称，便于后续针对训练。"""
+REPORT_SYSTEM_PROMPT = load_prompt("report_analysis")
 
 _llm_instance = None
 
@@ -101,12 +96,15 @@ def generate_learning_report(
 
     if llm:
         try:
-            resp = llm_predict_no_stream(
-                llm,
-                input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
-                sys_prompt=REPORT_SYSTEM_PROMPT,
-                temperature=0.4,
-            )
+            from app.services.llm.usage_tracking import usage_context
+
+            with usage_context(user_id):
+                resp = llm_predict_no_stream(
+                    llm,
+                    input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
+                    sys_prompt=REPORT_SYSTEM_PROMPT,
+                    temperature=0.4,
+                )
             content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
             content_md = (content or "").strip() or _template_report(stats_text)
         except Exception:

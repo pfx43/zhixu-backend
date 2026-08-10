@@ -355,7 +355,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
             content="真实资料内容",
         )
         original_module = sys.modules.get(
-            "app.services.quiz.question_gen_agent"
+            "app.services.agents.question_gen_agent"
         )
         try:
             for reason in (
@@ -365,7 +365,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 "invalid_output",
             ):
                 fake_module = types.ModuleType(
-                    "app.services.quiz.question_gen_agent"
+                    "app.services.agents.question_gen_agent"
                 )
                 fake_module.agent_generate_for_segment = (
                     lambda _segment, *, tag_hint="", _reason=reason: [
@@ -373,7 +373,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                     ]
                 )
                 sys.modules[
-                    "app.services.quiz.question_gen_agent"
+                    "app.services.agents.question_gen_agent"
                 ] = fake_module
 
                 with patch.object(
@@ -395,11 +395,11 @@ class QuestionGenerationFailureTests(unittest.TestCase):
         finally:
             if original_module is None:
                 sys.modules.pop(
-                    "app.services.quiz.question_gen_agent", None
+                    "app.services.agents.question_gen_agent", None
                 )
             else:
                 sys.modules[
-                    "app.services.quiz.question_gen_agent"
+                    "app.services.agents.question_gen_agent"
                 ] = original_module
 
     def test_failed_generation_sets_failed_and_never_persists(self):

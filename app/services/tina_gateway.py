@@ -141,8 +141,8 @@ class TinaGateway:
         从 key 池中获取可用 key，创建 BaseAPI。
         若 key 池为空或全满，回退到默认 key 创建。
         """
-        from app.utils import tina_loader  # noqa: F401
         from tina.llm import BaseAPI
+        from app.services.llm.usage_tracking import wrap_base_api
         from app.services.llm.llm_config import load_llm_settings
 
         settings = load_llm_settings()
@@ -153,10 +153,12 @@ class TinaGateway:
             api_key = settings.api_key
             logger.warning("TinaGateway: key 池无可用 key，使用默认 key")
 
-        return BaseAPI(
-            model=settings.model_name,
-            api_key=api_key,
-            base_url=settings.base_url,
+        return wrap_base_api(
+            BaseAPI(
+                model=settings.model_name,
+                api_key=api_key,
+                base_url=settings.base_url,
+            )
         )
 
     def release_base_api_key(self, llm_instance) -> None:
@@ -216,7 +218,6 @@ class TinaGateway:
         # 创建 BaseAPI 实例
         try:
             from app.services.llm.llm_config import load_llm_settings
-            from app.utils import tina_loader  # noqa: F401
             from tina.llm import BaseAPI
 
             settings = load_llm_settings()
@@ -348,7 +349,6 @@ class TinaGateway:
 
         try:
             from app.services.llm.llm_config import load_llm_settings
-            from app.utils import tina_loader  # noqa: F401
             from tina.llm import BaseAPI
 
             settings = load_llm_settings()

@@ -84,14 +84,16 @@ def create_base_api(*, env_path: Optional[LlmEnvPath] = None):
     if not settings.is_ready:
         raise ValueError("LLM configuration is incomplete")
 
-    from app.utils import tina_loader  # noqa: F401
     from tina.llm import BaseAPI
+    from app.services.llm.usage_tracking import wrap_base_api
 
-    return BaseAPI(
-        model=settings.model_name,
-        api_key=settings.api_key,
-        base_url=settings.base_url,
-        env_path=str(path),
+    return wrap_base_api(
+        BaseAPI(
+            model=settings.model_name,
+            api_key=settings.api_key,
+            base_url=settings.base_url,
+            env_path=str(path),
+        )
     )
 
 

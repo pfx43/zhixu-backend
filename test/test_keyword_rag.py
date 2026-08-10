@@ -212,7 +212,7 @@ def test_config_helpers_track_backend(monkeypatch):
 
 
 def test_zhishi_agent_retrieve_dispatches_to_keyword_search(monkeypatch):
-    from app.services.chat import zhishi_agent
+    from app.services.agents import zhishi_agent
 
     monkeypatch.setattr(config, "RAG_BACKEND", "keyword")
     fake_hits = [{"score": 1.0, "content": "命中内容", "segment_id": "s1"}]

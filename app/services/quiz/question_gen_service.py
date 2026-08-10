@@ -34,25 +34,15 @@ from app.services.knowledge.page_service import get_pages_by_numbers
 from app.services.llm.llm_config import create_base_api
 from app.services.quiz.question_hash import compute_content_hash
 from app.services.llm.llm_runner import llm_predict_no_stream
+from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
 QUESTIONS_PER_SEGMENT = 1
 EXCERPT_MAX_LEN = 500
 
-SYSTEM_PROMPT = """你是知拾学习助手，根据给定文档段落生成练习题。
-严格输出 JSON 数组，每项格式：
-{"stem":"题干","question_type":"single_choice","options":[{"key":"A","text":"..."},{"key":"B","text":"..."},{"key":"C","text":"..."},{"key":"D","text":"..."}],"answer":"A","explanation":"解析","tags":["标签"],"reference_text":"原文参考片段"}
-question_type 可选：single_choice（单选）、short_answer（简答）、application（应用题）。
-单选题 answer 必须是 A/B/C/D；简答/应用题 options 可为 []，answer 为标准答案要点。
-reference_text 为题目所依据的原文关键片段（100-300字）。
-tags 必须从用户已有 tag 列表中选择或复用相同含义的名称，避免同义不同名。
-不要输出 markdown 代码块。"""
-
-EXTRACT_SYSTEM_PROMPT = """你是知拾学习助手。给定教材页面内容，识别并提取其中自带的练习题。
-严格输出 JSON 数组，每项格式：
-{"stem":"题干","question_type":"single_choice","options":[{"key":"A","text":"..."},{"key":"B","text":"..."},{"key":"C","text":"..."},{"key":"D","text":"..."}],"answer":"A","explanation":"解析","tags":["标签"],"reference_text":"原文参考片段"}
-若页面无现成题目，返回空数组 []。tags 优先复用已有 tag 名。不要输出 markdown 代码块。"""
+SYSTEM_PROMPT = load_prompt("question_gen_segment")
+EXTRACT_SYSTEM_PROMPT = load_prompt("question_gen_extract")
 
 QuestionProvider = Callable[[DocumentSegment], List[dict]]
 PageProvider = Callable[[dict], List[dict]]
@@ -173,7 +163,7 @@ def _template_questions_for_page(page: dict) -> List[dict]:
 
 
 def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") -> List[dict]:
-    from app.services.quiz.question_gen_agent import agent_generate_for_page
+    from app.services.agents.question_gen_agent import agent_generate_for_page
 
     result = agent_generate_for_page(page, count=count, tag_hint=tag_hint)
     if result:
@@ -213,7 +203,7 @@ def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") ->
 
 
 def _llm_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
-    from app.services.quiz.question_gen_agent import agent_extract_for_page
+    from app.services.agents.question_gen_agent import agent_extract_for_page
 
     result = agent_extract_for_page(page, tag_hint=tag_hint)
     if result:
@@ -287,7 +277,7 @@ def _template_questions(segment: DocumentSegment) -> List[dict]:
 
 
 def _llm_generate(segment: DocumentSegment, *, tag_hint: str = "") -> List[dict]:
-    from app.services.quiz.question_gen_agent import agent_generate_for_segment
+    from app.services.agents.question_gen_agent import agent_generate_for_segment
 
     result = agent_generate_for_segment(segment, tag_hint=tag_hint)
     if result:
@@ -540,38 +530,41 @@ def generate_questions(
     total_questions = 0
 
     try:
-        for segment in segments:
-            if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
-                break
-            try:
-                if provider:
-                    raw_questions = gen_provider(segment)
-                else:
-                    raw_questions = _llm_generate(segment, tag_hint=tag_hint_global)
-            except Exception:
-                logger.warning(
-                    "分段出题失败，跳过: segment_id=%s", segment.id, exc_info=True
-                )
-                continue
+        from app.services.llm.usage_tracking import usage_context
 
-            for qdata in raw_questions[:QUESTIONS_PER_SEGMENT]:
+        with usage_context(user_id):
+            for segment in segments:
                 if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
                     break
-                normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
-                if not normalized:
+                try:
+                    if provider:
+                        raw_questions = gen_provider(segment)
+                    else:
+                        raw_questions = _llm_generate(segment, tag_hint=tag_hint_global)
+                except Exception:
+                    logger.warning(
+                        "分段出题失败，跳过: segment_id=%s", segment.id, exc_info=True
+                    )
                     continue
-                created, reused = _persist_question(
-                    db,
-                    user_id=user_id,
-                    document=document,
-                    segment=segment,
-                    qdata=normalized,
-                )
-                if created:
-                    created_count += 1
-                if reused:
-                    reused_count += 1
-                total_questions += 1
+
+                for qdata in raw_questions[:QUESTIONS_PER_SEGMENT]:
+                    if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
+                        break
+                    normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
+                    if not normalized:
+                        continue
+                    created, reused = _persist_question(
+                        db,
+                        user_id=user_id,
+                        document=document,
+                        segment=segment,
+                        qdata=normalized,
+                    )
+                    if created:
+                        created_count += 1
+                    if reused:
+                        reused_count += 1
+                    total_questions += 1
 
         if total_questions > 0:
             document.question_gen_status = "completed"
@@ -598,7 +591,7 @@ def _start_question_gen_thread(worker) -> None:
 
 
 def get_question_agent_readiness(*, probe: bool = True) -> dict:
-    from app.services.quiz.question_gen_agent import (
+    from app.services.agents.question_gen_agent import (
         get_question_agent_readiness as read_question_agent_readiness,
     )
 
