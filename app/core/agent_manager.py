@@ -1,5 +1,5 @@
 """
-Agent 池管理器 — 管理用户 → ZhishiAgent 的映射，保证用户隔离
+Agent 池管理器 — 管理用户 → ZhixuAgent 的映射，保证用户隔离
 """
 import logging
 import time
@@ -14,7 +14,7 @@ class AgentManager:
     Agent 池管理器
 
     职责：
-        - 懒加载：首次访问用户时创建 ZhishiAgent 实例
+        - 懒加载：首次访问用户时创建 ZhixuAgent 实例
         - 缓存复用：同一用户多个请求共享同一个 Agent
         - 用户隔离：不同 user_id 的 Agent 完全独立
         - 资源释放：支持清理闲置 Agent
@@ -22,10 +22,10 @@ class AgentManager:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._agents: Dict[int, "ZhishiAgent"] = {}  # user_id → ZhishiAgent
+        self._agents: Dict[int, "ZhixuAgent"] = {}  # user_id → ZhixuAgent
         self._last_access: Dict[int, float] = {}      # user_id → timestamp
 
-    def get_agent(self, user_id: int, dataset_id: str = "") -> "ZhishiAgent":
+    def get_agent(self, user_id: int, dataset_id: str = "") -> "ZhixuAgent":
         """
         获取或创建用户的 Agent 实例
 
@@ -34,9 +34,9 @@ class AgentManager:
             dataset_id: Dify 知识库 ID
 
         Returns:
-            ZhishiAgent 实例
+            ZhixuAgent 实例
         """
-        from app.services.agents.zhishi_agent import ZhishiAgent
+        from app.services.agents.zhixu_agent import ZhixuAgent
 
         with self._lock:
             agent = self._agents.get(user_id)
@@ -49,7 +49,7 @@ class AgentManager:
                         f"recreating agent (old={agent.dataset_id}, new={dataset_id})"
                     )
                 logger.info(f"AgentManager: creating agent for user_id={user_id}, dataset_id={dataset_id}")
-                agent = ZhishiAgent(user_id=user_id, dataset_id=dataset_id)
+                agent = ZhixuAgent(user_id=user_id, dataset_id=dataset_id)
                 self._agents[user_id] = agent
 
             self._last_access[user_id] = time.time()

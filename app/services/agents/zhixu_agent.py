@@ -1,5 +1,5 @@
 """
-知拾 Agent — tina Agent 封装（检索工具 + 流式对话）
+知序 Agent — tina Agent 封装（检索工具 + 流式对话）
 
 - 组合 KnowledgeRetriever 工具包（kb 命名空间），仅检索当前用户自己的知识库（用户隔离）
 - 通过 TinaGateway 统一创建 BaseAPI（key 池 + 用量记账）
@@ -25,9 +25,9 @@ if not is_local_rag():
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = load_prompt("zhishi_agent_qa")
-SYSTEM_PROMPT_LEARNING = load_prompt("zhishi_agent_learning")
-SYSTEM_PROMPT_CLASSROOM_NOTE = load_prompt("zhishi_agent_classroom_note")
+SYSTEM_PROMPT = load_prompt("zhixu_agent_qa")
+SYSTEM_PROMPT_LEARNING = load_prompt("zhixu_agent_learning")
+SYSTEM_PROMPT_CLASSROOM_NOTE = load_prompt("zhixu_agent_classroom_note")
 
 MODE_PROMPTS = {
     "qa": SYSTEM_PROMPT,
@@ -37,9 +37,9 @@ MODE_PROMPTS = {
 }
 
 
-class ZhishiAgent:
+class ZhixuAgent:
     """
-    知拾智能体 — 每个用户一个实例
+    知序智能体 — 每个用户一个实例
 
     职责：
         1. 持有 tina Agent + 检索工具包（本地 Chroma / 关键词 / DifyKB）
@@ -70,13 +70,13 @@ class ZhishiAgent:
             self._llm_ready = bool(tina_gateway._api_keys)
             if self._llm_ready:
                 logger.info(
-                    "ZhishiAgent LLM 就绪 (via Gateway): user_id=%s",
+                    "ZhixuAgent LLM 就绪 (via Gateway): user_id=%s",
                     user_id,
                 )
             else:
-                logger.warning("ZhishiAgent LLM 配置不完整: user_id=%s", user_id)
+                logger.warning("ZhixuAgent LLM 配置不完整: user_id=%s", user_id)
         except Exception as e:
-            logger.error(f"ZhishiAgent 初始化失败: user_id={user_id}, error={e}")
+            logger.error(f"ZhixuAgent 初始化失败: user_id={user_id}, error={e}")
 
     @property
     def is_ready(self) -> bool:
@@ -101,12 +101,12 @@ class ZhishiAgent:
                 system_prompt=SYSTEM_PROMPT,
                 max_context_length=80000,
                 max_tool_result_length=6000,
-                name=f"zhishi_{self.user_id}",
+                name=f"zhixu_{self.user_id}",
             )
             return True
         except Exception as e:
             logger.error(
-                "ZhishiAgent 创建 tina Agent 失败: user_id=%s error=%s",
+                "ZhixuAgent 创建 tina Agent 失败: user_id=%s error=%s",
                 self.user_id,
                 e,
             )
@@ -177,7 +177,7 @@ class ZhishiAgent:
             if runtime is not None:
                 runtime.llm = llm
         except Exception as e:
-            logger.error("ZhishiAgent 获取 llm 失败: user_id=%s error=%s", self.user_id, e)
+            logger.error("ZhixuAgent 获取 llm 失败: user_id=%s error=%s", self.user_id, e)
             yield {"role": "assistant", "content": "抱歉，AI 服务暂时不可用，请稍后重试。"}
             return
 
@@ -204,7 +204,7 @@ class ZhishiAgent:
                 if event:
                     yield event
         except Exception as e:
-            logger.error(f"ZhishiAgent.predict_stream 错误: {e}")
+            logger.error(f"ZhixuAgent.predict_stream 错误: {e}")
             yield {"type": "answer", "role": "assistant", "content": "抱歉，生成回复时出错了，请稍后重试。"}
         finally:
             # 生成器被提前关闭（用户打断/连接断开）时也保留聚合结果，供 chat 层保存
@@ -225,7 +225,7 @@ class ZhishiAgent:
                         "citations": [c.model_dump() for c in citations],
                     }
             except Exception as e:
-                logger.warning(f"ZhishiAgent 构建 citations 失败: {e}")
+                logger.warning(f"ZhixuAgent 构建 citations 失败: {e}")
 
         self._active_collection_id = None
         self._active_db = None

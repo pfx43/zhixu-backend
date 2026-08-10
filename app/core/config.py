@@ -40,7 +40,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USER = os.getenv("SMTP_USER", "your-email@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "your-app-password")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER)
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Zhishi Backend")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Zhixu Backend")
 
 # 邮箱验证码有效期（分钟）
 EMAIL_VERIFICATION_EXPIRE_MINUTES = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_MINUTES", 15))
@@ -73,7 +73,7 @@ DIFY_RERANKING_PROVIDER = os.getenv("DIFY_RERANKING_PROVIDER", "tongyi")
 DIFY_RERANKING_MODEL = os.getenv("DIFY_RERANKING_MODEL", "gte-rerank")
 
 # 欢迎文档路径（相对于 kt_backend 目录）
-WELCOME_DOC_PATH = os.getenv("WELCOME_DOC_PATH", "docs/欢迎使用知拾.md")
+WELCOME_DOC_PATH = os.getenv("WELCOME_DOC_PATH", "docs/欢迎使用知序.md")
 
 # 文件存储配置
 USE_OSS = os.getenv("USE_OSS", "false").lower() == "true"

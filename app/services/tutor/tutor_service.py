@@ -114,7 +114,7 @@ def _build_system_prompt(
         user_part = ""
 
     return (
-        "你是知拾（Zhishi）的苏格拉底式辅导老师 Tina。\n\n"
+        "你是知序（Zhixu）的苏格拉底式辅导老师 Tina。\n\n"
         f"{SOCRATIC_RULES}\n"
         f"## 当前辅导题目\n{_format_question_block(question)}\n"
         f"{user_part}"

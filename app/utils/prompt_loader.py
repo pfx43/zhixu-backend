@@ -4,7 +4,7 @@
 用法:
     from app.utils.prompt_loader import load_prompt
 
-    system_prompt = load_prompt("zhishi_agent_qa")
+    system_prompt = load_prompt("zhixu_agent_qa")
 
 环境变量:
     PROMPTS_DIR — 覆盖默认的 backend/prompts 路径（生产部署用）
