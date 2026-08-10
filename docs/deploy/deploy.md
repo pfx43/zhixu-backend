@@ -44,7 +44,7 @@ cd C:\zhixu-backend
    对项目根目录下的 `storage/` 有读写权限。
 3. **Breaking Change**：`DELETE /api/v1/notes/{note_id}` 现在需要
    `{"expected_revision": N}` body。旧 Flutter 客户端直接调用将返回 422。
-   详见 `docs/notes_前端对接文档.md`。
+   详见 `docs/notes_frontend_guide.md`。
 
 `start_server.ps1` 使用脚本所在目录解析路径，启动前拒绝复用已占用的 8765 端口。
 启动校验默认等待 60 秒，可通过 `ZHISHI_STARTUP_TIMEOUT_SECONDS` 调整。只有

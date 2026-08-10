@@ -1,7 +1,7 @@
-# 知拾 UI/UX 改进清单
+# 知序 UI/UX 改进清单
 
 > **文档版本**：2026-07-02  
-> **关联文档**：[PLAN.md](./PLAN.md) · [IMPLEMENTATION.md](./IMPLEMENTATION.md) · [DEV_GUIDE.md](./DEV_GUIDE.md)
+> **关联文档**：[plan.md](./plan.md) · [implementation.md](./implementation.md) · [dev_guide.md](./dev_guide.md)
 
 ---
 
@@ -108,7 +108,7 @@ S8 已在 React 端接通 `VITE_API_BASE`、知识库分区、刷题会话、辅
 | **对应 PLAN** | MVP 验收一句话（IMPLEMENTATION §3） |
 | **对应页面** | 全站联调 |
 | **建议改法** | 完成 P0-1～P0-4 后，按 DEV_GUIDE 走一遍：注册 → 上传 `.md` 到学习区 → 等待分段/出题 UI → 刷题 → 错题原文 → 「我不会」辅导；补全各页 loading/error 空态（见 P1-7）。 |
-| **涉及文件** | 多文件；`docs/IMPLEMENTATION.md` 验收勾选（文档维护，非本任务范围） |
+| **涉及文件** | 多文件；`docs/implementation.md` 验收勾选（文档维护，非本任务范围） |
 | **工作量** | S（验证）+ 依赖 P0-1～4 |
 
 ---
@@ -450,4 +450,4 @@ interface CitationCardProps {
 
 ---
 
-*维护：产品范围变更时同步更新 [PLAN.md](./PLAN.md)；阶段验收同步 [IMPLEMENTATION.md](./IMPLEMENTATION.md) S8 / S8.5 小节。*
+*维护：产品范围变更时同步更新 [plan.md](./plan.md)；阶段验收同步 [implementation.md](./implementation.md) S8 / S8.5 小节。*

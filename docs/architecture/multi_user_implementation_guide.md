@@ -1,4 +1,4 @@
-# 知拾后端 — 生产多用户改造实现指南
+# 知序后端 — 生产多用户改造实现指南
 
 > **文档性质**：给运维 / 后端同学的可派工手册。  
 > **本文不做代码提交**：只说明「谁做什么、按什么顺序做、改哪些文件、如何验收」。  
@@ -28,10 +28,10 @@
 
 | 配置 / 字段 | 位置 | 代码实情 |
 |-------------|------|----------|
-| `database.url` → PostgreSQL | `config.yaml` | [`app/core/database.py`](../app/core/database.py) 未完整消费 pool 参数；无 Alembic |
-| `cache.backend: redis` | `config.yaml` | [`app/core/redis.py`](../app/core/redis.py) 只有 `MemoryCache` |
-| `storage.backend` / `USE_OSS` | config / env | [`storage_service.py`](../app/services/storage_service.py) 开 OSS 直接 `NotImplementedError` |
-| `RAG_BACKEND=dify` | config | [`dify_kb.py`](../app/services/dify_kb.py) 已有；默认仍是 `local` Chroma |
+| `database.url` → PostgreSQL | `config.yaml` | [`app/core/database.py`](../../app/core/database.py) 未完整消费 pool 参数；无 Alembic |
+| `cache.backend: redis` | `config.yaml` | [`app/core/redis.py`](../../app/core/redis.py) 只有 `MemoryCache` |
+| `storage.backend` / `USE_OSS` | config / env | [`storage_service.py`](../../app/services/storage_service.py) 开 OSS 直接 `NotImplementedError` |
+| `RAG_BACKEND=dify` | config | [`dify_kb.py`](../../app/services/dify_kb.py) 已有；默认仍是 `local` Chroma |
 | `api_limit_daily` 等 | `User` 模型 | 登录写入 session，**强制校验未落地** |
 | Tina | `app/agents/*` | 直接调 `Agent` / `BaseAPI`，无统一包装、无用量记账 |
 
@@ -155,7 +155,7 @@ cache:
 
 > 以下为实现任务说明，按文件改。
 
-#### 4.1 真 Redis：[`app/core/redis.py`](../app/core/redis.py)
+#### 4.1 真 Redis：[`app/core/redis.py`](../../app/core/redis.py)
 
 - 保留现有 `MemoryCache`（本地开发）。
 - 新增 `RedisCache`，方法与现有对齐：`set_session` / `get_session` / `set_value` / `get_value` / `delete_key` / `scan_keys` / `lpush` / `lrange` 等。
@@ -171,7 +171,7 @@ else:
 - `requirements.txt` 增加 `redis` 包。
 - 登录 / 验证码 / 登出必须走同一 `cache` 实例。
 
-#### 4.2 连接池：[`app/core/database.py`](../app/core/database.py)
+#### 4.2 连接池：[`app/core/database.py`](../../app/core/database.py)
 
 当 URL 为 PostgreSQL 时，`create_engine` 至少带上：
 
@@ -182,9 +182,9 @@ else:
 
 生产禁止默默回落 SQLite：若未设置 `DATABASE_URL` 且环境为 production，应直接报错退出。
 
-#### 4.3 修启动阻塞：[`app/core/config.py`](../app/core/config.py)
+#### 4.3 修启动阻塞：[`app/core/config.py`](../../app/core/config.py)
 
-[`ocr_service.py`](../app/services/ocr_service.py) 会导入：
+[`ocr_service.py`](../../app/services/ocr_service.py) 会导入：
 
 - `BAIDU_OCR_API_KEY`
 - `BAIDU_OCR_SECRET_KEY`
@@ -232,7 +232,7 @@ else:
 pip install cos-python-sdk-v5
 ```
 
-写入 [`requirements.txt`](../requirements.txt)。
+写入 [`requirements.txt`](../../requirements.txt)。
 
 官方文档关键词：`CosS3Client`、`put_object`、`get_object`、`delete_object`、预签名 URL。
 
@@ -263,11 +263,11 @@ STORAGE_BACKEND=cos
 UPLOAD_MAX_SIZE_MB=50
 ```
 
-[`app/core/config.py`](../app/core/config.py) 需增加对 `storage.backend=cos` 与上述环境变量的读取；废弃或映射旧的 `USE_OSS` 布尔，避免两套开关打架。
+[`app/core/config.py`](../../app/core/config.py) 需增加对 `storage.backend=cos` 与上述环境变量的读取；废弃或映射旧的 `USE_OSS` 布尔，避免两套开关打架。
 
 ### 步骤 5 — 后端实现指引
 
-文件：[`app/services/storage_service.py`](../app/services/storage_service.py)
+文件：[`app/services/storage_service.py`](../../app/services/storage_service.py)
 
 1. 新增 `COSStorage`，与 `LocalStorage` **同一套方法签名**（至少）：
    - `save_file` / `get_file` / `delete_file`
@@ -308,14 +308,14 @@ global/{hash前2位}/{content_hash}
 
 | 路径 | 做法 | 适用 |
 |------|------|------|
-| **A 短期（推荐先落地）** | 生产 `RAG_BACKEND=dify`，复用 [`app/services/dify_kb.py`](../app/services/dify_kb.py) | 尽快把向量算力移出本机 |
+| **A 短期（推荐先落地）** | 生产 `RAG_BACKEND=dify`，复用 [`app/services/dify_kb.py`](../../app/services/dify_kb.py) | 尽快把向量算力移出本机 |
 | **B 中期** | 单独 GPU/向量服务器，HTTP：`/embed`、`/upsert`、`/search`（强制 `user_id` 过滤） | 要自控模型与成本时 |
 
 **约束（无论 A/B）**：
 
 - API 进程内 **禁止**再加载 `sentence-transformers` 作为生产默认路径
 - **禁止**多实例共写本地 Chroma 目录
-- 检索过滤失败时 **禁止**「去掉 filter 再查」的回退（见 [`chroma_store.py`](../app/services/chroma_store.py) 现有逻辑，生产必须删掉或仅 debug）
+- 检索过滤失败时 **禁止**「去掉 filter 再查」的回退（见 [`chroma_store.py`](../../app/services/chroma_store.py) 现有逻辑，生产必须删掉或仅 debug）
 
 本地开发可保留 `RAG_BACKEND=local`，但文档与部署手册写明：**生产禁止 local**。
 
@@ -324,7 +324,7 @@ global/{hash前2位}/{content_hash}
 把下面整段提示词丢给 AI（Cursor / 其他），生成后 **人工审查再合入**。
 
 ```text
-请在知拾后端增加向量存储适配层，不要把 embedding 模型加载进 FastAPI 进程。
+请在知序后端增加向量存储适配层，不要把 embedding 模型加载进 FastAPI 进程。
 
 目标：
 1. 新增 VectorStoreClient 抽象，方法至少包括：
@@ -349,8 +349,8 @@ global/{hash前2位}/{content_hash}
 ### 步骤 3 — 后端接入
 
 1. 生产 `.env`：`RAG_BACKEND=dify`（路径 A）或 `VECTOR_BACKEND=http` + `VECTOR_BASE_URL=...`（路径 B）。
-2. 注册用户时若走 Dify：确认 [`auth_service.py`](../app/services/auth_service.py) 创建 dataset 逻辑在生产开启。
-3. 分段完成后的索引写入改走适配层（见 [`index_service.py`](../app/services/index_service.py) / [`segment_service.py`](../app/services/segment_service.py)）。
+2. 注册用户时若走 Dify：确认 [`auth_service.py`](../../app/services/auth_service.py) 创建 dataset 逻辑在生产开启。
+3. 分段完成后的索引写入改走适配层（见 [`index_service.py`](../../app/services/index_service.py) / [`segment_service.py`](../../app/services/segment_service.py)）。
 4. 监控：API 容器内存不应再出现百兆级 embedding 模型常驻。
 
 ### 步骤 4 — P2 验收
@@ -367,7 +367,7 @@ global/{hash前2位}/{content_hash}
 
 ## P3：用量表 + 流式 chunk 记 token + 配额强制
 
-> 套餐字段已经在 [`app/models/models.py`](../app/models/models.py)（`api_limit_daily`、`token_limit_monthly`、`knowledge_base_limit`、`concurrent_limit` 等）。  
+> 套餐字段已经在 [`app/models/models.py`](../../app/models/models.py)（`api_limit_daily`、`token_limit_monthly`、`knowledge_base_limit`、`concurrent_limit` 等）。  
 > P3 要做的是：**计量 + 强制**，不是再加几个展示字段。
 
 ### 步骤 1 — 建用量表（PostgreSQL）
@@ -406,7 +406,7 @@ global/{hash前2位}/{content_hash}
 - 记账主键维度：`user_id` + 自然日 / 自然月
 - 流式与非流式都要覆盖
 
-现有流式入口示例（[`app/agents/zhishi_agent.py`](../app/agents/zhishi_agent.py)）：
+现有流式入口示例（[`app/agents/zhishi_agent.py`](../../app/agents/zhishi_agent.py)）：
 
 ```python
 async for chunk in self.agent.apredict(instruction=enhanced_message):
@@ -464,7 +464,7 @@ record_turn_usage(user_id, turn_prompt, turn_completion)
 
 ### 步骤 4 — 升级套餐不要裸奔
 
-[`POST /auth/users/me/upgrade-plan`](../app/api/v1/auth.py) 当前可直接改等级。改为：
+[`POST /auth/users/me/upgrade-plan`](../../app/api/v1/auth.py) 当前可直接改等级。改为：
 
 - 仅支付回调 / 管理员 Token 可调用；或
 - 删除对前端暴露，改成内部服务
@@ -544,13 +544,13 @@ llm:inflight:{user_id}
 
 | 文件 | 现状 | 目标 |
 |------|------|------|
-| [`app/agents/zhishi_agent.py`](../app/agents/zhishi_agent.py) | 自己 `BaseAPI` + `Agent` | 流式走 `gateway.stream_chat` |
-| [`app/agents/training_agent.py`](../app/agents/training_agent.py) | 同上 | 同上 |
-| [`app/agents/question_gen_agent.py`](../app/agents/question_gen_agent.py) | 自管 Semaphore(5) | 并发交给 Gateway + 用户限额 |
-| [`app/utils/tina_loader.py`](../app/utils/tina_loader.py) | 硬编码 `tina.env` 路径 | 读取 `TINA_ENV_PATH` / config |
+| [`app/agents/zhishi_agent.py`](../../app/agents/zhishi_agent.py) | 自己 `BaseAPI` + `Agent` | 流式走 `gateway.stream_chat` |
+| [`app/agents/training_agent.py`](../../app/agents/training_agent.py) | 同上 | 同上 |
+| [`app/agents/question_gen_agent.py`](../../app/agents/question_gen_agent.py) | 自管 Semaphore(5) | 并发交给 Gateway + 用户限额 |
+| [`app/utils/tina_loader.py`](../../app/utils/tina_loader.py) | 硬编码 `tina.env` 路径 | 读取 `TINA_ENV_PATH` / config |
 | 仓库根 | 无示例 | 增加 `tina.env.example`（无真实密钥） |
 
-统一 [`app/core/agent_manager.py`](../app/core/agent_manager.py) 与 `server.py` lifespan 里可能重复的 Agent 池，避免两套缓存。
+统一 [`app/core/agent_manager.py`](../../app/core/agent_manager.py) 与 `server.py` lifespan 里可能重复的 Agent 池，避免两套缓存。
 
 ### 步骤 5 — P4 验收
 
@@ -570,7 +570,7 @@ llm:inflight:{user_id}
 
 必须离开 API 进程同步路径的任务：
 
-1. PDF OCR（[`pdf_ocr_service.py`](../app/services/pdf_ocr_service.py)）
+1. PDF OCR（[`pdf_ocr_service.py`](../../app/services/pdf_ocr_service.py)）
 2. 文档解析 / 分段 / 索引 pipeline
 3. 批量出题
 4. 若仍自建向量写入，upsert 大批量分段
@@ -597,7 +597,7 @@ job:status:{job_id}        # Hash：state, progress, error, result
 现有进程内进度 dict（如 OCR progress）改为写 Redis。  
 多 worker / 多 API 实例下进度才能查到。
 
-[`app/core/job_runner.py`](../app/core/job_runner.py) 的 daemon 线程：**仅本地开发可用**；生产文档写明禁用。
+[`app/core/job_runner.py`](../../app/core/job_runner.py) 的 daemon 线程：**仅本地开发可用**；生产文档写明禁用。
 
 ### 步骤 5 — P5 验收
 
@@ -615,7 +615,7 @@ job:status:{job_id}        # Hash：state, progress, error, result
 
 ### 6.1 KT `user_hash` 未进 session
 
-- 现象：[`app/api/v1/kt.py`](../app/api/v1/kt.py) `_user_hash_or_503` 读 `current_user["user_hash"]`，登录写入字段在 [`auth_service.py`](../app/services/auth_service.py) **没有** `user_hash` → 已登录也 503。
+- 现象：[`app/api/v1/kt.py`](../../app/api/v1/kt.py) `_user_hash_or_503` 读 `current_user["user_hash"]`，登录写入字段在 [`auth_service.py`](../../app/services/auth_service.py) **没有** `user_hash` → 已登录也 503。
 - 改法：登录时用 `TcnClient.generate_user_hash(user_id)` 写入 session；或在 `_user_hash_or_503` 内按 `user_id` 现场生成并回填。
 - 验收：登录后 KT 接口不再因「哈希未初始化」503。
 
@@ -628,13 +628,13 @@ job:status:{job_id}        # Hash：state, progress, error, result
 
 ### 6.3 Chroma / 检索无 filter 回退
 
-- 位置：[`chroma_store.py`](../app/services/chroma_store.py) search 的 `retry without filter`
+- 位置：[`chroma_store.py`](../../app/services/chroma_store.py) search 的 `retry without filter`
 - 改法：生产删除该回退；失败返回空或 5xx。
 - 验收：单元/集成测试证明不会跨用户命中。
 
 ### 6.4 其它安全
 
-- [`server.py`](../server.py) CORS `allow_origins=["*"]` → 改为前端域名白名单
+- [`server.py`](../../server.py) CORS `allow_origins=["*"]` → 改为前端域名白名单
 - 更换默认 `SECRET_KEY`
 - 收敛 `check-email-verification`、`forgot-password` 的用户枚举信息
 - `upgrade-plan` 见 P3

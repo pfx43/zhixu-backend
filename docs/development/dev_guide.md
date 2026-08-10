@@ -1,9 +1,9 @@
-# 知拾 — 开发新功能实操指南
+# 知序 — 开发新功能实操指南
 
 > **读者**：需要在本仓库里加 API / 页面 / 落库能力的开发者  
-> **与 IMPLEMENTATION.md 的分工**：`IMPLEMENTATION.md` 按 S0–S8 阶段描述「做什么、验收什么」；**本文描述「按现有代码怎么写」**  
-> **数据模型真源**：[`backend/docs/DATABASE.md`](../backend/docs/DATABASE.md)  
-> **接口契约**：[`backend/docs/API.md`](../backend/docs/API.md)（实现后回写）
+> **与 implementation.md 的分工**：`implementation.md` 按 S0–S8 阶段描述「做什么、验收什么」；**本文描述「按现有代码怎么写」**  
+> **数据模型真源**：[`backend/docs/database.md`](../../../docs/database.md)  
+> **接口契约**：[`backend/docs/api/api_overview.md`](../../../docs/api/api_overview.md)（实现后回写）
 
 ---
 
@@ -19,7 +19,7 @@
 
 **本文主范本**：
 
-- **后端落库新能力**（刷题 session、知识库分区）：以 **`auth` / `plan` 为四层范本**，表结构对照 `DATABASE.md`
+- **后端落库新能力**（刷题 session、知识库分区）：以 **`auth` / `plan` 为四层范本**，表结构对照 `database.md`
 - **后端 API 形态**（鉴权、`HTTPException`、路由注册）：同时参考 **`chat`**（Pydantic `response_model`）与 **`kb`**（文件上传、`UploadFile`）
 - **前端联调**：以 **`kb`** 为范本（`kbApi` + `features/knowledge-base/`）
 
@@ -57,15 +57,15 @@ zhishi/
 │   ├── features/                 # 按页面划分（knowledge-base、chat…）
 │   └── data/nav.ts               # 侧栏导航（新页面需同步）
 └── docs/
-    ├── DEV_GUIDE.md              # 本文
-    └── IMPLEMENTATION.md         # 分阶段任务与验收
+    ├── dev_guide.md              # 本文
+    └── implementation.md         # 分阶段任务与验收
 ```
 
 ---
 
 ## 2. 新增后端 API（完整步骤）
 
-以下以 **「刷题 session」**（`quiz_sessions` 表，见 `DATABASE.md` §6.1）为例；**「知识库分区」**（`kb_collections`，§4.1）步骤相同，仅换模型名与 CRUD 函数。
+以下以 **「刷题 session」**（`quiz_sessions` 表，见 `database.md` §6.1）为例；**「知识库分区」**（`kb_collections`，§4.1）步骤相同，仅换模型名与 CRUD 函数。
 
 ### 2.1 在 `models/` 增加 ORM 模型
 
@@ -82,10 +82,10 @@ class User(Base):
     dataset_id = Column(String(255), nullable=True)
 ```
 
-**你要做的**（S1 阶段，见 `IMPLEMENTATION.md` §S1）：
+**你要做的**（S1 阶段，见 `implementation.md` §S1）：
 
 1. 新建 `backend/app/models/quiz_session.py`（或按 IMPLEMENTATION 拆分 `quiz.py`）
-2. `__tablename__` **必须与** `DATABASE.md` 一致，例如 `"quiz_sessions"`
+2. `__tablename__` **必须与** `database.md` 一致，例如 `"quiz_sessions"`
 3. UUID 主键用 `String(36)`，默认值 `str(uuid.uuid4())`
 4. 所有用户资源表带 `user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)`
 5. 在 `backend/app/models/__init__.py` 导出，确保 `init_db()` 能 `create_all`：
@@ -96,7 +96,7 @@ from .models import User, PlanTier
 
 扩展为：`from .quiz_session import QuizSession` 等。
 
-**表字段对照**（摘自 DATABASE.md）：
+**表字段对照**（摘自 database.md）：
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -108,7 +108,7 @@ from .models import User, PlanTier
 | status | VARCHAR(20) | `active` / `completed` |
 | started_at / finished_at | DATETIME | |
 
-团队环境以 **Alembic migration** 为准（`IMPLEMENTATION.md` S1），本地可暂用 `init_db()`。
+团队环境以 **Alembic migration** 为准（`implementation.md` S1），本地可暂用 `init_db()`。
 
 ---
 
@@ -489,7 +489,7 @@ export const quizApi = {
 
 **流式接口**（如 chat）不走 `request()`，需单独 `fetch` + SSE 解析，见 `chatApi.sendStream`。
 
-**本地 API 地址**：`IMPLEMENTATION.md` §5.3 建议改为 `import.meta.env.VITE_API_BASE`；当前文件顶部为常量，本地开发时在 `frontend/.env.development` 配置 `VITE_API_BASE=http://127.0.0.1:8765` 并改 `api.ts` 读取该变量。
+**本地 API 地址**：`implementation.md` §5.3 建议改为 `import.meta.env.VITE_API_BASE`；当前文件顶部为常量，本地开发时在 `frontend/.env.development` 配置 `VITE_API_BASE=http://127.0.0.1:8765` 并改 `api.ts` 读取该变量。
 
 ---
 
@@ -650,7 +650,7 @@ sequenceDiagram
 
 ---
 
-## 5. 与 IMPLEMENTATION.md 各阶段的对应关系
+## 5. 与 implementation.md 各阶段的对应关系
 
 | IMPLEMENTATION 阶段 | 本文章节 | 主要动作 |
 |----------------------|----------|----------|
@@ -686,7 +686,7 @@ uvicorn server:app --host 127.0.0.1 --port 8765
 npm run dev
 ```
 
-配置 `frontend/.env.development` 中 `VITE_API_BASE=http://127.0.0.1:8765`，并让 `api.ts` 读取该变量（见 `IMPLEMENTATION.md` §5.3）。
+配置 `frontend/.env.development` 中 `VITE_API_BASE=http://127.0.0.1:8765`，并让 `api.ts` 读取该变量（见 `implementation.md` §5.3）。
 
 **快速自检**：`GET http://127.0.0.1:8765/health` → 200；前端登录后进 Dashboard。
 
@@ -721,7 +721,7 @@ async def lifespan(app: FastAPI):
 
 ## 8. 自检清单（提交 PR 前）
 
-- [ ] `router.py` 已 `include_router`，URL 与 `API.md` 一致
+- [ ] `router.py` 已 `include_router`，URL 与 `api_overview.md` 一致
 - [ ] 需登录路由均挂 `get_current_active_user`
 - [ ] 用户数据查询带 `user_id` 过滤
 - [ ] Pydantic `response_model` 与前端 `types` 字段对齐
@@ -735,7 +735,7 @@ async def lifespan(app: FastAPI):
 
 | 文档 | 用途 |
 |------|------|
-| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | S0–S8 任务分解与验收 |
-| [PLAN.md](./PLAN.md) | 产品方向 |
-| [backend/docs/DATABASE.md](../backend/docs/DATABASE.md) | 表名、字段、ER |
-| [backend/docs/API.md](../backend/docs/API.md) | 已有接口契约 |
+| [implementation.md](./implementation.md) | S0–S8 任务分解与验收 |
+| [plan.md](./plan.md) | 产品方向 |
+| [backend/docs/database.md](../../../docs/database.md) | 表名、字段、ER |
+| [backend/docs/api/api_overview.md](../../../docs/api/api_overview.md) | 已有接口契约 |

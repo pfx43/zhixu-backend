@@ -211,18 +211,18 @@ def test_config_helpers_track_backend(monkeypatch):
     assert config.is_dify_rag() is True
 
 
-def test_zhishi_agent_retrieve_dispatches_to_keyword_search(monkeypatch):
-    from app.services.agents import zhishi_agent
+def test_zhixu_agent_retrieve_dispatches_to_keyword_search(monkeypatch):
+    from app.services.agents import zhixu_agent
 
     monkeypatch.setattr(config, "RAG_BACKEND", "keyword")
     fake_hits = [{"score": 1.0, "content": "命中内容", "segment_id": "s1"}]
     monkeypatch.setattr(
-        zhishi_agent,
+        zhixu_agent,
         "keyword_search",
         lambda db, query, **kwargs: fake_hits,
     )
 
-    agent = zhishi_agent.ZhishiAgent(user_id=7, dataset_id="")
+    agent = zhixu_agent.ZhixuAgent(user_id=7, dataset_id="")
     agent._active_db = object()
     agent._active_collection_id = "collection-1"
 

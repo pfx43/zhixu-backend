@@ -1,6 +1,6 @@
 # 团队分工
 
-## 项目：知拾 KT 融合 (Patchouli Knowledge × LEKT)
+## 项目：知序 KT 融合 (Patchouli Knowledge × LEKT)
 
 ---
 
@@ -66,8 +66,8 @@
 KT融合/
 ├── kt_backend/           ← 你主力维护
 ├── lekt_release_cython(3)/ ← 参考/只读
-├── README.md / PLAN.md   ← 你定稿
-└── TEAM.md               ← 你维护
+├── README.md / plan.md   ← 你定稿
+└── team.md               ← 你维护
 ```
 
 **你的任务清单：**
@@ -93,7 +93,7 @@ KT融合/
 | `lib/models/kt_models.dart` | 所有 KT 数据类（SkillNode, DependencyGraphData, LearningPathStep 等） |
 | `lib/serve/kt_api_service.dart` | KT 后端 HTTP 客户端，单例模式。**已增加** `loadConfig()`、`saveConfig()` |
 | `lib/main.dart` | 已加 KT 健康检查（line 90-94），不要再动 |
-| `PLAN.md` | 完整 API 格式、数据流图 |
+| `plan.md` | 完整 API 格式、数据流图 |
 
 ### 你需要写的文件
 

@@ -1,15 +1,15 @@
-# 知拾 — 工程实现指南
+# 知序 — 工程实现指南
 
 > **目标读者**：接手开发的自己 / 协作者  
-> **产品方向**：见 [PLAN.md](./PLAN.md)（王晨）  
-> **数据模型**：见 [backend/docs/DATABASE.md](../backend/docs/DATABASE.md)  
-> **接口契约**：见 [backend/docs/API.md](../backend/docs/API.md)（现有）+ 本文各阶段新增约定
+> **产品方向**：见 [plan.md](./plan.md)（王晨）  
+> **数据模型**：见 [backend/docs/database.md](../../../docs/database.md)  
+> **接口契约**：见 [backend/docs/api/api_overview.md](../../../docs/api/api_overview.md)（现有）+ 本文各阶段新增约定
 
 ---
 
 ## 0. 产品目标（与 PLAN 对齐）
 
-知拾从「第二大脑 / 知识存储 + 通用聊天」转向「**以学习资料驱动的刷题 + 苏格拉底式辅导**」。核心闭环：
+知序从「第二大脑 / 知识存储 + 通用聊天」转向「**以学习资料驱动的刷题 + 苏格拉底式辅导**」。核心闭环：
 
 1. 用户把资料放进**学习区**知识库 → 自动分段 → 自动/半自动出题  
 2. 用户刷题（含「我不会」）→ 答错展示原文与解析 → 可唤起辅导 Agent  
@@ -19,19 +19,19 @@ PLAN 描述「做什么」；本文描述「怎么按依赖顺序做出来」。
 
 ---
 
-## 1. 与 PLAN.md 的关系
+## 1. 与 plan.md 的关系
 
 | 文档 | 职责 |
 |------|------|
-| `docs/PLAN.md` | 产品动机、用户故事、难点标注 |
-| `backend/docs/DATABASE.md` | 表结构、字段、ER、去重与 zone 规则 |
-| `backend/docs/API.md` | 已实现接口的契约（auth/chat/kb/kt…） |
-| **`docs/DEV_GUIDE.md`** | **开发新功能实操**：models/crud/service/router、前端 api.ts/features 怎么写 |
-| **`docs/IMPLEMENTATION.md`（本文）** | 分阶段可执行步骤、文件路径、验收标准 |
+| `docs/plan.md` | 产品动机、用户故事、难点标注 |
+| `backend/docs/database.md` | 表结构、字段、ER、去重与 zone 规则 |
+| `backend/docs/api/api_overview.md` | 已实现接口的契约（auth/chat/kb/kt…） |
+| **`docs/dev_guide.md`** | **开发新功能实操**：models/crud/service/router、前端 api.ts/features 怎么写 |
+| **`docs/implementation.md`（本文）** | 分阶段可执行步骤、文件路径、验收标准 |
 
 > 按 S1–S8 做新能力时：**IMPLEMENTATION 定任务与验收，DEV_GUIDE 定代码写法与范本路径**。
 
-实现时以 **DATABASE.md 为 schema 真源**；新增 REST 端点实现后回写 `API.md`。
+实现时以 **database.md 为 schema 真源**；新增 REST 端点实现后回写 `api_overview.md`。
 
 ---
 
@@ -147,7 +147,7 @@ flowchart LR
 ### 5.1 后端 `backend/.env`（示例）
 
 ```env
-# 数据库 — 本地开发推荐 SQLite（与 DATABASE.md 一致）
+# 数据库 — 本地开发推荐 SQLite（与 database.md 一致）
 DATABASE_URL=sqlite:///./data/zhishi.db
 
 # 团队联调可切 MySQL
@@ -241,7 +241,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8765"
 
 ### S1 — 数据库与 ORM 基础
 
-**目标**：按 DATABASE.md 建齐 ORM + 迁移机制；默认 SQLite。
+**目标**：按 database.md 建齐 ORM + 迁移机制；默认 SQLite。
 
 **前置依赖**：S0
 
@@ -276,8 +276,8 @@ backend/alembic/           # 待建（S1 暂用 init_db create_all）
 1. UUID 主键统一 `String(36)`，默认值 `str(uuid.uuid4())`  
 2. JSON 字段（`tags`, `options`）用 `Text` 存 JSON 字符串，schema 层 pydantic 校验  
 3. `init_db()` 仍可调 `create_all`，但**团队以 Alembic 为准**  
-4. 迁移脚本 `001_plan_schema.py` 一次建齐 10 张新表（见 DATABASE.md §11）  
-5. 注册流程 `auth_service.register` 末尾增加 seed（DATABASE.md §10）：
+4. 迁移脚本 `001_plan_schema.py` 一次建齐 10 张新表（见 database.md §11）  
+5. 注册流程 `auth_service.register` 末尾增加 seed（database.md §10）：
    - `学习区` `zone=study` `is_default=1`
    - `生活区` `zone=life`
 
@@ -285,7 +285,7 @@ backend/alembic/           # 待建（S1 暂用 init_db create_all）
 
 - [x] `init_db()` / `create_all` 无报错，`data/zhishi.db` 含全部 13 张表（users + plan_tiers + 10 张新表）
 - [ ] `alembic upgrade head` 无报错（S1 暂跳过 Alembic，后续补 `001_plan_schema.py`）
-- [x] 新用户注册后 `kb_collections` 有 2 行（S2 注册 seed，见 DATABASE.md §10）
+- [x] 新用户注册后 `kb_collections` 有 2 行（S2 注册 seed，见 database.md §10）
 - [x] 外键：`documents.collection_id` → `kb_collections.id` 默认 RESTRICT（未设 `ondelete`）
 
 **S1 完成备注（2026-07-02）**：默认 `DATABASE_URL` 指向项目根 `data/zhishi.db`；models 拆分为 `kb.py` / `quiz.py` / `quiz_session.py` / `tutor.py`；SQLite `check_same_thread=False` + `PRAGMA foreign_keys=ON`。
@@ -315,7 +315,7 @@ backend/app/api/v1/collections.py   # 新建：/collections
 backend/app/api/v1/router.py        # include collections
 ```
 
-**API 约定（新增，需补进 API.md）**：
+**API 约定（新增，需补进 api_overview.md）**：
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -373,7 +373,7 @@ backend/app/api/v1/segments.py      # 可选：GET /documents/{id}/segments
 
 1. **仅 `zone=study`** 执行分段；`life` 跳过  
 2. 输入：优先 `parsed_cache_key` 文本；无则 `file_parser.parse_file`  
-3. 策略（DATABASE.md §4.4）：
+3. 策略（database.md §4.4）：
    - 有 `#` / `##`：按标题切 `document_segments`
    - 无标题：窗口 1500 字，overlap 200
 4. 每段写入 `order_index`, `char_start`, `char_end`, `title`, `content`  
@@ -602,7 +602,7 @@ backend/app/services/citation_service.py
 }
 ```
 
-5. v2 再考虑持久化 `chat_citations` 表（DATABASE.md §8）
+5. v2 再考虑持久化 `chat_citations` 表（database.md §8）
 
 **验收标准**：
 
@@ -680,9 +680,9 @@ frontend/src/routes/index.tsx
 
 ---
 
-## 8. 与 TEAM.md / KT 的关系
+## 8. 与 team.md / KT 的关系
 
-- `TEAM.md` 中 Flutter 分工与 **本仓库 `frontend/` React 端** 并行存在时，以 **同一套 REST API** 为准  
+- `team.md` 中 Flutter 分工与 **本仓库 `frontend/` React 端** 并行存在时，以 **同一套 REST API** 为准  
 - `/api/v1/kt/*` 已独立；`quiz_answers` 稳定后可把答题结果转为 KT `states` 输入（**非 MVP**）  
 - 算法负责人专注 LEKT；业务刷题逻辑在 `quiz_service`，不要在 `kt.py` 里堆功能
 
@@ -692,10 +692,10 @@ frontend/src/routes/index.tsx
 
 | 事件 | 更新 |
 |------|------|
-| 新增端点 | `backend/docs/API.md` |
-| 表结构变更 | `backend/docs/DATABASE.md` + Alembic revision |
+| 新增端点 | `backend/docs/api/api_overview.md` |
+| 表结构变更 | `backend/docs/database.md` + Alembic revision |
 | 阶段完成 | 本文档对应阶段验收打勾 |
-| 产品范围变更 | `docs/PLAN.md` |
+| 产品范围变更 | `docs/plan.md` |
 
 ---
 
@@ -703,7 +703,7 @@ frontend/src/routes/index.tsx
 
 | 决策 | 结论 | 影响 |
 |------|------|------|
-| **数据库默认** | 本地统一 SQLite（`data/zhishi.db`）；团队联调再切 MySQL | S1 需改 `config.py` 默认连接串；`DATABASE.md` 为 schema 真源 |
+| **数据库默认** | 本地统一 SQLite（`data/zhishi.db`）；团队联调再切 MySQL | S1 需改 `config.py` 默认连接串；`database.md` 为 schema 真源 |
 | **全局去重** | S2 起必须上 `global_documents` 跨用户去重 | S2 models + S3 上传链路需同时实现 `global_documents` / `documents` 双表与 `content_hash` 逻辑 |
 
 ---

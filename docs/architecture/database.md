@@ -1,4 +1,4 @@
-# 知拾数据库设计（PLAN 对齐版）
+# 知序数据库设计（PLAN 对齐版）
 
 > 作者：王晨 · fork 本地默认 SQLite，团队环境可切换 MySQL  
 > 同一套 SQLAlchemy models + Alembic migration，仅 `DATABASE_URL` 不同。
