@@ -52,6 +52,9 @@ class ZhishiAgent:
         self.dataset_id = dataset_id or ""
         self._active_collection_id: Optional[str] = None
         self._active_db: Optional["Session"] = None
+        # 最近一次 predict_stream 的聚合结果（完整思考内容 + 按序去重工具名），供 chat 层持久化
+        self._last_reasoning: str = ""
+        self._last_tool_names: list[str] = []
 
         self.kb = None
         if not is_local_rag() and dataset_id:
@@ -182,6 +185,12 @@ class ZhishiAgent:
         system_prompt = MODE_PROMPTS.get(mode, SYSTEM_PROMPT)
 
         from app.services.llm.llm_runner import iter_agent_predict_stream
+        from app.services.chat.chat_contract import ChatChunkNormalizer
+
+        # 归一化 + 聚合（思考内容 / 工具名），供 chat 层持久化
+        normalizer = ChatChunkNormalizer()
+        self._last_reasoning = ""
+        self._last_tool_names: list[str] = []
 
         try:
             for chunk in iter_agent_predict_stream(
@@ -191,21 +200,16 @@ class ZhishiAgent:
                 system_prompt=system_prompt,
                 temperature=0.7,
             ):
-                role = chunk.get("role", "assistant")
-                payload: dict = {"role": role, "content": chunk.get("content", "")}
-
-                reasoning = chunk.get("reasoning_content")
-                if reasoning:
-                    payload["reasoning_content"] = reasoning
-
-                tool_name = chunk.get("tool_name")
-                if tool_name:
-                    payload["tool_name"] = tool_name
-
-                yield payload
+                event = normalizer.normalize(chunk)
+                if event:
+                    yield event
         except Exception as e:
             logger.error(f"ZhishiAgent.predict_stream 错误: {e}")
-            yield {"role": "assistant", "content": "抱歉，生成回复时出错了，请稍后重试。"}
+            yield {"type": "answer", "role": "assistant", "content": "抱歉，生成回复时出错了，请稍后重试。"}
+        finally:
+            # 生成器被提前关闭（用户打断/连接断开）时也保留聚合结果，供 chat 层保存
+            self._last_reasoning = normalizer.reasoning
+            self._last_tool_names = list(normalizer.tool_names)
 
         # 构建 citations（基于检索工具本次命中的内容）
         if db and self.retriever and self.retriever.last_hits:
@@ -215,6 +219,7 @@ class ZhishiAgent:
                 )
                 if citations:
                     yield {
+                        "type": "metadata",
                         "role": "assistant",
                         "content": "",
                         "citations": [c.model_dump() for c in citations],

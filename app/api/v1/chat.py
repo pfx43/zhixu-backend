@@ -14,6 +14,7 @@ from app.core.config import is_local_rag
 from app.core.redis import cache
 from app.core.agent_manager import agent_manager
 from app.schemas.common import (
+    ChatBreakRequest,
     ChatRequest,
     ChatResponse,
     ChatHistoryItem,
@@ -30,6 +31,44 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["chat"])
 
 VALID_MODES = {"qa", "learning", "classroom_note", "verify"}
+
+# 用户打断：前端 POST /api/v1/chat/break 设置标记，流式生成器检查到后停止，
+# 已产出的内容保存并在消息末尾追加打断提示。
+INTERRUPT_NOTICE = "\n\n> ⏹️ 对话已被用户打断"
+_INTERRUPT_TTL = 300  # 打断标记有效期（秒）
+
+
+def _interrupt_key(user_id: int, session_id: str) -> str:
+    return f"chat:interrupt:{user_id}:{session_id}"
+
+
+def _mark_interrupt(user_id: int, session_id: str) -> None:
+    """前端请求打断：写入一次性标记。"""
+    try:
+        cache.set_value(_interrupt_key(user_id, session_id), "1")
+        cache.expire(_interrupt_key(user_id, session_id), _INTERRUPT_TTL)
+    except Exception as e:
+        logger.warning(f"标记打断失败: {e}")
+
+
+def _check_interrupt(user_id: int, session_id: str) -> bool:
+    """检查并消费打断标记（一次性：取到即删除，不会残留影响下次对话）。"""
+    try:
+        key = _interrupt_key(user_id, session_id)
+        if cache.get_value(key):
+            cache.delete_key(key)
+            return True
+        return False
+    except Exception:
+        return False
+
+
+def _clear_interrupt(user_id: int, session_id: str) -> None:
+    """清除残留标记（新流启动时调用，防止上次的打断信号误中断本轮）。"""
+    try:
+        cache.delete_key(_interrupt_key(user_id, session_id))
+    except Exception:
+        pass
 
 
 def _session_list_key(user_id: int) -> str:
@@ -101,13 +140,24 @@ def _save_session_meta(user_id: int, session_id: str, meta: dict):
     cache.lpush(_session_list_key(user_id), session_id)
 
 
-def _save_message(user_id: int, session_id: str, role: str, content: str) -> dict:
+def _save_message(
+    user_id: int,
+    session_id: str,
+    role: str,
+    content: str,
+    reasoning_content: Optional[str] = None,
+    tool_names: Optional[List[str]] = None,
+) -> dict:
     now = _now_iso()
     message = {
         "role": role,
         "content": content,
         "created_at": now,
     }
+    if reasoning_content:
+        message["reasoning_content"] = reasoning_content
+    if tool_names:
+        message["tool_names"] = list(tool_names)
 
     # 1. 写入内存缓存
     cache.rpush(_session_history_key(user_id, session_id), json.dumps(message))
@@ -223,6 +273,7 @@ def _stream_agent_response(
         content = _generate_assistant_response(message)
         data = json.dumps({
             "session_id": session_id,
+            "type": "answer",
             "role": "assistant",
             "content": content,
         }, ensure_ascii=False)
@@ -236,6 +287,7 @@ def _stream_agent_response(
             logger.error(f"_stream_agent_response: user_id={user_id} Agent 不可用")
             data = json.dumps({
                 "session_id": session_id,
+                "type": "answer",
                 "role": "assistant",
                 "content": "抱歉，AI 服务暂时不可用，请稍后重试。",
             }, ensure_ascii=False)
@@ -244,40 +296,75 @@ def _stream_agent_response(
 
         full_content = ""
         tcn_result = None
+        interrupted = False
 
-        for chunk in agent.predict_stream(
-            message, history, collection_id=collection_id, db=db, mode=mode, token=token
-        ):
-            role = chunk.get("role", "assistant")
-            content = chunk.get("content", "")
+        # 新流启动：清除上次残留的打断标记，避免误中断本轮
+        _clear_interrupt(user_id, session_id)
 
-            if content:
-                full_content += content
+        try:
+            for chunk in agent.predict_stream(
+                message, history, collection_id=collection_id, db=db, mode=mode, token=token
+            ):
+                # 用户打断：停止产出，已产出内容保存时追加打断提示
+                if _check_interrupt(user_id, session_id):
+                    interrupted = True
+                    break
 
-            payload = {
+                # 公开字段白名单：只放行 Chat 合同允许的字段
+                event_type = chunk.get("type", "answer")
+                role = chunk.get("role", "assistant")
+                content = chunk.get("content", "")
+
+                if event_type == "answer" and content:
+                    full_content += content
+
+                payload: dict = {
+                    "session_id": session_id,
+                    "type": event_type,
+                    "role": role,
+                    "content": content,
+                }
+
+                if event_type == "reasoning" and chunk.get("reasoning_content"):
+                    payload["reasoning_content"] = chunk["reasoning_content"]
+                elif event_type == "tool_call" and chunk.get("tool_name"):
+                    payload["tool_name"] = chunk["tool_name"]
+                elif event_type == "metadata":
+                    if chunk.get("citations"):
+                        payload["citations"] = chunk["citations"]
+
+                data = json.dumps(payload, ensure_ascii=False)
+                yield f"event: message\ndata: {data}\n\n"
+        except (GeneratorExit, ConnectionResetError, BrokenPipeError):
+            # 客户端断开：不 yield，保存已产出内容并标记打断
+            interrupted = True
+        except Exception as e:
+            logger.error(f"_stream_agent_response 异常: {e}", exc_info=True)
+            data = json.dumps({
                 "session_id": session_id,
-                "role": role,
-                "content": content,
-            }
-
-            reasoning = chunk.get("reasoning_content")
-            if reasoning:
-                payload["reasoning_content"] = reasoning
-
-            tool_name = chunk.get("tool_name")
-            if tool_name:
-                payload["tool_name"] = tool_name
-
-            citations = chunk.get("citations")
-            if citations:
-                payload["citations"] = citations
-
-            data = json.dumps(payload, ensure_ascii=False)
+                "type": "answer",
+                "role": "assistant",
+                "content": "抱歉，处理您的请求时出错了，请稍后重试。",
+            }, ensure_ascii=False)
             yield f"event: message\ndata: {data}\n\n"
+            return
 
-        if full_content:
+        # 稳定的流结束语义
+        yield "data: [DONE]\n\n"
+
+        _clear_interrupt(user_id, session_id)
+
+        if full_content or interrupted:
+            content = full_content + (INTERRUPT_NOTICE if interrupted else "")
             try:
-                _save_message(user_id, session_id, "assistant", full_content)
+                _save_message(
+                    user_id,
+                    session_id,
+                    "assistant",
+                    content,
+                    reasoning_content=getattr(agent, "_last_reasoning", None),
+                    tool_names=getattr(agent, "_last_tool_names", None),
+                )
             except Exception as e:
                 logger.error(f"保存助理消息失败: {e}")
 
@@ -291,6 +378,7 @@ def _stream_agent_response(
         if tcn_result:
             tcn_payload = {
                 "session_id": session_id,
+                "type": "metadata",
                 "role": "system",
                 "content": "",
                 "lvr": tcn_result.get("lvr"),
@@ -302,8 +390,9 @@ def _stream_agent_response(
         logger.error(f"_stream_agent_response 异常: {e}", exc_info=True)
         data = json.dumps({
             "session_id": session_id,
+            "type": "answer",
             "role": "assistant",
-            "content": f"抱歉，处理您的请求时出错：{str(e)}",
+            "content": "抱歉，处理您的请求时出错了，请稍后重试。",
         }, ensure_ascii=False)
         yield f"event: message\ndata: {data}\n\n"
 
@@ -387,6 +476,8 @@ def send_chat(
 
     citations = None
     assistant_content = _generate_assistant_response(request.content)
+    _reasoning = None
+    _tool_names = None
 
     if dataset_id or is_local_rag():
         try:
@@ -412,18 +503,28 @@ def send_chat(
                     mode=mode,
                     token=token,
                 ):
-                    if chunk.get("citations"):
+                    event_type = chunk.get("type", "answer")
+                    if event_type == "metadata" and chunk.get("citations"):
                         citations = chunk["citations"]
-                    elif chunk.get("content"):
+                    elif event_type == "answer" and chunk.get("content"):
                         full_content += chunk["content"]
                 if full_content:
                     assistant_content = full_content
+                _reasoning = getattr(agent, "_last_reasoning", None)
+                _tool_names = getattr(agent, "_last_tool_names", None)
         except HTTPException:
             raise
         except Exception as e:
             logger.error(f"非流式 chat Agent 调用失败: {e}")
 
-    _save_message(user_id, session_id, "assistant", assistant_content)
+    _save_message(
+        user_id,
+        session_id,
+        "assistant",
+        assistant_content,
+        reasoning_content=_reasoning,
+        tool_names=_tool_names,
+    )
 
     meta = _load_session_meta(user_id, session_id)
     title = meta.get("title") if meta else request.content[:40]
@@ -434,6 +535,23 @@ def send_chat(
         "content": assistant_content,
         "created_at": _now_iso(),
         "citations": citations,
+        "reasoning_content": _reasoning,
+        "tool_names": _tool_names,
+    }
+
+
+@router.post("/break")
+def break_chat(
+    request: ChatBreakRequest,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """用户打断当前流式输出：标记后，正在进行的流会停止，
+    已产出的内容保存并在消息末尾追加打断提示。"""
+    user_id = current_user["user_id"]
+    _mark_interrupt(user_id, request.session_id)
+    return {
+        "message": "已请求打断",
+        "session_id": request.session_id,
     }
 
 
