@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_current_token, get_db
 from app.schemas.page import PageExtractRequest, PageGenerateRequest
 from app.schemas.question import (
     PageQuestionResponse,
@@ -31,6 +31,7 @@ def generate_questions(
     payload: QuestionGenerateRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ):
     """对文档或指定分段批量出题（学习区 + 分段已完成）。"""
     if question_gen_service.is_question_gen_async():
@@ -39,6 +40,7 @@ def generate_questions(
             user_id=current_user["user_id"],
             document_id=payload.document_id,
             segment_ids=payload.segment_ids,
+            token=token,
         )
     else:
         result = question_gen_service.generate_questions(
@@ -46,6 +48,7 @@ def generate_questions(
             user_id=current_user["user_id"],
             document_id=payload.document_id,
             segment_ids=payload.segment_ids,
+            token=token,
         )
     db.commit()
     return result
@@ -124,6 +127,7 @@ def generate_from_pages(
     payload: PageGenerateRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ):
     """模式 B：对选中页批量 AI 出题。"""
     if question_gen_service.is_question_gen_async():
@@ -133,6 +137,7 @@ def generate_from_pages(
             document_id=payload.document_id,
             page_numbers=payload.page_numbers,
             questions_per_page=payload.questions_per_page,
+            token=token,
         )
     else:
         result = question_gen_service.generate_from_pages(
@@ -141,6 +146,7 @@ def generate_from_pages(
             document_id=payload.document_id,
             page_numbers=payload.page_numbers,
             questions_per_page=payload.questions_per_page,
+            token=token,
         )
     db.commit()
     return result

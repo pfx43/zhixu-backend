@@ -29,6 +29,11 @@ def get_current_user(
 
     return build_session_payload(user)
 
+
+def get_current_token(token: str = Depends(oauth2_scheme)) -> str:
+    """返回客户端本次请求携带的原始登录 token（供无状态用量记账使用）。"""
+    return token
+
 def get_current_active_user(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_active", True): # Default to True if missing, or handle strictly
         raise HTTPException(status_code=400, detail="Inactive user")

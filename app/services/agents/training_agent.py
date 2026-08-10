@@ -75,6 +75,7 @@ class TrainingCoachAgent:
         *,
         report_content: Optional[str] = None,
         report_title: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> TrainingPlanResult:
         """运行 Agent 制定训练计划，返回结构化结果。"""
         if not self.agent:
@@ -95,11 +96,9 @@ class TrainingCoachAgent:
         if self.training_tools is not None:
             self.training_tools.submitted_plan = None
 
-        from app.services.llm.usage_tracking import usage_context
-
         try:
-            with usage_context(self.user_id):
-                agent_predict_no_stream(self.agent, instruction=instruction)
+            self.llm.set_token(token or "")
+            agent_predict_no_stream(self.agent, instruction=instruction)
         except Exception as e:
             logger.warning("TrainingCoachAgent.plan_training 失败: %s", e, exc_info=True)
 
@@ -130,28 +129,28 @@ class TrainingCoachAgent:
         except Exception as e:
             logger.warning("注入训练计划上下文失败: %s", e)
 
-    def tutor_stream(self, message: str) -> Generator[dict, None, None]:
+    def tutor_stream(
+        self, message: str, token: Optional[str] = None
+    ) -> Generator[dict, None, None]:
         """辅导对话流式输出（复用同一 Agent 会话上下文）。"""
         if not self.agent:
             yield {"role": "assistant", "content": "抱歉，AI 教练暂时不可用，请稍后重试。"}
             return
 
-        from app.services.llm.usage_tracking import usage_context
-
         try:
-            with usage_context(self.user_id):
-                for chunk in iter_agent_continue_stream(self.agent, message):
-                    content = chunk.get("content", "")
-                    yield {
-                        "role": chunk.get("role", "assistant"),
-                        "content": content,
-                        **(
-                            {"reasoning_content": chunk["reasoning_content"]}
-                            if chunk.get("reasoning_content")
-                            else {}
-                        ),
-                        **({"tool_name": chunk["tool_name"]} if chunk.get("tool_name") else {}),
-                    }
+            self.llm.set_token(token or "")
+            for chunk in iter_agent_continue_stream(self.agent, message):
+                content = chunk.get("content", "")
+                yield {
+                    "role": chunk.get("role", "assistant"),
+                    "content": content,
+                    **(
+                        {"reasoning_content": chunk["reasoning_content"]}
+                        if chunk.get("reasoning_content")
+                        else {}
+                    ),
+                    **({"tool_name": chunk["tool_name"]} if chunk.get("tool_name") else {}),
+                }
         except Exception as e:
             logger.error("TrainingCoachAgent.tutor_stream 错误: %s", e)
             yield {"role": "assistant", "content": f"抱歉，生成回复时出错了：{str(e)}"}

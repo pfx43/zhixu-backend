@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_current_token, get_db
 from app.schemas.tutor import (
     TutorMessageCreate,
     TutorReplyOut,
@@ -58,6 +58,7 @@ def send_message(
     payload: TutorMessageCreate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ) -> Union[TutorReplyOut, StreamingResponse]:
     """用户发送消息，返回 Agent 辅导回复（支持 SSE 流式）。"""
     user_id = current_user["user_id"]
@@ -71,6 +72,7 @@ def send_message(
                     user_id=user_id,
                     session_id=session_id,
                     content=payload.content,
+                    token=token,
                 )
             finally:
                 db.commit()
@@ -90,6 +92,7 @@ def send_message(
         user_id=user_id,
         session_id=session_id,
         content=payload.content,
+        token=token,
     )
     db.commit()
     return result

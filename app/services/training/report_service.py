@@ -19,16 +19,10 @@ logger = logging.getLogger(__name__)
 
 REPORT_SYSTEM_PROMPT = load_prompt("report_analysis")
 
-_llm_instance = None
-
-
 def _get_llm():
-    global _llm_instance
-    if _llm_instance is not None:
-        return _llm_instance
+    """创建 Tina LLM 实例（每次新建，避免共享实例在并发下串 token 记账）。"""
     try:
-        _llm_instance = create_base_api()
-        return _llm_instance
+        return create_base_api()
     except Exception:
         logger.warning("Tina LLM 不可用，将使用模板报告", exc_info=True)
         return None
@@ -88,7 +82,7 @@ def _build_stats_payload(db: Session, user_id: int) -> str:
 
 
 def generate_learning_report(
-    db: Session, user_id: int
+    db: Session, user_id: int, token: str = ""
 ) -> LearningReportGenerateOut:
     stats_text = _build_stats_payload(db, user_id)
     llm = _get_llm()
@@ -96,15 +90,13 @@ def generate_learning_report(
 
     if llm:
         try:
-            from app.services.llm.usage_tracking import usage_context
-
-            with usage_context(user_id):
-                resp = llm_predict_no_stream(
-                    llm,
-                    input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
-                    sys_prompt=REPORT_SYSTEM_PROMPT,
-                    temperature=0.4,
-                )
+            llm.set_token(token)
+            resp = llm_predict_no_stream(
+                llm,
+                input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
+                sys_prompt=REPORT_SYSTEM_PROMPT,
+                temperature=0.4,
+            )
             content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
             content_md = (content or "").strip() or _template_report(stats_text)
         except Exception:

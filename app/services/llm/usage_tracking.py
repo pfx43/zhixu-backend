@@ -1,103 +1,64 @@
 """
-用量跟踪包装器 — 包装 tina BaseAPI，自动捕获真实 token 用量并按用户写入数据库。
+用量跟踪包装器 — 包装 tina BaseAPI，按客户端登录 token 无状态记账。
 
 设计：
-- 包装器透明代理 BaseAPI 的所有属性/方法，仅拦截 predict* / apredict* 调用。
-- 流式请求自动注入 ``stream_options.include_usage``，让上游返回精确 token 数。
-- 每次 LLM 调用（含 Agent 工具循环内的每一轮上游请求）都会记录一条用量。
-- 用户归属：优先使用创建时绑定的 user_id，否则回退到当前上下文的 user_id
-  （见 ``usage_context``），两者皆为空时跳过记账（如内部/匿名调用）。
+- 无状态：身份来源是客户端登录 token（``set_token``），不依赖任何服务端
+  "当前用户"状态；每次调用显式携带身份。
+- 记账时通过 auth_sessions 用 token 反查 user_id（每个实例解析一次并缓存），
+  随后写入 usage_token / usage_daily。
+- 流式请求自动注入 ``stream_options.include_usage`` 拿到上游精确 token 数；
+  非流式用 BaseAPI.tokens 增量取精确 total；均拿不到时降级 tiktoken 估算。
+- 每次 LLM 调用（含 Agent 工具循环内的每一轮上游请求）记录一条用量；
+  token 为空或解析不到用户时跳过记账（如内部/匿名调用）。
 """
 from __future__ import annotations
 
-import contextvars
 import json
 import logging
-from contextlib import contextmanager
 from typing import AsyncGenerator, Generator, Optional
 
 from app.services.usage_service import record_turn_usage
 
 logger = logging.getLogger(__name__)
 
-_current_user_id: contextvars.ContextVar[int] = contextvars.ContextVar(
-    "usage_current_user_id", default=0
-)
-
-
-def get_current_user_id() -> int:
-    """返回当前上下文中绑定的用户 id（未绑定返回 0）。"""
-    return _current_user_id.get()
-
-
-def set_current_user_id(user_id: int) -> None:
-    """在调用方上下文中绑定当前用户 id。"""
-    _current_user_id.set(int(user_id or 0))
-
-
-@contextmanager
-def usage_context(user_id: int):
-    """在指定作用域内绑定用户 id，退出时自动还原上下文。
-
-    用法（在发起 LLM 调用前包一层）::
-
-        with usage_context(user_id):
-            resp = llm_predict_no_stream(llm, ...)
-    """
-    token = _current_user_id.set(int(user_id or 0))
-    try:
-        yield
-    finally:
-        _current_user_id.reset(token)
-
-
-def _prompt_text_from_kwargs(kwargs: dict) -> str:
-    """从调用参数中拼出用于估算 prompt token 的文本（含 system/tools/history）。"""
-    parts: list[str] = []
-    messages = kwargs.get("messages")
-    if messages:
-        for m in messages:
-            if isinstance(m, dict):
-                content = m.get("content")
-                if content:
-                    parts.append(str(content))
-    input_text = kwargs.get("input_text")
-    if input_text:
-        parts.append(str(input_text))
-    sys_prompt = kwargs.get("sys_prompt")
-    if sys_prompt:
-        parts.append(str(sys_prompt))
-    tools = kwargs.get("tools")
-    if tools:
-        try:
-            parts.append(json.dumps(tools, ensure_ascii=False))
-        except Exception:
-            parts.append(str(tools))
-    return "\n".join(parts)
-
-
-def _with_include_usage(kwargs: dict) -> dict:
-    """为流式请求开启 usage 返回（上游需支持 stream_options.include_usage）。"""
-    if "stream_options" not in kwargs:
-        kwargs = dict(kwargs)
-        kwargs["stream_options"] = {"include_usage": True}
-    return kwargs
-
 
 class UsageTrackedAPI:
     """透明包装 tina BaseAPI — 记录每次 LLM 调用的 token 用量。"""
 
-    def __init__(self, api, user_id: int = 0):
+    def __init__(self, api, token: str = ""):
         self._api = api
-        self._user_id = int(user_id or 0)
+        self._token = token or ""
+        self._resolved_user_id: Optional[int] = None
 
-    # ── 用户归属 ──
+    # ── 身份绑定 ──
 
-    def set_user_id(self, user_id: int) -> None:
-        self._user_id = int(user_id or 0)
+    def set_token(self, token: str) -> None:
+        """绑定客户端登录 token；更换 token 时清空已缓存的用户解析。"""
+        token = token or ""
+        if token != self._token:
+            self._token = token
+            self._resolved_user_id = None
 
     def _resolve_user_id(self) -> int:
-        return self._user_id or get_current_user_id()
+        """token → user_id（实例缓存一次，解析不到返回 0）。"""
+        if self._resolved_user_id is not None:
+            return self._resolved_user_id
+        user_id = 0
+        if self._token:
+            try:
+                from app.core.database import SessionLocal
+                from app.services.auth.auth_session_service import get_session_user
+
+                db = SessionLocal()
+                try:
+                    user = get_session_user(db, self._token)
+                    user_id = user.id if user else 0
+                finally:
+                    db.close()
+            except Exception:
+                logger.exception("UsageTrackedAPI 反查用户失败: token=<redacted>")
+        self._resolved_user_id = user_id
+        return user_id
 
     # ── 属性透传 ──
 
@@ -105,7 +66,7 @@ class UsageTrackedAPI:
         return getattr(self._api, name)
 
     def __repr__(self):
-        return f"<UsageTrackedAPI user_id={self._user_id or 0} wrapping {self._api!r}>"
+        return f"<UsageTrackedAPI token={'set' if self._token else 'empty'} wrapping {self._api!r}>"
 
     # ── 记账 ──
 
@@ -168,8 +129,7 @@ class UsageTrackedAPI:
     def _wrap_stream(
         self, gen: Generator[dict, None, None], prompt_text: str
     ) -> Generator[dict, None, None]:
-        user_id = self._resolve_user_id()
-        if not user_id:
+        if not self._token:
             yield from gen
             return
 
@@ -223,8 +183,7 @@ class UsageTrackedAPI:
     async def _awrap_stream(
         self, agen: AsyncGenerator[dict, None], prompt_text: str
     ) -> AsyncGenerator[dict, None]:
-        user_id = self._resolve_user_id()
-        if not user_id:
+        if not self._token:
             async for chunk in agen:
                 yield chunk
             return
@@ -252,10 +211,43 @@ class UsageTrackedAPI:
                 self._record(prompt_text, "".join(parts), usage=usage)
 
 
-def wrap_base_api(api, user_id: int = 0) -> UsageTrackedAPI:
+def wrap_base_api(api, token: str = "") -> UsageTrackedAPI:
     """包装 tina BaseAPI 实例；已是包装器则直接返回。"""
     if isinstance(api, UsageTrackedAPI):
-        if user_id:
-            api.set_user_id(user_id)
+        if token:
+            api.set_token(token)
         return api
-    return UsageTrackedAPI(api, user_id=user_id)
+    return UsageTrackedAPI(api, token=token)
+
+
+def _prompt_text_from_kwargs(kwargs: dict) -> str:
+    """从调用参数中拼出用于估算 prompt token 的文本（含 system/tools/history）。"""
+    parts: list[str] = []
+    messages = kwargs.get("messages")
+    if messages:
+        for m in messages:
+            if isinstance(m, dict):
+                content = m.get("content")
+                if content:
+                    parts.append(str(content))
+    input_text = kwargs.get("input_text")
+    if input_text:
+        parts.append(str(input_text))
+    sys_prompt = kwargs.get("sys_prompt")
+    if sys_prompt:
+        parts.append(str(sys_prompt))
+    tools = kwargs.get("tools")
+    if tools:
+        try:
+            parts.append(json.dumps(tools, ensure_ascii=False))
+        except Exception:
+            parts.append(str(tools))
+    return "\n".join(parts)
+
+
+def _with_include_usage(kwargs: dict) -> dict:
+    """为流式请求开启 usage 返回（上游需支持 stream_options.include_usage）。"""
+    if "stream_options" not in kwargs:
+        kwargs = dict(kwargs)
+        kwargs["stream_options"] = {"include_usage": True}
+    return kwargs

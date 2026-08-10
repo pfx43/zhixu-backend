@@ -146,6 +146,7 @@ class ZhishiAgent:
         collection_id: Optional[str] = None,
         db: Optional["Session"] = None,
         mode: str = "qa",
+        token: Optional[str] = None,
     ) -> Generator[dict, None, None]:
         """
         流式对话 — tina Agent 自主决定是否调用检索工具
@@ -164,7 +165,14 @@ class ZhishiAgent:
         # 每次调用从 key 池获取新 llm（轮换 + 并发/RPM 限制）
         try:
             from app.services.tina_gateway import tina_gateway
-            self._agent.llm = tina_gateway.create_base_api()
+            llm = tina_gateway.create_base_api()
+            llm.set_token(token or "")
+            self._agent.llm = llm
+            # tina runtime 持有独立的 llm 引用，需同步替换（否则仍用旧 llm：
+            # 会导致 set_token 不生效 + aclient 绑定到已关闭的事件循环）
+            runtime = getattr(self._agent, "runtime", None)
+            if runtime is not None:
+                runtime.llm = llm
         except Exception as e:
             logger.error("ZhishiAgent 获取 llm 失败: user_id=%s error=%s", self.user_id, e)
             yield {"role": "assistant", "content": "抱歉，AI 服务暂时不可用，请稍后重试。"}
@@ -174,29 +182,27 @@ class ZhishiAgent:
         system_prompt = MODE_PROMPTS.get(mode, SYSTEM_PROMPT)
 
         from app.services.llm.llm_runner import iter_agent_predict_stream
-        from app.services.llm.usage_tracking import usage_context
 
         try:
-            with usage_context(self.user_id):
-                for chunk in iter_agent_predict_stream(
-                    self._agent,
-                    message,
-                    history=history,
-                    system_prompt=system_prompt,
-                    temperature=0.7,
-                ):
-                    role = chunk.get("role", "assistant")
-                    payload: dict = {"role": role, "content": chunk.get("content", "")}
+            for chunk in iter_agent_predict_stream(
+                self._agent,
+                message,
+                history=history,
+                system_prompt=system_prompt,
+                temperature=0.7,
+            ):
+                role = chunk.get("role", "assistant")
+                payload: dict = {"role": role, "content": chunk.get("content", "")}
 
-                    reasoning = chunk.get("reasoning_content")
-                    if reasoning:
-                        payload["reasoning_content"] = reasoning
+                reasoning = chunk.get("reasoning_content")
+                if reasoning:
+                    payload["reasoning_content"] = reasoning
 
-                    tool_name = chunk.get("tool_name")
-                    if tool_name:
-                        payload["tool_name"] = tool_name
+                tool_name = chunk.get("tool_name")
+                if tool_name:
+                    payload["tool_name"] = tool_name
 
-                    yield payload
+                yield payload
         except Exception as e:
             logger.error(f"ZhishiAgent.predict_stream 错误: {e}")
             yield {"role": "assistant", "content": "抱歉，生成回复时出错了，请稍后重试。"}

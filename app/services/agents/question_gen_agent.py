@@ -125,6 +125,7 @@ class QuestionGenAgent:
         tag_hint: str = "",
         count: int = 1,
         user_id: int = 0,
+        token: Optional[str] = None,
     ) -> List[dict]:
         """根据文档内容生成题目，返回结构化题目列表。"""
         if self.question_tools is not None:
@@ -146,14 +147,9 @@ class QuestionGenAgent:
                 f"请生成 {count} 道练习题，逐题调用 submit_question 提交。"
             )
 
-        from app.services.llm.usage_tracking import usage_context
-
         try:
-            if user_id:
-                with usage_context(user_id):
-                    agent_predict_no_stream(self.agent, instruction=instruction)
-            else:
-                agent_predict_no_stream(self.agent, instruction=instruction)
+            self.llm.set_token(token or "")
+            agent_predict_no_stream(self.agent, instruction=instruction)
         except Exception as exc:
             self.failure_reason = _classify_failure(exc)
             _last_readiness.update(
@@ -192,7 +188,7 @@ class QuestionGenAgent:
         return list(submitted_questions)
 
 
-def agent_generate_for_segment(segment, *, tag_hint: str = "") -> List[dict]:
+def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Optional[str] = None) -> List[dict]:
     """Agent 路径：按分段出题；失败时返回内部失败标记。"""
     agent = QuestionGenAgent(mode="generate")
     if not agent.is_ready:
@@ -203,6 +199,7 @@ def agent_generate_for_segment(segment, *, tag_hint: str = "") -> List[dict]:
         content=segment.content,
         tag_hint=tag_hint,
         count=1,
+        token=token,
     )
     if questions:
         return questions
@@ -210,7 +207,7 @@ def agent_generate_for_segment(segment, *, tag_hint: str = "") -> List[dict]:
 
 
 def agent_generate_for_page(
-    page: dict, *, count: int = 1, tag_hint: str = ""
+    page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     """Agent 路径：按页出题；失败时返回内部失败标记。"""
     agent = QuestionGenAgent(mode="generate")
@@ -222,13 +219,16 @@ def agent_generate_for_page(
         content=page["content"],
         tag_hint=tag_hint,
         count=count,
+        token=token,
     )
     if questions:
         return questions
     return _failure_marker(agent.failure_reason or "invalid_output")
 
 
-def agent_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
+def agent_extract_for_page(
+    page: dict, *, tag_hint: str = "", token: Optional[str] = None
+) -> List[dict]:
     """Agent 路径：按页提取题目；无现成题目仍返回空列表。"""
     agent = QuestionGenAgent(mode="extract")
     if not agent.is_ready:
@@ -242,4 +242,5 @@ def agent_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
         title=title,
         content=page["content"],
         tag_hint=tag_hint,
+        token=token,
     )

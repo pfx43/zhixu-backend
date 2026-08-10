@@ -47,16 +47,10 @@ EXTRACT_SYSTEM_PROMPT = load_prompt("question_gen_extract")
 QuestionProvider = Callable[[DocumentSegment], List[dict]]
 PageProvider = Callable[[dict], List[dict]]
 
-_llm_instance = None
-
-
 def _get_llm():
-    global _llm_instance
-    if _llm_instance is not None:
-        return _llm_instance
+    """创建 Tina LLM 实例（每次新建，避免共享实例在并发下串 token 记账）。"""
     try:
-        _llm_instance = create_base_api()
-        return _llm_instance
+        return create_base_api()
     except Exception:
         logger.warning("Tina LLM 不可用，将使用模板出题", exc_info=True)
         return None
@@ -162,10 +156,12 @@ def _template_questions_for_page(page: dict) -> List[dict]:
     ]
 
 
-def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") -> List[dict]:
+def _llm_generate_for_page(
+    page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
+) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_page
 
-    result = agent_generate_for_page(page, count=count, tag_hint=tag_hint)
+    result = agent_generate_for_page(page, count=count, tag_hint=tag_hint, token=token)
     if result:
         return result[:count]
 
@@ -180,6 +176,7 @@ def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") ->
         f"请生成 {count} 道练习题，覆盖本页核心知识点。"
     )
     try:
+        llm.set_token(token or "")
         resp = llm_predict_no_stream(
             llm,
             input_text=user_input,
@@ -202,10 +199,12 @@ def _llm_generate_for_page(page: dict, *, count: int = 1, tag_hint: str = "") ->
     return _template_questions_for_page(page)
 
 
-def _llm_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
+def _llm_extract_for_page(
+    page: dict, *, tag_hint: str = "", token: Optional[str] = None
+) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_extract_for_page
 
-    result = agent_extract_for_page(page, tag_hint=tag_hint)
+    result = agent_extract_for_page(page, tag_hint=tag_hint, token=token)
     if result:
         return result
 
@@ -219,6 +218,7 @@ def _llm_extract_for_page(page: dict, *, tag_hint: str = "") -> List[dict]:
         f"{tag_hint}\n\n请提取本页自带题目。"
     )
     try:
+        llm.set_token(token or "")
         resp = llm_predict_no_stream(
             llm,
             input_text=user_input,
@@ -276,10 +276,12 @@ def _template_questions(segment: DocumentSegment) -> List[dict]:
     ]
 
 
-def _llm_generate(segment: DocumentSegment, *, tag_hint: str = "") -> List[dict]:
+def _llm_generate(
+    segment: DocumentSegment, *, tag_hint: str = "", token: Optional[str] = None
+) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_segment
 
-    result = agent_generate_for_segment(segment, tag_hint=tag_hint)
+    result = agent_generate_for_segment(segment, tag_hint=tag_hint, token=token)
     if result:
         return result[:QUESTIONS_PER_SEGMENT]
 
@@ -294,6 +296,7 @@ def _llm_generate(segment: DocumentSegment, *, tag_hint: str = "") -> List[dict]
         f"请生成 {QUESTIONS_PER_SEGMENT} 道练习题。"
     )
     try:
+        llm.set_token(token or "")
         resp = llm_predict_no_stream(
             llm,
             input_text=user_input,
@@ -474,6 +477,7 @@ def generate_questions(
     document_id: Optional[str] = None,
     segment_ids: Optional[List[str]] = None,
     provider: Optional[QuestionProvider] = None,
+    token: Optional[str] = None,
 ) -> QuestionGenerateResponse:
     """
     对文档或指定分段批量出题。
@@ -530,41 +534,40 @@ def generate_questions(
     total_questions = 0
 
     try:
-        from app.services.llm.usage_tracking import usage_context
+        for segment in segments:
+            if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
+                break
+            try:
+                if provider:
+                    raw_questions = gen_provider(segment)
+                else:
+                    raw_questions = _llm_generate(
+                        segment, tag_hint=tag_hint_global, token=token
+                    )
+            except Exception:
+                logger.warning(
+                    "分段出题失败，跳过: segment_id=%s", segment.id, exc_info=True
+                )
+                continue
 
-        with usage_context(user_id):
-            for segment in segments:
+            for qdata in raw_questions[:QUESTIONS_PER_SEGMENT]:
                 if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
                     break
-                try:
-                    if provider:
-                        raw_questions = gen_provider(segment)
-                    else:
-                        raw_questions = _llm_generate(segment, tag_hint=tag_hint_global)
-                except Exception:
-                    logger.warning(
-                        "分段出题失败，跳过: segment_id=%s", segment.id, exc_info=True
-                    )
+                normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
+                if not normalized:
                     continue
-
-                for qdata in raw_questions[:QUESTIONS_PER_SEGMENT]:
-                    if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
-                        break
-                    normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
-                    if not normalized:
-                        continue
-                    created, reused = _persist_question(
-                        db,
-                        user_id=user_id,
-                        document=document,
-                        segment=segment,
-                        qdata=normalized,
-                    )
-                    if created:
-                        created_count += 1
-                    if reused:
-                        reused_count += 1
-                    total_questions += 1
+                created, reused = _persist_question(
+                    db,
+                    user_id=user_id,
+                    document=document,
+                    segment=segment,
+                    qdata=normalized,
+                )
+                if created:
+                    created_count += 1
+                if reused:
+                    reused_count += 1
+                total_questions += 1
 
         if total_questions > 0:
             document.question_gen_status = "completed"
@@ -620,6 +623,7 @@ def schedule_generate_questions(
     user_id: int,
     document_id: Optional[str] = None,
     segment_ids: Optional[List[str]] = None,
+    token: Optional[str] = None,
 ) -> QuestionGenerateResponse:
     """校验后立即返回 processing，后台线程执行出题。"""
     document: Optional[Document] = None
@@ -656,6 +660,7 @@ def schedule_generate_questions(
                 user_id=user_id,
                 document_id=document_id,
                 segment_ids=segment_ids,
+                token=token,
             )
             wdb.commit()
         except Exception:
@@ -690,6 +695,7 @@ def schedule_generate_from_pages(
     page_numbers: List[int],
     questions_per_page: int = 1,
     provider: Optional[PageProvider] = None,
+    token: Optional[str] = None,
 ) -> PageQuestionResponse:
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
@@ -710,6 +716,7 @@ def schedule_generate_from_pages(
                 page_numbers=page_numbers,
                 questions_per_page=questions_per_page,
                 provider=provider,
+                token=token,
             )
             wdb.commit()
         except Exception:
@@ -924,6 +931,7 @@ def generate_from_pages(
     page_numbers: List[int],
     questions_per_page: int = 1,
     provider: Optional[PageProvider] = None,
+    token: Optional[str] = None,
 ) -> PageQuestionResponse:
     """模式 B：对选中页批量 AI 出题。"""
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
@@ -949,7 +957,7 @@ def generate_from_pages(
             )
         else:
             page_provider = lambda p: _llm_generate_for_page(
-                p, count=questions_per_page, tag_hint=tag_hint
+                p, count=questions_per_page, tag_hint=tag_hint, token=token
             )
             pairs = batch_generate_questions(
                 pages,

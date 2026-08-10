@@ -165,6 +165,7 @@ def start_targeted_training(
     *,
     report_id: Optional[str] = None,
     force_new: bool = False,
+    token: Optional[str] = None,
 ) -> TargetedTrainingStartOut:
     if report_id:
         note = note_crud.get_note_by_id(db, user_id, report_id)
@@ -196,6 +197,7 @@ def start_targeted_training(
         plan = coach.plan_training(
             report_content=report_content,
             report_title=report_title,
+            token=token,
         )
         if not plan.question_ids:
             logger.info("TrainingCoachAgent 未提交计划，回退规则选题")
@@ -269,8 +271,9 @@ def stream_training_tutor(
     user_id: int,
     agent_session_id: str,
     message: str,
+    token: Optional[str] = None,
 ):
     """针对训练页 AI 辅导 SSE 流。"""
     coach = _resolve_coach_agent(db, user_id, agent_session_id)
-    for chunk in coach.tutor_stream(message):
+    for chunk in coach.tutor_stream(message, token=token):
         yield chunk

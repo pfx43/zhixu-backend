@@ -5,7 +5,7 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_active_user
+from app.api.deps import get_current_active_user, get_current_token
 from app.core.config import LLM_ASYNC, is_local_rag
 from app.services.knowledge.dify_kb import DifyKB
 from app.services.llm.llm_config import create_base_api
@@ -37,6 +37,7 @@ def _parse_suggestions(content: str) -> list[str]:
 @router.get("/suggestions")
 async def get_dashboard_suggestions(
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ):
     """
     根据用户知识库文档生成个性化建议
@@ -85,19 +86,16 @@ async def get_dashboard_suggestions(
     ]
 
     try:
-        user_id = current_user["user_id"]
-        from app.services.llm.usage_tracking import usage_context
-
         llm = create_base_api()
-        with usage_context(user_id):
-            if LLM_ASYNC:
-                response = await llm.apredict_no_stream(
-                    messages=messages, temperature=0.7, max_tokens=300
-                )
-            else:
-                response = llm_predict_no_stream(
-                    llm, messages=messages, temperature=0.7, max_tokens=300
-                )
+        llm.set_token(token)
+        if LLM_ASYNC:
+            response = await llm.apredict_no_stream(
+                messages=messages, temperature=0.7, max_tokens=300
+            )
+        else:
+            response = llm_predict_no_stream(
+                llm, messages=messages, temperature=0.7, max_tokens=300
+            )
         content = response.get("content", "")
         return {"suggestions": _parse_suggestions(content)}
     except Exception as e:

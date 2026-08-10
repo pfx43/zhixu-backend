@@ -62,6 +62,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
         app.dependency_overrides[question_api.get_current_active_user] = lambda: {
             "user_id": 1
         }
+        app.dependency_overrides[question_api.get_current_token] = lambda: "test-token"
 
         with (
             patch.object(
@@ -368,7 +369,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                     "app.services.agents.question_gen_agent"
                 )
                 fake_module.agent_generate_for_segment = (
-                    lambda _segment, *, tag_hint="", _reason=reason: [
+                    lambda _segment, *, tag_hint="", token=None, _reason=reason: [
                         {"_question_generation_failure": _reason}
                     ]
                 )

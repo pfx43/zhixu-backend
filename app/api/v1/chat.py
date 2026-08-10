@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_current_token, get_db
 from app.api.deps_quota import check_quota
 from app.core.config import is_local_rag
 from app.core.redis import cache
@@ -215,6 +215,7 @@ def _stream_agent_response(
     tc_user_action: Optional[str] = None,
     tc_domain_id: Optional[str] = None,
     mode: str = "qa",
+    token: Optional[str] = None,
 ):
     if not dataset_id and not is_local_rag():
         logger.warning(f"_stream_agent_response: user_id={user_id} 没有 dataset_id，使用 echo 回退")
@@ -245,7 +246,7 @@ def _stream_agent_response(
         tcn_result = None
 
         for chunk in agent.predict_stream(
-            message, history, collection_id=collection_id, db=db, mode=mode
+            message, history, collection_id=collection_id, db=db, mode=mode, token=token
         ):
             role = chunk.get("role", "assistant")
             content = chunk.get("content", "")
@@ -327,6 +328,7 @@ def send_chat(
     current_user: dict = Depends(get_current_active_user),
     _quota: dict = Depends(check_quota),
     db: Session = Depends(get_db),
+    token: str = Depends(get_current_token),
 ):
     mode = request.mode or "qa"
     if mode not in VALID_MODES:
@@ -373,6 +375,7 @@ def send_chat(
                 tc_user_action=request.tc_user_action,
                 tc_domain_id=request.tc_domain_id,
                 mode=mode,
+                token=token,
             ),
             media_type="text/event-stream",
             headers={
@@ -407,6 +410,7 @@ def send_chat(
                     collection_id=collection_id,
                     db=db,
                     mode=mode,
+                    token=token,
                 ):
                     if chunk.get("citations"):
                         citations = chunk["citations"]
