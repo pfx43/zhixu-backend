@@ -129,6 +129,28 @@ class ChatChunkNormalizerTests(unittest.TestCase):
         ev = n.normalize({"role": "assistant", "content": "你好"})
         self.assertEqual(ev, {"type": "answer", "role": "assistant", "content": "你好"})
 
+    def test_final_tool_calls_only_extracts_names(self):
+        """只有最终 tool_calls（无提前 tool_name 分片）时也能归一工具名，且不暴露参数。"""
+        n = ChatChunkNormalizer()
+        ev = n.normalize({
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {"id": "call_1", "type": "function", "function": {"name": "kb_search", "arguments": '{"query": "秘密"}'}},
+                {"id": "call_2", "type": "function", "function": {"name": "web_fetch", "arguments": '{"url": "http://x"}'}},
+            ],
+        })
+        self.assertIsNotNone(ev)
+        self.assertEqual(ev["type"], "tool_call")
+        self.assertEqual(ev["tool_name"], "kb_search")
+        self.assertNotIn("arguments", ev)
+        self.assertNotIn("秘密", json.dumps(ev, ensure_ascii=False))
+
+        # 后续工具名继续入聚合（按序去重），重复调用不重复发
+        ev2 = n.normalize({"role": "assistant", "tool_calls": [{"function": {"name": "kb_search"}}]})
+        self.assertIsNone(ev2)
+        self.assertEqual(n.tool_names, ["kb_search", "web_fetch"])
+
 
 class InfiniteInterruptAgent(FakeAgent):
     """无限输出 + 每次迭代同步聚合结果的 Agent（模拟真实 ZhixuAgent finally 行为）。"""
@@ -153,6 +175,20 @@ class InfiniteInterruptAgent(FakeAgent):
             if ev:
                 yield ev
             n += 1
+
+
+class RawAgent(FakeAgent):
+    """直接透传原始 chunk（绕过 normalizer），用于验证公开边界的白名单。"""
+
+    def predict_stream(self, *args, **kwargs):
+        for chunk in self._raw:
+            yield chunk
+
+
+class NotReadyAgent(FakeAgent):
+    @property
+    def is_ready(self) -> bool:
+        return False
 
 
 class ChatSseContractTests(unittest.TestCase):
@@ -315,6 +351,118 @@ class ChatSseContractTests(unittest.TestCase):
         self.assertNotIn(chat_api.INTERRUPT_NOTICE, save_calls[-1][0][3])
         # 残留标记已被新流启动清理
         self.assertFalse(chat_api._check_interrupt(1, "sess-stale"))
+
+    def test_disconnect_saves_partial_and_emits_no_done(self):
+        """客户端断开（真实 close 生成器）：不再产出任何 SSE，部分内容可靠保存。"""
+        saved = []
+        fake = InfiniteInterruptAgent()
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=fake),
+            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_load_history", return_value=[]),
+        ):
+            gen = chat_api._stream_agent_response(
+                user_id=1, session_id="sess-disc", message="断连测试",
+                dataset_id="ds1", collection_id="c1", mode="qa", token="t",
+            )
+            next(gen)  # 消费第一个事件后模拟断开
+            gen.close()
+
+        # 已产出部分内容被保存（不含打断提示——断连不是用户主动打断）
+        save_calls = [s for s in saved if s[0][2] == "assistant"]
+        self.assertTrue(save_calls)
+        args, kwargs = save_calls[-1]
+        self.assertIn("片段", args[3])
+        self.assertNotIn(chat_api.INTERRUPT_NOTICE, args[3])
+
+    def test_public_boundary_drops_tool_role_and_unknown_types(self):
+        """公开边界白名单：role=tool / 未知 type / 工具参数不进入公开流与历史。"""
+        saved = []
+        raw_chunks = [
+            {"role": "tool", "type": "answer", "content": '{"hits": [{"segment_id": "LEAK_MARKER"}]}'},
+            {"role": "assistant", "type": "unknown_type", "content": "神秘内容"},
+            {"role": "assistant", "type": "tool_call", "tool_name": "kb_search",
+             "tool_arguments": '{"query": "top-secret"}'},
+            {"role": "assistant", "type": "answer", "content": "干净回答"},
+        ]
+        fake = RawAgent(raw_chunks)
+        with _sse_client(fake, saved) as client:
+            resp = client.post("/api/v1/chat", json={
+                "content": "你好", "stream": True, "mode": "qa",
+            })
+        events = _parse_sse(resp.text)
+        payloads = [json.loads(e) for e in events[:-1]]
+        self.assertEqual(events[-1], "[DONE]")
+
+        body = json.dumps(payloads, ensure_ascii=False)
+        self.assertNotIn("LEAK_MARKER", body)
+        self.assertNotIn("tool_arguments", body)
+        self.assertNotIn("神秘内容", body)
+        types = [p["type"] for p in payloads]
+        self.assertEqual(types, ["tool_call", "answer"])
+
+        # 历史只保存干净正文
+        save_calls = [s for s in saved if s[0][2] == "assistant"]
+        self.assertEqual(save_calls[-1][0][3], "干净回答")
+
+    def test_early_exits_emit_done(self):
+        """echo 回退 / agent 未就绪 / 内部异常：统一发 [DONE] 作为最后事件。"""
+        # echo 回退（无 dataset 且非本地 RAG）
+        with patch.object(chat_api, "is_local_rag", return_value=False):
+            lines = list(chat_api._stream_agent_response(
+                user_id=1, session_id="s1", message="hi",
+                dataset_id="", collection_id=None, db=None, history=[], mode="qa", token="t",
+            ))
+        self.assertEqual(lines[-1], "data: [DONE]\n\n")
+        self.assertIn("已收到", lines[0])
+
+        # agent 未就绪
+        saved = []
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=NotReadyAgent([])),
+            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+        ):
+            lines = list(chat_api._stream_agent_response(
+                user_id=1, session_id="s2", message="hi",
+                dataset_id="ds1", collection_id="c1", mode="qa", token="t",
+            ))
+        self.assertEqual(lines[-1], "data: [DONE]\n\n")
+        self.assertIn("不可用", lines[0])
+
+        # 内部异常（生成中途抛错）
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=FakeAgent([], error=ValueError("boom"))),
+            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+        ):
+            lines = list(chat_api._stream_agent_response(
+                user_id=1, session_id="s3", message="hi",
+                dataset_id="ds1", collection_id="c1", mode="qa", token="t",
+            ))
+        self.assertEqual(lines[-1], "data: [DONE]\n\n")
+        self.assertIn("出错了", lines[0])
+        self.assertNotIn("boom", lines[0])  # 错误去敏
+
+    def test_tcn_metadata_before_done(self):
+        """TCN metadata 必须出现在 [DONE] 之前。"""
+        saved = []
+        fake = FakeAgent(RAW_CHUNKS)
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=fake),
+            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_load_history", return_value=[]),
+            patch.object(
+                chat_api, "_tc_predict_background",
+                return_value={"session_id": "s", "lvr": 0.5, "diagnosis": "d"},
+            ),
+        ):
+            lines = list(chat_api._stream_agent_response(
+                user_id=1, session_id="s", message="hi",
+                dataset_id="ds1", collection_id="c1", mode="qa", token="t",
+                user_hash="h", tc_node_id="n", tc_user_action="correct", tc_domain_id="d",
+            ))
+        self.assertEqual(lines[-1], "data: [DONE]\n\n")
+        done_index = lines.index("data: [DONE]\n\n")
+        self.assertTrue(any("lvr" in line for line in lines[:done_index]))
 
 
 if __name__ == "__main__":

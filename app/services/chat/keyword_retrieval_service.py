@@ -60,22 +60,28 @@ def search(
     if not terms:
         return []
 
-    # 候选：content 命中任一 term，或文档标题命中整句/任一 term
+    # 候选：content / segment title / document display_name 命中任一 term
     term_conditions = [_lexical_contains(DocumentSegment.content, t) for t in terms]
+    title_conditions = [_lexical_contains(DocumentSegment.title, t) for t in terms]
+    name_conditions = [_lexical_contains(Document.display_name, t) for t in terms]
     filters = [
         Document.user_id == int(user_id),
         Document.zone == "study",
         Document.segment_status == "completed",
         Document.indexing_status == "completed",
-        or_(*term_conditions),
+        or_(*(term_conditions + title_conditions + name_conditions)),
     ]
     if collection_id:
         filters.append(Document.collection_id == collection_id)
 
+    # 有界候选集：先在 SQL 侧 limit，再在 Python 侧评分/排序/截断，
+    # 避免 .all() 把全部匹配段载入内存
+    candidate_limit = max(200, top_k * 20)
     rows = (
         db.query(Document, DocumentSegment)
         .join(DocumentSegment, DocumentSegment.document_id == Document.id)
         .filter(*filters)
+        .limit(candidate_limit)
         .all()
     )
 

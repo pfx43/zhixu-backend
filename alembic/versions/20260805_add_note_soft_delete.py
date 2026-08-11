@@ -1,7 +1,7 @@
 """为用户笔记增加软删除字段
 
 Revision ID: 20260805_note_soft_delete
-Revises: 20260804_question_fallbacks
+Revises: 20260802_note_revision
 Create Date: 2026-08-05 00:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260805_note_soft_delete"
-down_revision = "20260804_question_fallbacks"
+down_revision = "20260802_note_revision"
 branch_labels = None
 depends_on = None
 

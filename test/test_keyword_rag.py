@@ -194,6 +194,66 @@ def test_keyword_search_returns_empty_without_db_or_blank_query(keyword_db):
     assert keyword_retrieval_service.search(None, "词", user_id=user_id) == []
 
 
+def test_keyword_search_matches_segment_title_and_display_name(keyword_db):
+    """只出现在 segment title / document display_name 的关键词必须能命中。"""
+    SessionLocal, user_id, coll_id, *_ = keyword_db
+    with SessionLocal() as db:
+        title_doc = Document(
+            user_id=user_id, collection_id=coll_id, display_name="普通文件名.pdf",
+            zone="study", content_hash="t1",
+            segment_status="completed", indexing_status="completed",
+        )
+        db.add(title_doc)
+        db.flush()
+        db.add(DocumentSegment(
+            document_id=title_doc.id, order_index=0, title="光合作用详解",
+            content="正文完全没有关键词", char_start=0, char_end=9,
+        ))
+        name_doc = Document(
+            user_id=user_id, collection_id=coll_id, display_name="牛顿力学.pdf",
+            zone="study", content_hash="t2",
+            segment_status="completed", indexing_status="completed",
+        )
+        db.add(name_doc)
+        db.flush()
+        db.add(DocumentSegment(
+            document_id=name_doc.id, order_index=0, title="第一章",
+            content="正文也没有关键词", char_start=0, char_end=8,
+        ))
+        db.commit()
+
+        hits_title = keyword_retrieval_service.search(db, "光合作用", user_id=user_id)
+        hits_name = keyword_retrieval_service.search(db, "牛顿力学", user_id=user_id)
+
+    assert len(hits_title) == 1
+    assert hits_title[0]["title"] == "光合作用详解"
+    assert hits_title[0]["score"] > 0
+    assert len(hits_name) == 1
+    assert hits_name[0]["display_name"] == "牛顿力学.pdf"
+
+
+def test_keyword_search_bounded_candidates(keyword_db):
+    """大量匹配段时有界查询仍返回 top_k，不炸内存。"""
+    SessionLocal, user_id, coll_id, *_ = keyword_db
+    with SessionLocal() as db:
+        for i in range(205):
+            doc = Document(
+                user_id=user_id, collection_id=coll_id, display_name=f"批量{i}.pdf",
+                zone="study", content_hash=f"b{i}",
+                segment_status="completed", indexing_status="completed",
+            )
+            db.add(doc)
+            db.flush()
+            db.add(DocumentSegment(
+                document_id=doc.id, order_index=0, title="第一章",
+                content=f"批量文档内容 {i} 都包含关键词", char_start=0, char_end=16,
+            ))
+        db.commit()
+        hits = keyword_retrieval_service.search(db, "关键词", user_id=user_id)
+
+    assert len(hits) == 5  # top_k 默认 5
+
+
 def test_config_helpers_track_backend(monkeypatch):
     monkeypatch.setattr(config, "RAG_BACKEND", "keyword")
     assert config.is_keyword_rag() is True

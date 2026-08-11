@@ -22,7 +22,7 @@ import app.models  # noqa: F401
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 
-def run_alembic_upgrade(database_url: str) -> subprocess.CompletedProcess[str]:
+def run_alembic_upgrade(database_url: str, revision: str = "head") -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
     environment["DATABASE_URL"] = database_url
     return subprocess.run(
@@ -30,9 +30,10 @@ def run_alembic_upgrade(database_url: str) -> subprocess.CompletedProcess[str]:
             sys.executable,
             "-c",
             (
+                "import sys; "
                 "from alembic import command; "
                 "from alembic.config import Config; "
-                "command.upgrade(Config('alembic.ini'), 'head')"
+                f"command.upgrade(Config('alembic.ini'), {revision!r})"
             ),
         ],
         cwd=str(BACKEND_ROOT),
@@ -83,7 +84,36 @@ def test_alembic_upgrade_adopts_existing_create_all_database(tmp_path):
         revision = connection.execute(
             text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert revision == "20260807_add_usage_tables"
+    assert revision == "20260811_merge_develop_heads"
+
+
+def test_alembic_upgrade_from_legacy_chain_backfills_missing_branches(tmp_path):
+    """旧链已部署到 20260805_note_soft_delete 的库，升级 head 后自动补跑
+    note_attachments / usage 分支，不被旧 alembic_version 跳过。"""
+    database_path = tmp_path / "legacy-chain.db"
+    database_url = f"sqlite:///{database_path.as_posix()}"
+    engine = create_engine(database_url)
+
+    first = run_alembic_upgrade(database_url, revision="20260805_note_soft_delete")
+    assert first.returncode == 0, first.stdout + first.stderr
+    with engine.connect() as connection:
+        assert connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one() == "20260805_note_soft_delete"
+    assert "note_attachments" not in inspect(engine).get_table_names()
+    assert "usage_daily" not in inspect(engine).get_table_names()
+
+    second = run_alembic_upgrade(database_url)
+    assert second.returncode == 0, second.stdout + second.stderr
+    tables = inspect(engine).get_table_names()
+    assert "note_attachments" in tables
+    assert "usage_daily" in tables
+    assert "usage_token" in tables
+    with engine.connect() as connection:
+        revision = connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalar_one()
+    assert revision == "20260811_merge_develop_heads"
 
 
 def test_alembic_upgrade_adds_non_null_initial_revision_to_legacy_notes(tmp_path):

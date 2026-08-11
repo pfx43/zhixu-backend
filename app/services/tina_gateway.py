@@ -153,24 +153,23 @@ class TinaGateway:
             api_key = settings.api_key
             logger.warning("TinaGateway: key 池无可用 key，使用默认 key")
 
-        return wrap_base_api(
+        wrapped = wrap_base_api(
             BaseAPI(
                 model=settings.model_name,
                 api_key=api_key,
                 base_url=settings.base_url,
             )
         )
+        # 记录本次 acquire 的 key lease，供调用方在 finally 中释放；
+        # 回退默认 key 时未递增 inflight，lease 为 None 表示无需释放
+        wrapped.leased_key = api_key if api_key != settings.api_key else None
+        return wrapped
 
     def release_base_api_key(self, llm_instance) -> None:
-        """释放与 BaseAPI 实例关联的 key。
-
-        注意：BaseAPI 不直接暴露 api_key，此处通过遍历池中 key
-        来释放（最简单的方式是释放所有 inflight 计数中的一项）。
-        由于无法从 BaseAPI 实例反查 key，调用方需自行管理。
-        实际上，如果 key 池使用了 Redis inflight 计数，需要调用方
-        在完成 Agent 调用后手动调用 release_key。
-        """
-        pass  # BaseAPI 不暴露 key，无法精确释放；依赖 Redis key 的 TTL 自动过期
+        """释放与 BaseAPI 实例关联的 key lease（成功/异常/生成器关闭路径均可安全调用）。"""
+        key = getattr(llm_instance, "leased_key", None)
+        if key:
+            self._release_key(key)
 
     def stream_chat(
         self,

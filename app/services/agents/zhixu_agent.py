@@ -4,8 +4,11 @@
 - 组合 KnowledgeRetriever 工具包（kb 命名空间），仅检索当前用户自己的知识库（用户隔离）
 - 通过 TinaGateway 统一创建 BaseAPI（key 池 + 用量记账）
 - 对话时 Agent 自主决定是否调用检索工具，命中内容用于构建 citations
+- 并发安全：predict_stream 以互斥锁保证同一 Agent 实例的生成串行，
+  同一用户并发会话不会互相覆盖运行态
 """
 import logging
+import threading
 from typing import Generator, List, Optional, TYPE_CHECKING
 
 from app.core.config import is_local_rag, is_keyword_rag
@@ -50,8 +53,8 @@ class ZhixuAgent:
     def __init__(self, user_id: int, dataset_id: str = ""):
         self.user_id = user_id
         self.dataset_id = dataset_id or ""
-        self._active_collection_id: Optional[str] = None
-        self._active_db: Optional["Session"] = None
+        # 同用户并发会话互斥：一次完整生成期间持有，避免共享运行态互相覆盖
+        self._lock = threading.RLock()
         # 最近一次 predict_stream 的聚合结果（完整思考内容 + 按序去重工具名），供 chat 层持久化
         self._last_reasoning: str = ""
         self._last_tool_names: list[str] = []
@@ -152,8 +155,25 @@ class ZhixuAgent:
         token: Optional[str] = None,
     ) -> Generator[dict, None, None]:
         """
-        流式对话 — tina Agent 自主决定是否调用检索工具
+        流式对话 — tina Agent 自主决定是否调用检索工具。
+
+        并发安全：整个生成（含生成器提前关闭）期间持有 per-agent 互斥锁，
+        同一用户的并发会话串行执行，不共享/覆盖彼此运行态。
         """
+        with self._lock:
+            yield from self._predict_stream_locked(
+                message, history, collection_id, db, mode, token
+            )
+
+    def _predict_stream_locked(
+        self,
+        message: str,
+        history: Optional[List[dict]] = None,
+        collection_id: Optional[str] = None,
+        db: Optional["Session"] = None,
+        mode: str = "qa",
+        token: Optional[str] = None,
+    ) -> Generator[dict, None, None]:
         self._active_collection_id = collection_id
         self._active_db = db
 
@@ -210,6 +230,12 @@ class ZhixuAgent:
             # 生成器被提前关闭（用户打断/连接断开）时也保留聚合结果，供 chat 层保存
             self._last_reasoning = normalizer.reasoning
             self._last_tool_names = list(normalizer.tool_names)
+            # 释放 key lease（成功/异常/生成器关闭路径均执行）
+            try:
+                from app.services.tina_gateway import tina_gateway
+                tina_gateway.release_base_api_key(llm)
+            except Exception:
+                logger.exception("ZhixuAgent 释放 key lease 失败: user_id=%s", self.user_id)
 
         # 构建 citations（基于检索工具本次命中的内容）
         if db and self.retriever and self.retriever.last_hits:

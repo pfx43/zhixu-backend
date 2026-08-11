@@ -41,7 +41,7 @@ class ChatChunkNormalizer:
                 "reasoning_content": reasoning,
             }
 
-        # 工具相关事件（声明 / 参数分片 / tool_calls）：工具名首次出现才发一条
+        # 工具相关事件（声明 / 参数分片）：工具名首次出现才发一条
         tool_name = chunk.get("tool_name")
         if tool_name:
             if tool_name != self._current_tool:
@@ -54,6 +54,31 @@ class ChatChunkNormalizer:
                     "content": "",
                     "tool_name": tool_name,
                 }
+            return None
+
+        # 仅提供最终 tool_calls（无提前 tool_name 分片）的兼容分支：
+        # 提取 function.name 按首次出现去重，只发 tool_call 事件，不暴露参数
+        tool_calls = chunk.get("tool_calls")
+        if tool_calls:
+            emitted = None
+            for tc in tool_calls:
+                fn = tc.get("function") if isinstance(tc, dict) else getattr(tc, "function", None)
+                if isinstance(fn, dict):
+                    name = fn.get("name")
+                else:
+                    name = getattr(fn, "name", None) if fn else None
+                if name and name not in self.tool_names:
+                    self.tool_names.append(name)
+                    self._current_tool = name
+                    if emitted is None:
+                        emitted = {
+                            "type": "tool_call",
+                            "role": "assistant",
+                            "content": "",
+                            "tool_name": name,
+                        }
+            if emitted:
+                return emitted
             return None
 
         # 正文分片
