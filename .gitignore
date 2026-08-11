@@ -71,7 +71,7 @@ storage/
 backend/storage/
 backend/content_cache/
 backend/upload_hashes.json
-
+.opencode/
 # Chroma 向量索引
 data/chroma/
 
@@ -81,6 +81,14 @@ data/*.db-journal
 data/*.db-wal
 data/*.db-shm
 app/data/
+
+# 运行时生成的数据/测试数据（误入跟踪，git rm --cached 移除）
+data/knowledge_graph/
+data/*.csv
+data/*.npy
+
+# opencode 本地配置
+opencode.json
 releases/
 # ─── LEKT 本地编译产物（按需提交则注释掉）──
 # backend/*.pyd
@@ -90,7 +98,7 @@ releases/
 *.zip
 *.rar
 *.7z
-# ������ ��Ƶ��Ⱦ���� �������������������������������������� 
-renders/ 
+# ������ ��Ƶ��Ⱦ���� ��������������������������������������
+renders/
 zhishi-web/renders/ 
 zhishi-web/video/

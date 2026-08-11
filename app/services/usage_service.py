@@ -6,15 +6,19 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.config import APP_TIMEZONE
 from app.core.database import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+_BUSINESS_TZ = ZoneInfo(APP_TIMEZONE)
 
 
 # ── tiktoken 估算（可选依赖） ──
@@ -51,13 +55,48 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _current_yyyymm() -> str:
-    """返回当前年月字符串，如 '202608'。"""
-    return datetime.now(timezone.utc).strftime("%Y%m")
+    """返回业务日所在年月字符串，如 '202608'（按 APP_TIMEZONE）。"""
+    return datetime.now(_BUSINESS_TZ).strftime("%Y%m")
 
 
 def _today() -> date:
-    """返回当前 UTC 日期。"""
-    return datetime.now(timezone.utc).date()
+    """返回业务日日期（按 APP_TIMEZONE）。"""
+    return datetime.now(_BUSINESS_TZ).date()
+
+
+def _upsert_sql(dialect: str, table: str) -> str:
+    """按方言生成原子累加 upsert；SQLite/PostgreSQL 走 ON CONFLICT，MySQL 走 ON DUPLICATE KEY UPDATE。"""
+    if dialect == "mysql":
+        if table == "usage_token":
+            return """
+                INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
+                VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
+                ON DUPLICATE KEY UPDATE
+                    prompt_tokens = usage_token.prompt_tokens + VALUES(prompt_tokens),
+                    completion_tokens = usage_token.completion_tokens + VALUES(completion_tokens),
+                    total_tokens = usage_token.total_tokens + VALUES(total_tokens)
+                """
+        return """
+            INSERT INTO usage_daily (user_id, date, api_calls)
+            VALUES (:user_id, :date, 1)
+            ON DUPLICATE KEY UPDATE api_calls = usage_daily.api_calls + 1
+            """
+    if table == "usage_token":
+        return """
+            INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
+            VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
+            ON CONFLICT (user_id, yyyymm)
+            DO UPDATE SET
+                prompt_tokens = usage_token.prompt_tokens + :prompt,
+                completion_tokens = usage_token.completion_tokens + :completion,
+                total_tokens = usage_token.total_tokens + :total
+            """
+    return """
+        INSERT INTO usage_daily (user_id, date, api_calls)
+        VALUES (:user_id, :date, 1)
+        ON CONFLICT (user_id, date)
+        DO UPDATE SET api_calls = usage_daily.api_calls + 1
+        """
 
 
 # ── 公开 API ──
@@ -106,26 +145,22 @@ def record_turn_usage(
                 completion_tokens = max(0, final_total - prompt_tokens)
         else:
             estimated = True
-            prompt_tokens = prompt_tokens or _estimate_tokens(prompt)
-            completion_tokens = completion_tokens or _estimate_tokens(completion)
+            if prompt_tokens is None:
+                prompt_tokens = _estimate_tokens(prompt)
+            if completion_tokens is None:
+                completion_tokens = _estimate_tokens(completion)
             final_total = prompt_tokens + completion_tokens
 
         yyyymm = _current_yyyymm()
         today = _today()
 
+        dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
+        token_sql = _upsert_sql(dialect, "usage_token")
+        daily_sql = _upsert_sql(dialect, "usage_daily")
+
         # ── usage_token 按月原子累加 ──
         db.execute(
-            text(
-                """
-                INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
-                VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
-                ON CONFLICT (user_id, yyyymm)
-                DO UPDATE SET
-                    prompt_tokens = usage_token.prompt_tokens + :prompt,
-                    completion_tokens = usage_token.completion_tokens + :completion,
-                    total_tokens = usage_token.total_tokens + :total
-                """
-            ),
+            text(token_sql),
             {
                 "user_id": user_id,
                 "yyyymm": yyyymm,
@@ -137,14 +172,7 @@ def record_turn_usage(
 
         # ── usage_daily 按日原子累加 ──
         db.execute(
-            text(
-                """
-                INSERT INTO usage_daily (user_id, date, api_calls)
-                VALUES (:user_id, :date, 1)
-                ON CONFLICT (user_id, date)
-                DO UPDATE SET api_calls = usage_daily.api_calls + 1
-                """
-            ),
+            text(daily_sql),
             {"user_id": user_id, "date": today},
         )
 

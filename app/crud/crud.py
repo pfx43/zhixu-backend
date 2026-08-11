@@ -30,14 +30,21 @@ def delete_user_by_id(db: Session, user_id: int):
 def get_user_with_plan_details_v2(db: Session, user_id: int):
     """获取用户信息及套餐详情"""
     # 使用原生SQL查询，关联users和plan_tiers表
-    # PostgreSQL: expires_at 距当前时间的天数（不足一天截断）
-    query = text("""
+    # days_remaining：距当前时间的剩余天数（不足一天截断），按方言实现
+    dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
+    if dialect == "sqlite":
+        days_expr = "CAST((julianday(u.expires_at) - julianday('now')) AS INTEGER)"
+    elif dialect == "mysql":
+        days_expr = "TIMESTAMPDIFF(DAY, NOW(), u.expires_at)"
+    else:  # postgresql 等
+        days_expr = "CAST(EXTRACT(EPOCH FROM (u.expires_at - CURRENT_TIMESTAMP)) / 86400 AS INTEGER)"
+    query = text(f"""
     SELECT 
         u.*, 
         p.name as plan_name, 
         p.price_monthly, 
         p.price_yearly, 
-        CAST(EXTRACT(EPOCH FROM (u.expires_at - CURRENT_TIMESTAMP)) / 86400 AS INTEGER) as days_remaining 
+        {days_expr} as days_remaining
     FROM users u 
     LEFT JOIN plan_tiers p ON u.plan_level = p.level 
     WHERE u.id = :user_id

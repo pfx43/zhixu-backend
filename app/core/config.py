@@ -149,6 +149,12 @@ MAX_QUESTIONS_PER_DOCUMENT = int(
 # 显式设置 DIFY_MAX_UPLOAD_SIZE 后才拦截；实际能否入库仍受 Dify Cloud 侧限制
 DIFY_MAX_UPLOAD_SIZE = int(os.getenv("DIFY_MAX_UPLOAD_SIZE", "0"))
 
+# 配额强制开关：false（默认）时不通过套餐计划限制用户（记账仍照常写入）
+QUOTA_ENFORCE = os.getenv("QUOTA_ENFORCE", "false").lower() == "true"
+
+# 业务日时区：用量按此切分日/月（面向中国大陆用户，默认 Asia/Shanghai）
+APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Shanghai")
+
 # 检索后端：local（Chroma 本地向量）| keyword（纯关键词检索，不走向量）| dify
 RAG_BACKEND = os.getenv("RAG_BACKEND", "local").lower()
 _CHROMA_DEFAULT = _REPO_ROOT / "data" / "chroma"

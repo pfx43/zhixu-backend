@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.core.config import QUOTA_ENFORCE
 from app.services.usage_service import get_daily_api_calls, get_monthly_token_usage
 
 logger = logging.getLogger(__name__)
@@ -28,9 +29,15 @@ def check_quota(
 
     知识库数量请使用单独的 check_kb_quota 依赖。
 
+    QUOTA_ENFORCE=false（默认）时直接放行，不通过套餐计划限制用户；
+    用量记账不受影响，开关打开后即可按套餐限制。
+
     Returns:
         current_user dict（透传，方便下游继续使用）
     """
+    if not QUOTA_ENFORCE:
+        return current_user
+
     user_id = current_user["user_id"]
 
     # 从会话 payload 读取配额值（避免额外 DB 查询）
