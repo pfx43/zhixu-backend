@@ -246,7 +246,7 @@ class ChatResponse(BaseModel):
     content: str
     created_at: datetime
     citations: Optional[List[CitationOut]] = None
-    # 可选：完整思考内容 + 按首次出现顺序去重的工具名（旧客户端可忽略）
+    # 可选：完整思考内容 + 按调用顺序的完整工具名序列（去重/计数由前端完成，旧客户端可忽略）
     reasoning_content: Optional[str] = None
     tool_names: Optional[List[str]] = None
 

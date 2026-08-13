@@ -55,7 +55,7 @@ class ZhixuAgent:
         self.dataset_id = dataset_id or ""
         # 同用户并发会话互斥：一次完整生成期间持有，避免共享运行态互相覆盖
         self._lock = threading.RLock()
-        # 最近一次 predict_stream 的聚合结果（完整思考内容 + 按序去重工具名），供 chat 层持久化
+        # 最近一次 predict_stream 的聚合结果（完整思考内容 + 完整调用序列工具名），供 chat 层持久化
         self._last_reasoning: str = ""
         self._last_tool_names: list[str] = []
 

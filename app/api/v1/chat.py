@@ -344,7 +344,7 @@ def _stream_agent_response(
                     reasoning_parts.append(rc)
             elif event_type == "tool_call":
                 tn = chunk.get("tool_name")
-                if tn and tn not in tool_names:
+                if tn:
                     tool_names.append(tn)
 
             payload: dict = {
@@ -541,7 +541,7 @@ def send_chat(
                         reasoning_parts.append(chunk["reasoning_content"])
                     elif event_type == "tool_call":
                         tn = chunk.get("tool_name")
-                        if tn and tn not in tool_names:
+                        if tn:
                             tool_names.append(tn)
                 if full_content:
                     assistant_content = full_content

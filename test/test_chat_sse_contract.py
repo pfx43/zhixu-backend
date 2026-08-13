@@ -1,8 +1,8 @@
 """
 Chat SSE 公开合同测试 — 覆盖：
-- ChatChunkNormalizer 归一化（reasoning/tool_call/answer 白名单、工具结果过滤、去重）
+- ChatChunkNormalizer 归一化（reasoning/tool_call/answer 白名单、工具结果过滤、分片合并）
 - chat SSE 输出（type 字段、[DONE]、无工具结果泄漏）
-- 历史持久化（reasoning_content / tool_names 按序去重）
+- 历史持久化（reasoning_content / tool_names 完整调用序列）
 - 错误去敏、旧历史兼容、非流式响应新字段
 """
 import json
@@ -118,11 +118,12 @@ class ChatChunkNormalizerTests(unittest.TestCase):
         self.assertIsNone(ev)
         self.assertEqual(n.tool_names, [])
 
-    def test_tool_names_ordered_dedup(self):
+    def test_tool_names_keep_full_call_sequence(self):
+        """工具名聚合保留完整调用序列（含重复调用），展示去重由前端完成。"""
         n = ChatChunkNormalizer()
         for t in ("kb_search", "search", "kb_search", "search"):
             n.normalize({"role": "assistant", "tool_name": t})
-        self.assertEqual(n.tool_names, ["kb_search", "search"])
+        self.assertEqual(n.tool_names, ["kb_search", "search", "kb_search", "search"])
 
     def test_answer_passthrough(self):
         n = ChatChunkNormalizer()
@@ -146,10 +147,11 @@ class ChatChunkNormalizerTests(unittest.TestCase):
         self.assertNotIn("arguments", ev)
         self.assertNotIn("秘密", json.dumps(ev, ensure_ascii=False))
 
-        # 后续工具名继续入聚合（按序去重），重复调用不重复发
+        # 后续工具名继续入聚合（完整序列），重复调用再次计入并发新事件
         ev2 = n.normalize({"role": "assistant", "tool_calls": [{"function": {"name": "kb_search"}}]})
-        self.assertIsNone(ev2)
-        self.assertEqual(n.tool_names, ["kb_search", "web_fetch"])
+        self.assertIsNotNone(ev2)
+        self.assertEqual(ev2["tool_name"], "kb_search")
+        self.assertEqual(n.tool_names, ["kb_search", "web_fetch", "kb_search"])
 
 
 class InfiniteInterruptAgent(FakeAgent):
@@ -215,7 +217,7 @@ class ChatSseContractTests(unittest.TestCase):
         self.assertIn("reasoning", types)
         self.assertIn("tool_call", types)
         self.assertIn("answer", types)
-        # tool_call 只出现一次（去重）
+        # tool_call 单次调用（分片合并）只发一条
         self.assertEqual(types.count("tool_call"), 1)
         tool_events = [p for p in payloads if p["type"] == "tool_call"]
         self.assertEqual(tool_events[0]["tool_name"], "kb_search")
@@ -224,7 +226,7 @@ class ChatSseContractTests(unittest.TestCase):
         answer_text = "".join(p["content"] for p in payloads if p["type"] == "answer")
         self.assertEqual(answer_text, "你好，世界")
 
-        # 历史持久化：干净正文 + 完整思考 + 按序去重工具名
+        # 历史持久化：干净正文 + 完整思考 + 完整调用序列工具名
         save_calls = [s for s in saved if s[0][2] == "assistant"]
         self.assertTrue(save_calls)
         args, kwargs = save_calls[-1]
