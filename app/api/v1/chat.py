@@ -24,7 +24,6 @@ from app.schemas.common import (
 from app.services.tutor.citation_service import resolve_chat_collection
 from app.services.knowledge.storage_service import storage_service
 from app.services.tcn.tcn_client import tcn_client
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -232,30 +231,7 @@ def _generate_assistant_response(user_message: str) -> str:
     return f"已收到：{user_message}"
 
 
-def _tc_predict_background(user_hash: str, tc_node_id: str, tc_user_action: str, tc_domain_id: str, session_id: str):
-    """TCN predict 同步包装 — 从 sync generator 中调用 async predict"""
-    try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(
-            tcn_client.predict(
-                user_hash=user_hash,
-                current_node=tc_node_id,
-                user_action=tc_user_action,
-                domain_id=tc_domain_id,
-            )
-        )
-        loop.close()
-        return {
-            "session_id": session_id,
-            "lvr": result.get("lvr"),
-            "diagnosis": result.get("diagnosis"),
-        }
-    except Exception as e:
-        logger.warning(f"TCN predict 异步失败: {e}")
-        return None
-
-
-def _stream_agent_response(
+async def _stream_agent_response(
     user_id: int,
     session_id: str,
     message: str,
@@ -270,7 +246,7 @@ def _stream_agent_response(
     mode: str = "qa",
     token: Optional[str] = None,
 ):
-    """流式 Agent 回复。
+    """流式 Agent 回复（async generator）。
 
     结束语义（[DONE] 合同）：
     - 正常 / 受控错误：恰好一次 [DONE]，且为客户端可见的最后一个事件（TCN metadata 在其前）；
@@ -319,13 +295,14 @@ def _stream_agent_response(
     # 新流启动：清除上次残留的打断标记，避免误中断本轮
     _clear_interrupt(user_id, session_id)
 
+    chunk_counter = 0
     try:
-        gen = agent.predict_stream(
+        async for chunk in agent.generate(
             message, history, collection_id=collection_id, db=db, mode=mode, token=token
-        )
-        for chunk in gen:
-            # 用户打断：停止产出，已产出内容保存时追加打断提示
-            if _check_interrupt(user_id, session_id):
+        ):
+            chunk_counter += 1
+            # 用户打断：降频检查（每 8 chunk 一次 Redis 往返），命中则停止产出
+            if chunk_counter % 8 == 0 and _check_interrupt(user_id, session_id):
                 interrupted = True
                 break
 
@@ -365,7 +342,7 @@ def _stream_agent_response(
             yield f"event: message\ndata: {data}\n\n"
     except (GeneratorExit, ConnectionResetError, BrokenPipeError):
         # 客户端断开：不再 yield（GeneratorExit 期间 yield 会抛 RuntimeError），
-        # 部分内容保存交给下方 finally 路径
+        # 部分内容保存交给下方保存路径
         disconnected = True
     except Exception as e:
         failed = True
@@ -378,13 +355,31 @@ def _stream_agent_response(
         }, ensure_ascii=False)
         yield f"event: message\ndata: {data}\n\n"
 
+    # ── 保存前置：先持久化，再产出 [DONE]（客户端收到 [DONE] 即认为完成） ──
+    if full_content or interrupted:
+        content = full_content + (INTERRUPT_NOTICE if interrupted else "")
+        try:
+            _save_message(
+                user_id,
+                session_id,
+                "assistant",
+                content,
+                reasoning_content="".join(reasoning_parts) or None,
+                tool_names=tool_names or None,
+            )
+        except Exception as e:
+            logger.error(f"保存助理消息失败: {e}")
+
     # ── 统一结束语义：metadata 在前，[DONE] 必为最后事件；断连不再产出任何事件 ──
     if not disconnected:
         # TCN 集成：对话完成后异步更新知识状态并透传结果
         if not failed and user_hash and tc_node_id and tc_user_action:
             try:
-                tcn_result = _tc_predict_background(
-                    user_hash, tc_node_id, tc_user_action, tc_domain_id or "", session_id
+                tcn_result = await tcn_client.predict(
+                    user_hash=user_hash,
+                    current_node=tc_node_id,
+                    user_action=tc_user_action,
+                    domain_id=tc_domain_id or "",
                 )
             except Exception as e:
                 logger.warning(f"TCN predict 调用异常: {e}")
@@ -402,25 +397,11 @@ def _stream_agent_response(
 
         yield "data: [DONE]\n\n"
 
-    # ── 清理与保存：断连/打断/正常路径均可靠执行（不再产生 SSE 输出） ──
+    # ── 清理：断连/打断/正常路径均清除打断标记 ──
     try:
         _clear_interrupt(user_id, session_id)
     except Exception:
         pass
-
-    if full_content or interrupted:
-        content = full_content + (INTERRUPT_NOTICE if interrupted else "")
-        try:
-            _save_message(
-                user_id,
-                session_id,
-                "assistant",
-                content,
-                reasoning_content="".join(reasoning_parts) or None,
-                tool_names=tool_names or None,
-            )
-        except Exception as e:
-            logger.error(f"保存助理消息失败: {e}")
 
 
 @router.get("")
@@ -438,7 +419,7 @@ def chat_info():
 
 
 @router.post("", response_model=ChatResponse)
-def send_chat(
+async def send_chat(
     request: ChatRequest,
     current_user: dict = Depends(get_current_active_user),
     _quota: dict = Depends(check_quota),
@@ -470,108 +451,34 @@ def send_chat(
 
     _save_message(user_id, session_id, "user", request.content)
 
-    if request.stream:
-        history = _load_history(user_id, session_id)
-        if history:
-            history = history[:-1]
+    history = _load_history(user_id, session_id)
+    if history:
+        history = history[:-1]
 
-        user_hash = current_user.get("user_hash")
-        return StreamingResponse(
-            _stream_agent_response(
-                user_id=user_id,
-                session_id=session_id,
-                message=request.content,
-                dataset_id=dataset_id,
-                collection_id=collection_id,
-                db=db,
-                history=history,
-                user_hash=user_hash,
-                tc_node_id=request.tc_node_id,
-                tc_user_action=request.tc_user_action,
-                tc_domain_id=request.tc_domain_id,
-                mode=mode,
-                token=token,
-            ),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            }
-        )
-
-    citations = None
-    assistant_content = _generate_assistant_response(request.content)
-    reasoning_parts: List[str] = []
-    tool_names: List[str] = []
-
-    if dataset_id or is_local_rag():
-        try:
-            agent = agent_manager.get_agent(user_id, dataset_id or "")
-
-            # qa / learning / classroom_note 三种 mode 下 agent 不可用 → 503
-            if mode in ("qa", "learning", "classroom_note") and not agent.is_ready:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="AI 服务暂时不可用，请稍后重试",
-                )
-
-            if agent.is_ready:
-                history = _load_history(user_id, session_id)
-                if history:
-                    history = history[:-1]
-                full_content = ""
-                for chunk in agent.predict_stream(
-                    request.content,
-                    history,
-                    collection_id=collection_id,
-                    db=db,
-                    mode=mode,
-                    token=token,
-                ):
-                    event_type = chunk.get("type", "")
-                    role = chunk.get("role", "")
-                    if event_type not in ALLOWED_EVENT_TYPES or role == "tool":
-                        continue
-                    if event_type == "metadata" and chunk.get("citations"):
-                        citations = chunk["citations"]
-                    elif event_type == "answer" and chunk.get("content"):
-                        full_content += chunk["content"]
-                    elif event_type == "reasoning" and chunk.get("reasoning_content"):
-                        reasoning_parts.append(chunk["reasoning_content"])
-                    elif event_type == "tool_call":
-                        tn = chunk.get("tool_name")
-                        if tn:
-                            tool_names.append(tn)
-                if full_content:
-                    assistant_content = full_content
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"非流式 chat Agent 调用失败: {e}")
-
-    _reasoning = "".join(reasoning_parts) or None
-    _save_message(
-        user_id,
-        session_id,
-        "assistant",
-        assistant_content,
-        reasoning_content=_reasoning,
-        tool_names=tool_names or None,
+    user_hash = current_user.get("user_hash")
+    return StreamingResponse(
+        _stream_agent_response(
+            user_id=user_id,
+            session_id=session_id,
+            message=request.content,
+            dataset_id=dataset_id,
+            collection_id=collection_id,
+            db=db,
+            history=history,
+            user_hash=user_hash,
+            tc_node_id=request.tc_node_id,
+            tc_user_action=request.tc_user_action,
+            tc_domain_id=request.tc_domain_id,
+            mode=mode,
+            token=token,
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
     )
-
-    meta = _load_session_meta(user_id, session_id)
-    title = meta.get("title") if meta else request.content[:40]
-    return {
-        "session_id": session_id,
-        "session_title": title,
-        "role": "assistant",
-        "content": assistant_content,
-        "created_at": _now_iso(),
-        "citations": citations,
-        "reasoning_content": _reasoning,
-        "tool_names": tool_names or None,
-    }
 
 
 @router.post("/break")

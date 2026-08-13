@@ -225,7 +225,6 @@ from app.schemas.quiz import CitationOut
 class ChatRequest(BaseModel):
     content: str
     session_id: Optional[str] = None
-    stream: bool = False
     collection_id: Optional[str] = None
     # 对话模式: qa / learning / classroom_note / verify
     mode: Optional[str] = "qa"

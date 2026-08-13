@@ -152,6 +152,9 @@ DIFY_MAX_UPLOAD_SIZE = int(os.getenv("DIFY_MAX_UPLOAD_SIZE", "0"))
 # 配额强制开关：false（默认）时不通过套餐计划限制用户（记账仍照常写入）
 QUOTA_ENFORCE = os.getenv("QUOTA_ENFORCE", "false").lower() == "true"
 
+# Agent 最大工具调用次数（tina 工具循环上限，防止死循环；默认 30）
+LLM_MAX_TOOL_LOOP = int(os.getenv("LLM_MAX_TOOL_LOOP", "30"))
+
 # 业务日时区：用量按此切分日/月（面向中国大陆用户，默认 Asia/Shanghai）
 APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Shanghai")
 

@@ -10,6 +10,8 @@ from typing import Callable, List, Optional
 
 from tina import Tools
 
+from app.services.usage_service import resolve_user_id_by_token
+
 logger = logging.getLogger(__name__)
 
 _RETRIEVAL_TOP_K_DEFAULT = 5
@@ -18,17 +20,27 @@ _RETRIEVAL_TOP_K_MAX = 10
 
 class KnowledgeRetriever:
     """
-    知识库检索工具包 — 每个用户一个实例，只检索当前用户自己的知识库。
+    知识库检索工具包 — 只检索当前绑定用户的文档（用户隔离）。
 
-    检索命中结果（last_hits）保留在实例上，供调用方构建 citations。
+    通过 ``set_token`` 动态绑定当前用户身份，检索工具随之为该用户工作；
+    ``last_hits`` 保留本次命中结果，供调用方构建 citations。
     """
 
-    def __init__(self, retrieve_fn: Callable[[str, int], List[dict]]):
+    def __init__(self, retrieve_fn: Callable[[int, str, int], List[dict]]):
         self._retrieve_fn = retrieve_fn
+        self._user_id: int = 0
         self.last_hits: List[dict] = []
 
         self.tools = Tools(name="kb")
         self.tools.register_tool(tool=self.search)
+
+    async def set_token(self, token: str) -> None:
+        """动态绑定当前用户身份：token 反查 user_id，检索工具随之切换。"""
+        self._user_id = await resolve_user_id_by_token(token)
+
+    @property
+    def user_id(self) -> int:
+        return self._user_id
 
     def get_tools(self) -> Tools:
         """把工具包公开给 Agent 使用。"""
@@ -43,6 +55,7 @@ class KnowledgeRetriever:
             top_k (int): 返回片段数量上限，默认 5，最大 10
         """
         hits = self._retrieve_fn(
+            self._user_id,
             query,
             top_k=max(1, min(int(top_k), _RETRIEVAL_TOP_K_MAX)),
         )

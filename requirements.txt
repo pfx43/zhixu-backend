@@ -37,4 +37,4 @@ tiktoken>=0.5.0
 psycopg2-binary>=2.9.0
 
 # Tina Agent（本地 wheel，见 3rdParty/）
-./3rdParty/tina_python-0.5.2-py3-none-any.whl
+./3rdParty/tina_python-0.5.3-py3-none-any.whl

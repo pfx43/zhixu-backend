@@ -283,10 +283,9 @@ def test_zhixu_agent_retrieve_dispatches_to_keyword_search(monkeypatch):
     )
 
     agent = zhixu_agent.ZhixuAgent(user_id=7, dataset_id="")
-    agent._active_db = object()
-    agent._active_collection_id = "collection-1"
+    retrieve = agent._make_retrieve_fn(db=object(), collection_id="collection-1")
 
-    hits = agent._retrieve("中国近代史", top_k=3)
+    hits = retrieve(7, "中国近代史", top_k=3)
     assert hits == fake_hits
 
 

@@ -2,6 +2,7 @@ import json as _json
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 from app.core.config import SQLALCHEMY_DATABASE_URL, _DEFAULT_SQLITE_PATH, _REPO_ROOT
@@ -58,6 +59,33 @@ if _is_sqlite:
         cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# ── 异步引擎（生产/开发 PostgreSQL + asyncpg；本地/测试 SQLite + aiosqlite） ──
+import re as _re
+_async_url = _re.sub(
+    r"^postgresql(?:\+\w+)?://",
+    "postgresql+asyncpg://",
+    SQLALCHEMY_DATABASE_URL,
+    count=1,
+)
+if _async_url.startswith("sqlite://"):
+    _async_url = _async_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+
+_async_engine_kwargs: dict = {"echo": False}
+if _is_sqlite:
+    _async_engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    _async_engine_kwargs.update({
+        "pool_size": _pool_size,
+        "max_overflow": _pool_max_overflow,
+        "pool_pre_ping": True,
+        "pool_recycle": _pool_recycle,
+    })
+
+async_engine = create_async_engine(_async_url, **_async_engine_kwargs)
+AsyncSessionLocal = async_sessionmaker(
+    async_engine, class_=AsyncSession, expire_on_commit=False
+)
 
 Base = declarative_base()
 

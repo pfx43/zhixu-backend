@@ -10,11 +10,13 @@ from datetime import date, datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import APP_TIMEZONE
-from app.core.database import SessionLocal
+from app.core.database import AsyncSessionLocal, SessionLocal
+from app.models import AuthSession, User
+from app.services.auth.auth_session_service import _utc_now, get_session_user, hash_token
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,74 @@ def _upsert_sql(dialect: str, table: str) -> str:
 
 
 # ── 公开 API ──
+
+
+async def resolve_user_id_by_token(token: str) -> int:
+    """客户端登录 token → user_id（异步 DB 访问）；token 为空或解析不到返回 0。
+
+    供 RAGTools 等组件按客户端凭据动态绑定用户身份（反查逻辑唯一出处）。
+    """
+    if not token:
+        return 0
+    try:
+        async with AsyncSessionLocal() as db:
+            session = (
+                await db.execute(
+                    select(AuthSession).where(
+                        AuthSession.token_hash == hash_token(token),
+                        AuthSession.expires_at > _utc_now(),
+                    )
+                )
+            ).scalar_one_or_none()
+            if session is None:
+                return 0
+            user = await db.get(User, session.user_id)
+            return user.id if user else 0
+    except Exception:
+        logger.exception("resolve_user_id_by_token 反查用户失败: token=<redacted>")
+        return 0
+
+
+async def record_usage_for_token(token: str, usage: dict) -> None:
+    """按客户端登录 token 反查 user_id 并异步写入用量表。
+
+    每次 LLM 调用（含 Agent 工具循环内每一轮）记录一条；token 为空、
+    解析不到用户或记账失败均跳过，不阻塞生成。
+    """
+    user_id = await resolve_user_id_by_token(token)
+    if not user_id:
+        return
+    try:
+        prompt_tokens = usage.get("prompt_tokens")
+        completion_tokens = usage.get("completion_tokens")
+        total_tokens = usage.get("total_tokens")
+        if total_tokens is None:
+            total_tokens = (prompt_tokens or 0) + (completion_tokens or 0)
+
+        yyyymm = _current_yyyymm()
+        today = _today()
+
+        async with AsyncSessionLocal() as db:
+            dialect = db.bind.dialect.name
+            token_sql = _upsert_sql(dialect, "usage_token")
+            daily_sql = _upsert_sql(dialect, "usage_daily")
+            await db.execute(
+                text(token_sql),
+                {
+                    "user_id": user_id,
+                    "yyyymm": yyyymm,
+                    "prompt": prompt_tokens or 0,
+                    "completion": completion_tokens or 0,
+                    "total": total_tokens or 0,
+                },
+            )
+            await db.execute(
+                text(daily_sql),
+                {"user_id": user_id, "date": today},
+            )
+            await db.commit()
+    except Exception:
+        logger.exception("record_usage_for_token 记账失败: token=<redacted>")
 
 
 def record_turn_usage(

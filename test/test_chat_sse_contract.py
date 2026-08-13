@@ -5,11 +5,12 @@ Chat SSE 公开合同测试 — 覆盖：
 - 历史持久化（reasoning_content / tool_names 完整调用序列）
 - 错误去敏、旧历史兼容、非流式响应新字段
 """
+import asyncio
 import json
 import unittest
 from contextlib import contextmanager
 from types import SimpleNamespace
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -32,7 +33,7 @@ class FakeAgent:
     def is_ready(self) -> bool:
         return True
 
-    def predict_stream(self, *args, **kwargs):
+    async def generate(self, *args, **kwargs):
         if self._error:
             raise self._error
         normalizer = ChatChunkNormalizer()
@@ -91,6 +92,15 @@ def _parse_sse(text: str):
         if line.startswith("data: "):
             events.append(line[6:])
     return events
+
+
+async def _aiter(agen):
+    return [x async for x in agen]
+
+
+def _collect(agen):
+    """收集 async generator 到 list（独立事件循环）。"""
+    return asyncio.run(_aiter(agen))
 
 
 class ChatChunkNormalizerTests(unittest.TestCase):
@@ -167,7 +177,7 @@ class InfiniteInterruptAgent(FakeAgent):
     def is_ready(self) -> bool:
         return True
 
-    def predict_stream(self, *args, **kwargs):
+    async def generate(self, *args, **kwargs):
         normalizer = ChatChunkNormalizer()
         n = 0
         while True:
@@ -182,7 +192,7 @@ class InfiniteInterruptAgent(FakeAgent):
 class RawAgent(FakeAgent):
     """直接透传原始 chunk（绕过 normalizer），用于验证公开边界的白名单。"""
 
-    def predict_stream(self, *args, **kwargs):
+    async def generate(self, *args, **kwargs):
         for chunk in self._raw:
             yield chunk
 
@@ -199,7 +209,7 @@ class ChatSseContractTests(unittest.TestCase):
         fake = FakeAgent(RAW_CHUNKS)
         with _sse_client(fake, saved) as client:
             resp = client.post("/api/v1/chat", json={
-                "content": "知识追踪是什么？", "stream": True, "mode": "qa",
+                "content": "知识追踪是什么？", "mode": "qa",
             })
         self.assertEqual(resp.status_code, 200)
         events = _parse_sse(resp.text)
@@ -239,24 +249,11 @@ class ChatSseContractTests(unittest.TestCase):
         fake = FakeAgent([], error=ValueError("secret-internal-detail: db timeout"))
         with _sse_client(fake, saved) as client:
             resp = client.post("/api/v1/chat", json={
-                "content": "你好", "stream": True, "mode": "qa",
+                "content": "你好", "mode": "qa",
             })
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn("secret-internal-detail", resp.text)
         self.assertIn("抱歉", resp.text)
-
-    def test_non_stream_response_has_new_fields(self):
-        saved = []
-        fake = FakeAgent(RAW_CHUNKS)
-        with _sse_client(fake, saved) as client:
-            resp = client.post("/api/v1/chat", json={
-                "content": "知识追踪是什么？", "stream": False, "mode": "qa",
-            })
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body["content"], "你好，世界")  # 无工具结果
-        self.assertEqual(body["reasoning_content"], "The user asks.No hits.")
-        self.assertEqual(body["tool_names"], ["kb_search"])
 
     def test_old_history_missing_new_fields_still_ok(self):
         old = {"role": "assistant", "content": "旧消息", "created_at": "2026-08-10T10:00:00"}
@@ -297,15 +294,19 @@ class ChatSseContractTests(unittest.TestCase):
                 mode="qa",
                 token="t",
             )
-            it = iter(gen)
-            consumed = []
-            for _ in range(30):  # 消费部分输出
-                consumed.append(next(it))
 
-            # 前端发送 break：标记该 session
-            chat_api._mark_interrupt(1, "sess-break")
-            remaining = list(it)  # 继续消费 → 检查到标记，流提前结束
-            consumed += remaining
+            async def _run():
+                consumed = []
+                for _ in range(30):  # 消费部分输出
+                    consumed.append(await gen.__anext__())
+                # 前端发送 break：标记该 session
+                chat_api._mark_interrupt(1, "sess-break")
+                # 继续消费 → 检查到标记，流提前结束
+                async for item in gen:
+                    consumed.append(item)
+                return consumed
+
+            consumed = asyncio.run(_run())
 
         # 流以 [DONE] 结束，且未产出全部内容
         self.assertEqual(consumed[-1], "data: [DONE]\n\n")
@@ -339,7 +340,7 @@ class ChatSseContractTests(unittest.TestCase):
             patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
             patch.object(chat_api, "_load_history", return_value=[]),
         ):
-            lines = list(chat_api._stream_agent_response(
+            lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="sess-stale", message="新对话",
                 dataset_id="ds1", collection_id="c1", mode="qa", token="t",
             ))
@@ -367,8 +368,12 @@ class ChatSseContractTests(unittest.TestCase):
                 user_id=1, session_id="sess-disc", message="断连测试",
                 dataset_id="ds1", collection_id="c1", mode="qa", token="t",
             )
-            next(gen)  # 消费第一个事件后模拟断开
-            gen.close()
+
+            async def _run():
+                await gen.__anext__()  # 消费第一个事件后模拟断开
+                await gen.aclose()
+
+            asyncio.run(_run())
 
         # 已产出部分内容被保存（不含打断提示——断连不是用户主动打断）
         save_calls = [s for s in saved if s[0][2] == "assistant"]
@@ -390,7 +395,7 @@ class ChatSseContractTests(unittest.TestCase):
         fake = RawAgent(raw_chunks)
         with _sse_client(fake, saved) as client:
             resp = client.post("/api/v1/chat", json={
-                "content": "你好", "stream": True, "mode": "qa",
+                "content": "你好", "mode": "qa",
             })
         events = _parse_sse(resp.text)
         payloads = [json.loads(e) for e in events[:-1]]
@@ -411,7 +416,7 @@ class ChatSseContractTests(unittest.TestCase):
         """echo 回退 / agent 未就绪 / 内部异常：统一发 [DONE] 作为最后事件。"""
         # echo 回退（无 dataset 且非本地 RAG）
         with patch.object(chat_api, "is_local_rag", return_value=False):
-            lines = list(chat_api._stream_agent_response(
+            lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s1", message="hi",
                 dataset_id="", collection_id=None, db=None, history=[], mode="qa", token="t",
             ))
@@ -424,7 +429,7 @@ class ChatSseContractTests(unittest.TestCase):
             patch.object(chat_api.agent_manager, "get_agent", return_value=NotReadyAgent([])),
             patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
         ):
-            lines = list(chat_api._stream_agent_response(
+            lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s2", message="hi",
                 dataset_id="ds1", collection_id="c1", mode="qa", token="t",
             ))
@@ -436,7 +441,7 @@ class ChatSseContractTests(unittest.TestCase):
             patch.object(chat_api.agent_manager, "get_agent", return_value=FakeAgent([], error=ValueError("boom"))),
             patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
         ):
-            lines = list(chat_api._stream_agent_response(
+            lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s3", message="hi",
                 dataset_id="ds1", collection_id="c1", mode="qa", token="t",
             ))
@@ -453,11 +458,11 @@ class ChatSseContractTests(unittest.TestCase):
             patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
             patch.object(chat_api, "_load_history", return_value=[]),
             patch.object(
-                chat_api, "_tc_predict_background",
-                return_value={"session_id": "s", "lvr": 0.5, "diagnosis": "d"},
+                chat_api.tcn_client, "predict",
+                new=AsyncMock(return_value={"lvr": 0.5, "diagnosis": "d"}),
             ),
         ):
-            lines = list(chat_api._stream_agent_response(
+            lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s", message="hi",
                 dataset_id="ds1", collection_id="c1", mode="qa", token="t",
                 user_hash="h", tc_node_id="n", tc_user_action="correct", tc_domain_id="d",
