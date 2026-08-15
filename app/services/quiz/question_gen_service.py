@@ -2,6 +2,8 @@
 文档分段 → 题目生成服务
 写入 global_questions / question_provenance / user_question_refs
 """
+import asyncio
+import inspect
 import json
 import logging
 import re
@@ -12,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from app.core.config import MAX_QUESTIONS_PER_DOCUMENT, QUESTION_GEN_ASYNC
 from app.core.database import SessionLocal
-from app.core.job_runner import run_in_background
 
 from app.crud import kb as kb_crud
 from app.crud import question as question_crud
@@ -31,9 +32,9 @@ from app.schemas.question import (
     ProvenanceOut,
 )
 from app.services.knowledge.page_service import get_pages_by_numbers
-from app.services.llm.llm_config import create_base_api
+from app.services.llm.llm_pool import llm_pool
 from app.services.quiz.question_hash import compute_content_hash
-from app.services.llm.llm_runner import llm_predict_no_stream
+from app.services.usage_service import record_usage_for_token
 from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -48,12 +49,43 @@ QuestionProvider = Callable[[DocumentSegment], List[dict]]
 PageProvider = Callable[[dict], List[dict]]
 
 def _get_llm():
-    """创建 Tina LLM 实例（每次新建，避免共享实例在并发下串 token 记账）。"""
+    """从 LLMPool 取共享 LLM 实例（稳定；池空返回 None → 模板回退）。"""
     try:
-        return create_base_api()
+        return llm_pool.acquire()
     except Exception:
-        logger.warning("Tina LLM 不可用，将使用模板出题", exc_info=True)
+        logger.warning("LLMPool 不可用，将使用模板出题", exc_info=True)
         return None
+
+
+async def _llm_complete(
+    llm,
+    user_input: str,
+    *,
+    sys_prompt: str,
+    temperature: float,
+    token: Optional[str] = None,
+) -> Tuple[str, Optional[dict]]:
+    """流式调用 LLM 收集完整文本与 usage（统一记账）。返回 (text, usage)。"""
+    text = ""
+    usage: Optional[dict] = None
+    try:
+        async for chunk in await llm.apredict(
+            input_text=user_input,
+            sys_prompt=sys_prompt,
+            format="json",
+            temperature=temperature,
+            stream=True,
+        ):
+            if isinstance(chunk, dict):
+                if chunk.get("usage"):
+                    usage = chunk["usage"]
+                content = chunk.get("content")
+                if content:
+                    text += content
+    finally:
+        if usage:
+            await record_usage_for_token(token or "", usage)
+    return text, usage
 
 
 def _extract_json_array(text: str) -> Optional[list]:
@@ -156,12 +188,12 @@ def _template_questions_for_page(page: dict) -> List[dict]:
     ]
 
 
-def _llm_generate_for_page(
+async def _llm_generate_for_page(
     page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_page
 
-    result = agent_generate_for_page(page, count=count, tag_hint=tag_hint, token=token)
+    result = await agent_generate_for_page(page, count=count, tag_hint=tag_hint, token=token)
     if result:
         return result[:count]
 
@@ -176,15 +208,13 @@ def _llm_generate_for_page(
         f"请生成 {count} 道练习题，覆盖本页核心知识点。"
     )
     try:
-        llm.set_token(token or "")
-        resp = llm_predict_no_stream(
+        content, _ = await _llm_complete(
             llm,
-            input_text=user_input,
+            user_input,
             sys_prompt=SYSTEM_PROMPT,
-            format="json",
             temperature=0.3,
+            token=token,
         )
-        content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
         items = _extract_json_array(content) or []
         normalized = [_normalize_question(item) for item in items]
         result = [q for q in normalized if q][:count]
@@ -199,12 +229,12 @@ def _llm_generate_for_page(
     return _template_questions_for_page(page)
 
 
-def _llm_extract_for_page(
+async def _llm_extract_for_page(
     page: dict, *, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_extract_for_page
 
-    result = agent_extract_for_page(page, tag_hint=tag_hint, token=token)
+    result = await agent_extract_for_page(page, tag_hint=tag_hint, token=token)
     if result:
         return result
 
@@ -218,15 +248,13 @@ def _llm_extract_for_page(
         f"{tag_hint}\n\n请提取本页自带题目。"
     )
     try:
-        llm.set_token(token or "")
-        resp = llm_predict_no_stream(
+        content, _ = await _llm_complete(
             llm,
-            input_text=user_input,
+            user_input,
             sys_prompt=EXTRACT_SYSTEM_PROMPT,
-            format="json",
             temperature=0.2,
+            token=token,
         )
-        content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
         items = _extract_json_array(content) or []
         normalized = [_normalize_question(item) for item in items]
         return [q for q in normalized if q]
@@ -237,7 +265,15 @@ def _llm_extract_for_page(
         return []
 
 
-def batch_generate_questions(
+async def _call_provider(provider, *args):
+    """兼容同步/异步 provider 调用。"""
+    result = provider(*args)
+    if inspect.isawaitable(result):
+        result = await result
+    return result
+
+
+async def batch_generate_questions(
     pages: List[dict],
     *,
     questions_per_page: int = 1,
@@ -250,7 +286,8 @@ def batch_generate_questions(
     gen = provider or (lambda p: _llm_generate_for_page(p, count=questions_per_page))
     results: List[tuple[dict, dict]] = []
     for page in pages:
-        for qdata in gen(page)[:questions_per_page]:
+        raw = await _call_provider(gen, page)
+        for qdata in raw[:questions_per_page]:
             normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
             if normalized:
                 results.append((page, normalized))
@@ -276,12 +313,12 @@ def _template_questions(segment: DocumentSegment) -> List[dict]:
     ]
 
 
-def _llm_generate(
+async def _llm_generate(
     segment: DocumentSegment, *, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_segment
 
-    result = agent_generate_for_segment(segment, tag_hint=tag_hint, token=token)
+    result = await agent_generate_for_segment(segment, tag_hint=tag_hint, token=token)
     if result:
         return result[:QUESTIONS_PER_SEGMENT]
 
@@ -296,15 +333,13 @@ def _llm_generate(
         f"请生成 {QUESTIONS_PER_SEGMENT} 道练习题。"
     )
     try:
-        llm.set_token(token or "")
-        resp = llm_predict_no_stream(
+        content, _ = await _llm_complete(
             llm,
-            input_text=user_input,
+            user_input,
             sys_prompt=SYSTEM_PROMPT,
-            format="json",
             temperature=0.3,
+            token=token,
         )
-        content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
         items = _extract_json_array(content) or []
         normalized = [_normalize_question(item) for item in items]
         result = [q for q in normalized if q][:QUESTIONS_PER_SEGMENT]
@@ -471,7 +506,7 @@ def _validate_document_for_page_ops(doc: Optional[Document]) -> Document:
     return doc
 
 
-def generate_questions(
+async def generate_questions(
     db: Session,
     user_id: int,
     document_id: Optional[str] = None,
@@ -481,7 +516,7 @@ def generate_questions(
 ) -> QuestionGenerateResponse:
     """
     对文档或指定分段批量出题。
-    provider 可注入 mock（测试用）；默认走 LLM + 模板回退。
+    provider 可注入 mock（测试用，同步/异步均可）；默认走 LLM + 模板回退。
     """
     gen_provider = provider or _llm_generate
     created_count = 0
@@ -539,9 +574,9 @@ def generate_questions(
                 break
             try:
                 if provider:
-                    raw_questions = gen_provider(segment)
+                    raw_questions = await _call_provider(gen_provider, segment)
                 else:
-                    raw_questions = _llm_generate(
+                    raw_questions = await _llm_generate(
                         segment, tag_hint=tag_hint_global, token=token
                     )
             except Exception:
@@ -589,10 +624,6 @@ def generate_questions(
         raise
 
 
-def _start_question_gen_thread(worker) -> None:
-    run_in_background(worker, name="question-gen")
-
-
 def get_question_agent_readiness(*, probe: bool = True) -> dict:
     from app.services.agents.question_gen_agent import (
         get_question_agent_readiness as read_question_agent_readiness,
@@ -618,14 +649,14 @@ def _require_question_generation_ready() -> None:
     )
 
 
-def schedule_generate_questions(
+async def schedule_generate_questions(
     db: Session,
     user_id: int,
     document_id: Optional[str] = None,
     segment_ids: Optional[List[str]] = None,
     token: Optional[str] = None,
 ) -> QuestionGenerateResponse:
-    """校验后立即返回 processing，后台线程执行出题。"""
+    """校验后立即返回 processing，主事件循环后台任务执行出题。"""
     document: Optional[Document] = None
     target_doc_id: Optional[str] = None
 
@@ -652,10 +683,10 @@ def schedule_generate_questions(
     document.question_gen_status = "processing"
     db.flush()
 
-    def worker() -> None:
+    async def _task() -> None:
         wdb = SessionLocal()
         try:
-            generate_questions(
+            await generate_questions(
                 wdb,
                 user_id=user_id,
                 document_id=document_id,
@@ -678,7 +709,7 @@ def schedule_generate_questions(
         finally:
             wdb.close()
 
-    _start_question_gen_thread(worker)
+    asyncio.create_task(_task())
     return QuestionGenerateResponse(
         document_id=target_doc_id,
         question_gen_status="processing",
@@ -688,7 +719,7 @@ def schedule_generate_questions(
     )
 
 
-def schedule_generate_from_pages(
+async def schedule_generate_from_pages(
     db: Session,
     user_id: int,
     document_id: str,
@@ -706,10 +737,10 @@ def schedule_generate_from_pages(
     doc.question_gen_status = "processing"
     db.flush()
 
-    def worker() -> None:
+    async def _task() -> None:
         wdb = SessionLocal()
         try:
-            generate_from_pages(
+            await generate_from_pages(
                 wdb,
                 user_id=user_id,
                 document_id=doc.id,
@@ -734,7 +765,7 @@ def schedule_generate_from_pages(
         finally:
             wdb.close()
 
-    _start_question_gen_thread(worker)
+    asyncio.create_task(_task())
     return PageQuestionResponse(
         document_id=doc.id,
         page_numbers=page_numbers,
@@ -746,7 +777,7 @@ def schedule_generate_from_pages(
     )
 
 
-def schedule_extract_from_pages(
+async def schedule_extract_from_pages(
     db: Session,
     user_id: int,
     document_id: str,
@@ -762,10 +793,10 @@ def schedule_extract_from_pages(
     doc.question_gen_status = "processing"
     db.flush()
 
-    def worker() -> None:
+    async def _task() -> None:
         wdb = SessionLocal()
         try:
-            extract_from_pages(
+            await extract_from_pages(
                 wdb,
                 user_id=user_id,
                 document_id=doc.id,
@@ -788,7 +819,7 @@ def schedule_extract_from_pages(
         finally:
             wdb.close()
 
-    _start_question_gen_thread(worker)
+    asyncio.create_task(_task())
     return PageQuestionResponse(
         document_id=doc.id,
         page_numbers=page_numbers,
@@ -924,7 +955,7 @@ def delete_user_questions(
     )
 
 
-def generate_from_pages(
+async def generate_from_pages(
     db: Session,
     user_id: int,
     document_id: str,
@@ -950,7 +981,7 @@ def generate_from_pages(
 
     try:
         if provider:
-            pairs = batch_generate_questions(
+            pairs = await batch_generate_questions(
                 pages,
                 questions_per_page=questions_per_page,
                 provider=provider,
@@ -959,7 +990,7 @@ def generate_from_pages(
             page_provider = lambda p: _llm_generate_for_page(
                 p, count=questions_per_page, tag_hint=tag_hint, token=token
             )
-            pairs = batch_generate_questions(
+            pairs = await batch_generate_questions(
                 pages,
                 questions_per_page=questions_per_page,
                 provider=page_provider,
@@ -998,7 +1029,7 @@ def generate_from_pages(
         raise
 
 
-def extract_from_pages(
+async def extract_from_pages(
     db: Session,
     user_id: int,
     document_id: str,
@@ -1026,7 +1057,7 @@ def extract_from_pages(
         for page in pages:
             if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
                 break
-            raw_questions = extract_fn(page)
+            raw_questions = await _call_provider(extract_fn, page)
             for qdata in raw_questions:
                 if total_questions >= MAX_QUESTIONS_PER_DOCUMENT:
                     break

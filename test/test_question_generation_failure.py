@@ -1,9 +1,10 @@
+import asyncio
 import json
 import sys
 import types
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
@@ -127,17 +128,14 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                     "reason": "agent_unavailable",
                 },
             ),
-            patch.object(
-                question_gen_service,
-                "_start_question_gen_thread",
-                side_effect=AssertionError("unavailable agent must not start a worker"),
-            ),
         ):
             with self.assertRaises(HTTPException) as raised:
-                question_gen_service.schedule_generate_questions(
-                    db,
-                    user_id=1,
-                    document_id=document.id,
+                asyncio.run(
+                    question_gen_service.schedule_generate_questions(
+                        db,
+                        user_id=1,
+                        document_id=document.id,
+                    )
                 )
 
         self.assertEqual(raised.exception.status_code, 503)
@@ -179,10 +177,12 @@ class QuestionGenerationFailureTests(unittest.TestCase):
             ),
         ):
             with self.assertRaises(HTTPException) as raised:
-                question_gen_service.generate_questions(
-                    db,
-                    user_id=1,
-                    document_id=document.id,
+                asyncio.run(
+                    question_gen_service.generate_questions(
+                        db,
+                        user_id=1,
+                        document_id=document.id,
+                    )
                 )
 
         self.assertEqual(raised.exception.status_code, 503)
@@ -222,20 +222,15 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                             "reason": "agent_unavailable",
                         },
                     ),
-                    patch.object(
-                        question_gen_service,
-                        "_start_question_gen_thread",
-                        side_effect=AssertionError(
-                            "unavailable agent must not start a worker"
-                        ),
-                    ),
                 ):
                     with self.assertRaises(HTTPException) as raised:
-                        schedule(
-                            db,
-                            user_id=1,
-                            document_id=document.id,
-                            page_numbers=[1],
+                        asyncio.run(
+                            schedule(
+                                db,
+                                user_id=1,
+                                document_id=document.id,
+                                page_numbers=[1],
+                            )
                         )
 
                 self.assertEqual(raised.exception.status_code, 503)
@@ -272,11 +267,13 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                     ),
                 ):
                     with self.assertRaises(HTTPException) as raised:
-                        operation(
-                            db,
-                            user_id=1,
-                            document_id=document.id,
-                            page_numbers=[1],
+                        asyncio.run(
+                            operation(
+                                db,
+                                user_id=1,
+                                document_id=document.id,
+                                page_numbers=[1],
+                            )
                         )
 
                 self.assertEqual(raised.exception.status_code, 503)
@@ -368,11 +365,13 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 fake_module = types.ModuleType(
                     "app.services.agents.question_gen_agent"
                 )
-                fake_module.agent_generate_for_segment = (
-                    lambda _segment, *, tag_hint="", token=None, _reason=reason: [
-                        {"_question_generation_failure": _reason}
-                    ]
-                )
+
+                async def _fake_agent_generate(
+                    _segment, *, tag_hint="", token=None, _reason=reason
+                ):
+                    return [{"_question_generation_failure": _reason}]
+
+                fake_module.agent_generate_for_segment = _fake_agent_generate
                 sys.modules[
                     "app.services.agents.question_gen_agent"
                 ] = fake_module
@@ -384,7 +383,9 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                         "legacy LLM/template fallback must not run"
                     ),
                 ):
-                    result = question_gen_service._llm_generate(segment)
+                    result = asyncio.run(
+                        question_gen_service._llm_generate(segment)
+                    )
 
                 self.assertEqual(
                     result,
@@ -449,9 +450,11 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                     patch.object(
                         question_gen_service,
                         "_llm_generate",
-                        return_value=[
-                            {"_question_generation_failure": reason}
-                        ],
+                        new=AsyncMock(
+                            return_value=[
+                                {"_question_generation_failure": reason}
+                            ]
+                        ),
                     ),
                     patch.object(
                         question_gen_service,
@@ -461,10 +464,12 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                         ),
                     ),
                 ):
-                    response = question_gen_service.generate_questions(
-                        db,
-                        user_id=1,
-                        document_id=document.id,
+                    response = asyncio.run(
+                        question_gen_service.generate_questions(
+                            db,
+                            user_id=1,
+                            document_id=document.id,
+                        )
                     )
 
                 self.assertEqual(response.question_gen_status, "failed")
@@ -515,11 +520,13 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 ),
             ),
         ):
-            response = question_gen_service.generate_questions(
-                db,
-                user_id=1,
-                document_id=document.id,
-                provider=timeout_provider,
+            response = asyncio.run(
+                question_gen_service.generate_questions(
+                    db,
+                    user_id=1,
+                    document_id=document.id,
+                    provider=timeout_provider,
+                )
             )
 
         self.assertEqual(response.question_gen_status, "failed")
@@ -534,11 +541,13 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 "content": "真实资料内容",
             }
         ]
-        pairs = question_gen_service.batch_generate_questions(
-            pages,
-            provider=lambda _page: [
-                {"_question_generation_failure": "invalid_output"}
-            ],
+        pairs = asyncio.run(
+            question_gen_service.batch_generate_questions(
+                pages,
+                provider=lambda _page: [
+                    {"_question_generation_failure": "invalid_output"}
+                ],
+            )
         )
         self.assertEqual(pairs, [])
 

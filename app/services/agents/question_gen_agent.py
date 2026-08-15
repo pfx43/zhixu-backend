@@ -3,6 +3,9 @@
 
 生成模式失败时返回一个仅供服务内部传播的失败标记。该标记无法通过题目字段
 校验，因此现有批处理会将文档终态设置为 failed，而不会继续走固定模板回退。
+
+LLM 从 LLMPool 取共享实例（裸 BaseAPI），以流式驱动工具循环并在流中发现
+usage 键时统一记账（record_usage_for_token），与 chat 链路一致。
 """
 from __future__ import annotations
 
@@ -11,9 +14,9 @@ from typing import List, Optional
 
 from tina import Agent
 
-from app.services.llm.llm_config import create_base_api
-from app.services.llm.llm_runner import agent_predict_no_stream
+from app.services.llm.llm_pool import llm_pool
 from app.services.tools.question_gen_tools import QuestionGenTools
+from app.services.usage_service import record_usage_for_token
 from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -84,7 +87,9 @@ class QuestionGenAgent:
         )
 
         try:
-            self.llm = create_base_api()
+            self.llm = llm_pool.acquire()
+            if self.llm is None:
+                raise RuntimeError("LLMPool 为空，出题 Agent 不可用")
             self.question_tools = QuestionGenTools()
             self.tools = self.question_tools.get_tools()
 
@@ -117,7 +122,7 @@ class QuestionGenAgent:
     def is_ready(self) -> bool:
         return self.agent is not None
 
-    def generate_from_content(
+    async def generate_from_content(
         self,
         *,
         title: str,
@@ -148,8 +153,10 @@ class QuestionGenAgent:
             )
 
         try:
-            self.llm.set_token(token or "")
-            agent_predict_no_stream(self.agent, instruction=instruction)
+            # 流式驱动完整工具循环（submit_question），流中发现 usage 即统一记账
+            async for chunk in self.agent.apredict(instruction=instruction):
+                if isinstance(chunk, dict) and chunk.get("usage"):
+                    await record_usage_for_token(token or "", chunk["usage"])
         except Exception as exc:
             self.failure_reason = _classify_failure(exc)
             _last_readiness.update(
@@ -188,13 +195,13 @@ class QuestionGenAgent:
         return list(submitted_questions)
 
 
-def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Optional[str] = None) -> List[dict]:
+async def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Optional[str] = None) -> List[dict]:
     """Agent 路径：按分段出题；失败时返回内部失败标记。"""
     agent = QuestionGenAgent(mode="generate")
     if not agent.is_ready:
         return _failure_marker(agent.failure_reason or "agent_unavailable")
     title = segment.title or "（无标题）"
-    questions = agent.generate_from_content(
+    questions = await agent.generate_from_content(
         title=title,
         content=segment.content,
         tag_hint=tag_hint,
@@ -206,7 +213,7 @@ def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Optional[s
     return _failure_marker(agent.failure_reason or "invalid_output")
 
 
-def agent_generate_for_page(
+async def agent_generate_for_page(
     page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     """Agent 路径：按页出题；失败时返回内部失败标记。"""
@@ -214,7 +221,7 @@ def agent_generate_for_page(
     if not agent.is_ready:
         return _failure_marker(agent.failure_reason or "agent_unavailable")
     title = page.get("title") or f"第 {page.get('page_number', '?')} 页"
-    questions = agent.generate_from_content(
+    questions = await agent.generate_from_content(
         title=title,
         content=page["content"],
         tag_hint=tag_hint,
@@ -226,7 +233,7 @@ def agent_generate_for_page(
     return _failure_marker(agent.failure_reason or "invalid_output")
 
 
-def agent_extract_for_page(
+async def agent_extract_for_page(
     page: dict, *, tag_hint: str = "", token: Optional[str] = None
 ) -> List[dict]:
     """Agent 路径：按页提取题目；无现成题目仍返回空列表。"""
@@ -238,7 +245,7 @@ def agent_extract_for_page(
         )
         return []
     title = page.get("title") or f"第 {page.get('page_number', '?')} 页"
-    return agent.generate_from_content(
+    return await agent.generate_from_content(
         title=title,
         content=page["content"],
         tag_hint=tag_hint,

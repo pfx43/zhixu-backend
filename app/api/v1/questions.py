@@ -27,7 +27,7 @@ router = APIRouter(tags=["题目"])
     response_model=QuestionGenerateResponse,
     status_code=status.HTTP_200_OK,
 )
-def generate_questions(
+async def generate_questions(
     payload: QuestionGenerateRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
@@ -35,7 +35,7 @@ def generate_questions(
 ):
     """对文档或指定分段批量出题（学习区 + 分段已完成）。"""
     if question_gen_service.is_question_gen_async():
-        result = question_gen_service.schedule_generate_questions(
+        result = await question_gen_service.schedule_generate_questions(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
@@ -43,7 +43,7 @@ def generate_questions(
             token=token,
         )
     else:
-        result = question_gen_service.generate_questions(
+        result = await question_gen_service.generate_questions(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
@@ -123,7 +123,7 @@ def get_question(
     response_model=PageQuestionResponse,
     status_code=status.HTTP_200_OK,
 )
-def generate_from_pages(
+async def generate_from_pages(
     payload: PageGenerateRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
@@ -131,7 +131,7 @@ def generate_from_pages(
 ):
     """模式 B：对选中页批量 AI 出题。"""
     if question_gen_service.is_question_gen_async():
-        result = question_gen_service.schedule_generate_from_pages(
+        result = await question_gen_service.schedule_generate_from_pages(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
@@ -140,7 +140,7 @@ def generate_from_pages(
             token=token,
         )
     else:
-        result = question_gen_service.generate_from_pages(
+        result = await question_gen_service.generate_from_pages(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
@@ -157,21 +157,21 @@ def generate_from_pages(
     response_model=PageQuestionResponse,
     status_code=status.HTTP_200_OK,
 )
-def extract_from_pages(
+async def extract_from_pages(
     payload: PageExtractRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
     """模式 A：从选中页提取教材自带题目。"""
     if question_gen_service.is_question_gen_async():
-        result = question_gen_service.schedule_extract_from_pages(
+        result = await question_gen_service.schedule_extract_from_pages(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
             page_numbers=payload.page_numbers,
         )
     else:
-        result = question_gen_service.extract_from_pages(
+        result = await question_gen_service.extract_from_pages(
             db=db,
             user_id=current_user["user_id"],
             document_id=payload.document_id,
