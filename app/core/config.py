@@ -1,7 +1,6 @@
 import os
 
 from app.core import paddle_env  # noqa: F401
-import urllib.parse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,21 +17,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 # 项目根目录（zhishi/），无论从 backend/ 还是仓库根启动均可解析
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _BACKEND_DIR
-_DEFAULT_SQLITE_PATH = _REPO_ROOT / "data" / "zhishi.db"
 
 
-def _default_database_url() -> str:
-    return f"sqlite:///{_DEFAULT_SQLITE_PATH.as_posix()}"
+def _require_postgres_url() -> str:
+    url = os.getenv("DATABASE_URL", "").strip()
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL 未设置。知序只用 PostgreSQL，请在 .env 中配置，例如 "
+            "postgresql+psycopg2://zhixu:password@127.0.0.1:5432/zhixu"
+        )
+    scheme = url.split("://", 1)[0].lower()
+    if not scheme.startswith("postgresql"):
+        raise RuntimeError(
+            f"DATABASE_URL 必须是 PostgreSQL，当前是 {scheme!r}。"
+            "不再支持 SQLite / MySQL。"
+        )
+    return url
 
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", _default_database_url())
-
-# MySQL 连接参数（仅当 DATABASE_URL 未设置且需回退 MySQL 时使用；团队环境请直接设 DATABASE_URL）
-password = urllib.parse.quote_plus(os.getenv("DB_PASSWORD", "@430524Lj"))
-host = os.getenv("DB_HOST", "127.0.0.1")
-port = os.getenv("DB_PORT", "3306")
-db_name = os.getenv("DB_NAME", "my_ai_app")
-user = os.getenv("DB_USER", "root")
+SQLALCHEMY_DATABASE_URL = _require_postgres_url()
 
 # SMTP 邮件配置
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")

@@ -4,9 +4,10 @@
 按 tina 复杂 Agent 开发范式：类内定义工具，Tools(name=...) 设置命名空间
 防止与其他工具包冲突，get_tools() 供 Agent 组合使用。
 """
+import inspect
 import json
 import logging
-from typing import Callable, List, Optional
+from typing import Awaitable, Callable, List, Union
 
 from tina import Tools
 
@@ -17,6 +18,8 @@ logger = logging.getLogger(__name__)
 _RETRIEVAL_TOP_K_DEFAULT = 5
 _RETRIEVAL_TOP_K_MAX = 10
 
+RetrieveFn = Callable[..., Union[List[dict], Awaitable[List[dict]]]]
+
 
 class KnowledgeRetriever:
     """
@@ -26,7 +29,7 @@ class KnowledgeRetriever:
     ``last_hits`` 保留本次命中结果，供调用方构建 citations。
     """
 
-    def __init__(self, retrieve_fn: Callable[[int, str, int], List[dict]]):
+    def __init__(self, retrieve_fn: RetrieveFn):
         self._retrieve_fn = retrieve_fn
         self._user_id: int = 0
         self.last_hits: List[dict] = []
@@ -46,7 +49,7 @@ class KnowledgeRetriever:
         """把工具包公开给 Agent 使用。"""
         return self.tools
 
-    def search(self, query: str, top_k: int = 5) -> str:
+    async def search(self, query: str, top_k: int = 5) -> str:
         """
         在用户自己的知识库中检索相关内容（仅限当前登录用户的文档，不涉及其他用户数据）。
 
@@ -59,6 +62,8 @@ class KnowledgeRetriever:
             query,
             top_k=max(1, min(int(top_k), _RETRIEVAL_TOP_K_MAX)),
         )
+        if inspect.isawaitable(hits):
+            hits = await hits
         self.last_hits = list(hits)
 
         fragments = []

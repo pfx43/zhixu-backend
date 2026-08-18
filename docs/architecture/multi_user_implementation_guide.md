@@ -14,7 +14,7 @@
 |------|------|----------------|
 | 向量 / Embedding | 默认本地 Chroma + 进程内 `sentence-transformers` | 吃内存、难水平扩展、Web 进程被拖死 |
 | 文件 | 本地 `storage/`，OSS/COS 开关未实现 | 多机无法共享文件 |
-| 数据库 | 配置写了 PG，常回落 SQLite | 扛不住高并发 |
+| 数据库 | PostgreSQL | 只用 PG；未配置 `DATABASE_URL` 或写成 SQLite/MySQL 会直接失败 |
 | 缓存 / 登录态 | 配置写了 Redis，实现是 `MemoryCache` | 多 worker 登录态分裂 |
 | 套餐限额 | User 表有字段 | 业务路径几乎不强制 |
 | LLM | 各 Agent 直接 `BaseAPI(tina.env)` | 无 key 池、无 token 计量、单 key 并发上限难控 |
@@ -180,7 +180,7 @@ else:
 - `pool_pre_ping=True`
 - `pool_recycle`（读 config，不要写死后忘记同步 yaml）
 
-生产禁止默默回落 SQLite：若未设置 `DATABASE_URL` 且环境为 production，应直接报错退出。
+未设置 `DATABASE_URL`、或 URL 不是 PostgreSQL，进程直接报错退出。不再回落 SQLite / MySQL。
 
 #### 4.3 修启动阻塞：[`app/core/config.py`](../../app/core/config.py)
 

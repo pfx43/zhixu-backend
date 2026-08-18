@@ -4,37 +4,21 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.api.deps import get_db
-from app.core.database import Base
 from app.core.redis import cache
 from app.models import AuthSession, User
 from app.services.auth import auth_service
 from app.services.auth.auth_session_service import create_auth_session, hash_token
 from server import app
+from pgutil import make_sessionmaker
 
 
 @pytest.fixture()
 def auth_client(monkeypatch):
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    testing_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    engine, testing_session = make_sessionmaker()
 
     with testing_session() as db:
         db.add(
@@ -63,7 +47,6 @@ def auth_client(monkeypatch):
         app.dependency_overrides.clear()
         for key in list(cache.scan_keys("auth:token:*")):
             cache.delete_key(key)
-        Base.metadata.drop_all(bind=engine)
         engine.dispose()
 
 
@@ -170,20 +153,8 @@ def test_refresh_rotates_persisted_session_after_process_cache_reset(auth_client
     ).status_code == 200
 
 
-def test_concurrent_refresh_issues_only_one_new_session(tmp_path):
-    engine = create_engine(
-        f"sqlite:///{(tmp_path / 'concurrent-refresh.db').as_posix()}",
-        connect_args={"check_same_thread": False, "timeout": 10},
-    )
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    testing_session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def test_concurrent_refresh_issues_only_one_new_session():
+    engine, testing_session = make_sessionmaker()
     old_token = "concurrent-refresh-token"
     with testing_session() as db:
         user = User(
@@ -232,7 +203,6 @@ def test_concurrent_refresh_issues_only_one_new_session(tmp_path):
         ).status_code == 200
     finally:
         app.dependency_overrides.clear()
-        Base.metadata.drop_all(bind=engine)
         engine.dispose()
 
 

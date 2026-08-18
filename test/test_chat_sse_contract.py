@@ -2,7 +2,7 @@
 Chat SSE 公开合同测试 — 覆盖：
 - ChatChunkNormalizer 归一化（reasoning/tool_call/answer 白名单、工具结果过滤、分片合并）
 - chat SSE 输出（type 字段、[DONE]、无工具结果泄漏）
-- 历史持久化（reasoning_content / tool_names 完整调用序列）
+- 历史持久化（reasoning_content / tool_names 首次出现去重）
 - 错误去敏、旧历史兼容、非流式响应新字段
 """
 import asyncio
@@ -38,8 +38,7 @@ class FakeAgent:
             raise self._error
         normalizer = ChatChunkNormalizer()
         for chunk in self._raw:
-            event = normalizer.normalize(chunk)
-            if event:
+            for event in normalizer.normalize(chunk):
                 yield event
         self._last_reasoning = normalizer.reasoning
         self._last_tool_names = list(normalizer.tool_names)
@@ -58,6 +57,11 @@ RAW_CHUNKS = [
 ]
 
 
+def _record_save(saved_messages):
+    """async _save_message 的记录器：await 时把参数记下来。"""
+    return AsyncMock(side_effect=lambda *args, **kwargs: saved_messages.append((args, kwargs)))
+
+
 @contextmanager
 def _sse_client(fake_agent, saved_messages, *, history=None):
     """构建 chat 路由测试客户端；patch 在请求期间保持生效。"""
@@ -66,12 +70,14 @@ def _sse_client(fake_agent, saved_messages, *, history=None):
     app.dependency_overrides[chat_api.get_current_active_user] = lambda: {
         "user_id": 1, "dataset_id": ""
     }
+    app.dependency_overrides[chat_api.get_streaming_user] = lambda: {
+        "user_id": 1, "dataset_id": ""
+    }
     app.dependency_overrides[chat_api.get_current_token] = lambda: "test-token"
-    app.dependency_overrides[chat_api.get_db] = lambda: MagicMock()
-    app.dependency_overrides[chat_api.check_quota] = lambda: {"user_id": 1}
 
-    def recorder(*args, **kwargs):
-        saved_messages.append((args, kwargs))
+    @contextmanager
+    def _fake_short_session():
+        yield MagicMock()
 
     with (
         patch.object(chat_api.agent_manager, "get_agent", return_value=fake_agent),
@@ -80,7 +86,8 @@ def _sse_client(fake_agent, saved_messages, *, history=None):
             "resolve_chat_collection",
             return_value=(SimpleNamespace(id="c1"), "ds1"),
         ),
-        patch.object(chat_api, "_save_message", side_effect=recorder),
+        patch.object(chat_api, "short_session", _fake_short_session),
+        patch.object(chat_api, "_save_message", _record_save(saved_messages)),
         patch.object(chat_api, "_load_history", return_value=history or []),
     ):
         yield TestClient(app)
@@ -106,10 +113,10 @@ def _collect(agen):
 class ChatChunkNormalizerTests(unittest.TestCase):
     def test_reasoning_aggregated_and_typed(self):
         n = ChatChunkNormalizer()
-        ev = n.normalize({"role": "assistant", "reasoning_content": "The"})
-        self.assertEqual(ev, {
+        evs = n.normalize({"role": "assistant", "reasoning_content": "The"})
+        self.assertEqual(evs, [{
             "type": "reasoning", "role": "assistant", "content": "", "reasoning_content": "The",
-        })
+        }])
         n.normalize({"role": "assistant", "reasoning_content": " user asks."})
         self.assertEqual(n.reasoning, "The user asks.")
 
@@ -117,33 +124,35 @@ class ChatChunkNormalizerTests(unittest.TestCase):
         n = ChatChunkNormalizer()
         ev1 = n.normalize({"role": "assistant", "tool_name": "kb_search"})
         ev2 = n.normalize({"role": "assistant", "tool_name": "kb_search", "tool_arguments": "x"})
-        self.assertEqual(ev1["type"], "tool_call")
-        self.assertEqual(ev1["tool_name"], "kb_search")
-        self.assertIsNone(ev2)  # 重复 tool_name 不再发事件
-        self.assertNotIn("tool_arguments", ev1)
+        self.assertEqual(ev1[0]["type"], "tool_call")
+        self.assertEqual(ev1[0]["tool_name"], "kb_search")
+        self.assertEqual(ev2, [])  # 重复 tool_name 连续分片不再发事件
+        self.assertNotIn("tool_arguments", ev1[0])
 
     def test_tool_result_dropped(self):
         n = ChatChunkNormalizer()
         ev = n.normalize({"role": "tool", "content": '{"hits": []}', "tool_name": "kb_search"})
-        self.assertIsNone(ev)
+        self.assertEqual(ev, [])
         self.assertEqual(n.tool_names, [])
 
-    def test_tool_names_keep_full_call_sequence(self):
-        """工具名聚合保留完整调用序列（含重复调用），展示去重由前端完成。"""
+    def test_tool_names_first_seen_order_for_history(self):
+        """历史 tool_names 按首次出现去重；直播仍为每次切换发事件。"""
         n = ChatChunkNormalizer()
+        live = []
         for t in ("kb_search", "search", "kb_search", "search"):
-            n.normalize({"role": "assistant", "tool_name": t})
-        self.assertEqual(n.tool_names, ["kb_search", "search", "kb_search", "search"])
+            live.extend(n.normalize({"role": "assistant", "tool_name": t}))
+        self.assertEqual(n.tool_names, ["kb_search", "search"])
+        self.assertEqual([e["tool_name"] for e in live], ["kb_search", "search", "kb_search", "search"])
 
     def test_answer_passthrough(self):
         n = ChatChunkNormalizer()
         ev = n.normalize({"role": "assistant", "content": "你好"})
-        self.assertEqual(ev, {"type": "answer", "role": "assistant", "content": "你好"})
+        self.assertEqual(ev, [{"type": "answer", "role": "assistant", "content": "你好"}])
 
     def test_final_tool_calls_only_extracts_names(self):
         """只有最终 tool_calls（无提前 tool_name 分片）时也能归一工具名，且不暴露参数。"""
         n = ChatChunkNormalizer()
-        ev = n.normalize({
+        evs = n.normalize({
             "role": "assistant",
             "content": "",
             "tool_calls": [
@@ -151,17 +160,16 @@ class ChatChunkNormalizerTests(unittest.TestCase):
                 {"id": "call_2", "type": "function", "function": {"name": "web_fetch", "arguments": '{"url": "http://x"}'}},
             ],
         })
-        self.assertIsNotNone(ev)
-        self.assertEqual(ev["type"], "tool_call")
-        self.assertEqual(ev["tool_name"], "kb_search")
-        self.assertNotIn("arguments", ev)
-        self.assertNotIn("秘密", json.dumps(ev, ensure_ascii=False))
+        self.assertEqual([e["tool_name"] for e in evs], ["kb_search", "web_fetch"])
+        self.assertEqual(evs[0]["type"], "tool_call")
+        self.assertNotIn("arguments", evs[0])
+        self.assertNotIn("秘密", json.dumps(evs, ensure_ascii=False))
+        self.assertEqual(n.tool_names, ["kb_search", "web_fetch"])
 
-        # 后续工具名继续入聚合（完整序列），重复调用再次计入并发新事件
+        # 再次调用 kb_search：直播再发一条，历史不去重追加
         ev2 = n.normalize({"role": "assistant", "tool_calls": [{"function": {"name": "kb_search"}}]})
-        self.assertIsNotNone(ev2)
-        self.assertEqual(ev2["tool_name"], "kb_search")
-        self.assertEqual(n.tool_names, ["kb_search", "web_fetch", "kb_search"])
+        self.assertEqual([e["tool_name"] for e in ev2], ["kb_search"])
+        self.assertEqual(n.tool_names, ["kb_search", "web_fetch"])
 
 
 class InfiniteInterruptAgent(FakeAgent):
@@ -181,10 +189,9 @@ class InfiniteInterruptAgent(FakeAgent):
         normalizer = ChatChunkNormalizer()
         n = 0
         while True:
-            ev = normalizer.normalize({"role": "assistant", "content": f"片段{n}"})
-            self._last_reasoning = normalizer.reasoning
-            self._last_tool_names = list(normalizer.tool_names)
-            if ev:
+            for ev in normalizer.normalize({"role": "assistant", "content": f"片段{n}"}):
+                self._last_reasoning = normalizer.reasoning
+                self._last_tool_names = list(normalizer.tool_names)
                 yield ev
             n += 1
 
@@ -282,7 +289,7 @@ class ChatSseContractTests(unittest.TestCase):
                 "resolve_chat_collection",
                 return_value=(SimpleNamespace(id="c1"), "ds1"),
             ),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
             patch.object(chat_api, "_load_history", return_value=[]),
         ):
             gen = chat_api._stream_agent_response(
@@ -323,7 +330,7 @@ class ChatSseContractTests(unittest.TestCase):
         self.assertTrue(args[3].endswith(chat_api.INTERRUPT_NOTICE))
         self.assertIn("片段", args[3])
         # 打断标记已清理（一次性消费）
-        self.assertFalse(chat_api._check_interrupt(1, "sess-break"))
+        self.assertFalse(asyncio.run(chat_api._check_interrupt(1, "sess-break")))
 
     def test_stale_interrupt_does_not_break_new_stream(self):
         """残留标记（上次打断未消费）不应中断新一轮对话。"""
@@ -337,7 +344,7 @@ class ChatSseContractTests(unittest.TestCase):
                 "resolve_chat_collection",
                 return_value=(SimpleNamespace(id="c1"), "ds1"),
             ),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
             patch.object(chat_api, "_load_history", return_value=[]),
         ):
             lines = _collect(chat_api._stream_agent_response(
@@ -353,7 +360,7 @@ class ChatSseContractTests(unittest.TestCase):
         self.assertTrue(save_calls)
         self.assertNotIn(chat_api.INTERRUPT_NOTICE, save_calls[-1][0][3])
         # 残留标记已被新流启动清理
-        self.assertFalse(chat_api._check_interrupt(1, "sess-stale"))
+        self.assertFalse(asyncio.run(chat_api._check_interrupt(1, "sess-stale")))
 
     def test_disconnect_saves_partial_and_emits_no_done(self):
         """客户端断开（真实 close 生成器）：不再产出任何 SSE，部分内容可靠保存。"""
@@ -361,7 +368,7 @@ class ChatSseContractTests(unittest.TestCase):
         fake = InfiniteInterruptAgent()
         with (
             patch.object(chat_api.agent_manager, "get_agent", return_value=fake),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
             patch.object(chat_api, "_load_history", return_value=[]),
         ):
             gen = chat_api._stream_agent_response(
@@ -418,7 +425,7 @@ class ChatSseContractTests(unittest.TestCase):
         with patch.object(chat_api, "is_local_rag", return_value=False):
             lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s1", message="hi",
-                dataset_id="", collection_id=None, db=None, history=[], mode="qa", token="t",
+                dataset_id="", collection_id=None, history=[], mode="qa", token="t",
             ))
         self.assertEqual(lines[-1], "data: [DONE]\n\n")
         self.assertIn("已收到", lines[0])
@@ -427,7 +434,7 @@ class ChatSseContractTests(unittest.TestCase):
         saved = []
         with (
             patch.object(chat_api.agent_manager, "get_agent", return_value=NotReadyAgent([])),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
         ):
             lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s2", message="hi",
@@ -439,7 +446,7 @@ class ChatSseContractTests(unittest.TestCase):
         # 内部异常（生成中途抛错）
         with (
             patch.object(chat_api.agent_manager, "get_agent", return_value=FakeAgent([], error=ValueError("boom"))),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
         ):
             lines = _collect(chat_api._stream_agent_response(
                 user_id=1, session_id="s3", message="hi",
@@ -455,7 +462,7 @@ class ChatSseContractTests(unittest.TestCase):
         fake = FakeAgent(RAW_CHUNKS)
         with (
             patch.object(chat_api.agent_manager, "get_agent", return_value=fake),
-            patch.object(chat_api, "_save_message", side_effect=lambda *a, **k: saved.append((a, k))),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
             patch.object(chat_api, "_load_history", return_value=[]),
             patch.object(
                 chat_api.tcn_client, "predict",
@@ -470,6 +477,31 @@ class ChatSseContractTests(unittest.TestCase):
         self.assertEqual(lines[-1], "data: [DONE]\n\n")
         done_index = lines.index("data: [DONE]\n\n")
         self.assertTrue(any("lvr" in line for line in lines[:done_index]))
+
+
+class ChatPersistenceAsyncTests(unittest.TestCase):
+    """async 热路径写入必须被 def 路由的同步读看到（同一 MemoryCache）。"""
+
+    def test_async_save_visible_to_sync_history_and_sessions(self):
+        user_id = 91001
+        session_id = "sess-async-roundtrip"
+        chat_api._delete_session(user_id, session_id)
+        asyncio.run(chat_api._save_message(user_id, session_id, "user", "你好异步"))
+        history = chat_api._load_history(user_id, session_id)
+        self.assertEqual(history[-1]["content"], "你好异步")
+        self.assertEqual(history[-1]["role"], "user")
+        sessions = chat_api._load_sessions(user_id)
+        ids = [s["id"] for s in sessions]
+        self.assertIn(session_id, ids)
+        chat_api._delete_session(user_id, session_id)
+        self.assertEqual(chat_api._load_history(user_id, session_id), [])
+
+    def test_sync_break_visible_to_async_interrupt_check(self):
+        session_id = "sess-async-break-share"
+        asyncio.run(chat_api._clear_interrupt(1, session_id))
+        chat_api._mark_interrupt(1, session_id)
+        self.assertTrue(asyncio.run(chat_api._check_interrupt(1, session_id)))
+        self.assertFalse(asyncio.run(chat_api._check_interrupt(1, session_id)))
 
 
 if __name__ == "__main__":

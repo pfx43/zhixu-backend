@@ -9,7 +9,8 @@ document_id/segment_id/collection_id/title/char_start/char_end 等）
 import logging
 from typing import List, Optional
 
-from sqlalchemy import or_
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.models import Document, DocumentSegment
@@ -20,7 +21,7 @@ _TITLE_BONUS = 0.3
 
 
 def _lexical_contains(column, query: str):
-    """大小写不敏感的子串谓词（转义 % / _ / \\，兼容 SQLite/PostgreSQL）。"""
+    """大小写不敏感的子串谓词（转义 % / _ / \\，PostgreSQL ILIKE）。"""
     escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return column.ilike("%" + escaped + "%", escape="\\")
 
@@ -40,27 +41,16 @@ def _term_score(content: str, segment_title: str, display_name: str, term: str) 
     return score
 
 
-def search(
-    db: Session,
+def _candidate_filters(
     query: str,
     *,
     user_id: int,
-    collection_id: Optional[str] = None,
-    top_k: int = 5,
-) -> List[dict]:
-    """关键词检索用户知识库分段。
-
-    返回与 ``ChromaStore.search`` 一致的命中结构，仅做词法匹配，
-    不调用 embedding / 向量存储。
-    """
-    if db is None or not query or not query.strip():
-        return []
-
+    collection_id: Optional[str],
+):
     terms = _tokenize(query.strip())
     if not terms:
-        return []
+        return None, []
 
-    # 候选：content / segment title / document display_name 命中任一 term
     term_conditions = [_lexical_contains(DocumentSegment.content, t) for t in terms]
     title_conditions = [_lexical_contains(DocumentSegment.title, t) for t in terms]
     name_conditions = [_lexical_contains(Document.display_name, t) for t in terms]
@@ -73,18 +63,10 @@ def search(
     ]
     if collection_id:
         filters.append(Document.collection_id == collection_id)
+    return filters, terms
 
-    # 有界候选集：先在 SQL 侧 limit，再在 Python 侧评分/排序/截断，
-    # 避免 .all() 把全部匹配段载入内存
-    candidate_limit = max(200, top_k * 20)
-    rows = (
-        db.query(Document, DocumentSegment)
-        .join(DocumentSegment, DocumentSegment.document_id == Document.id)
-        .filter(*filters)
-        .limit(candidate_limit)
-        .all()
-    )
 
+def _hits_from_rows(rows, terms: List[str], top_k: int) -> List[dict]:
     scored: List[dict] = []
     for doc, seg in rows:
         score = sum(
@@ -116,3 +98,65 @@ def search(
         )
 
     return hits
+
+
+def search(
+    db: Session,
+    query: str,
+    *,
+    user_id: int,
+    collection_id: Optional[str] = None,
+    top_k: int = 5,
+) -> List[dict]:
+    """关键词检索用户知识库分段。
+
+    返回与 ``ChromaStore.search`` 一致的命中结构，仅做词法匹配，
+    不调用 embedding / 向量存储。
+    """
+    if db is None or not query or not query.strip():
+        return []
+
+    filters, terms = _candidate_filters(
+        query, user_id=user_id, collection_id=collection_id
+    )
+    if not terms:
+        return []
+
+    candidate_limit = max(200, top_k * 20)
+    rows = (
+        db.query(Document, DocumentSegment)
+        .join(DocumentSegment, DocumentSegment.document_id == Document.id)
+        .filter(*filters)
+        .limit(candidate_limit)
+        .all()
+    )
+    return _hits_from_rows(rows, terms, top_k)
+
+
+async def search_async(
+    db: AsyncSession,
+    query: str,
+    *,
+    user_id: int,
+    collection_id: Optional[str] = None,
+    top_k: int = 5,
+) -> List[dict]:
+    """search 的 AsyncSession 版本，供 Agent 工具在事件循环上调用。"""
+    if db is None or not query or not query.strip():
+        return []
+
+    filters, terms = _candidate_filters(
+        query, user_id=user_id, collection_id=collection_id
+    )
+    if not terms:
+        return []
+
+    candidate_limit = max(200, top_k * 20)
+    stmt = (
+        select(Document, DocumentSegment)
+        .join(DocumentSegment, DocumentSegment.document_id == Document.id)
+        .where(*filters)
+        .limit(candidate_limit)
+    )
+    result = await db.execute(stmt)
+    return _hits_from_rows(result.all(), terms, top_k)

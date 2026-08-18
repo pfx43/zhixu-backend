@@ -3,12 +3,9 @@ import pytest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from pgutil import make_sessionmaker
 
 import app.core.config as config
-from app.core.database import Base
 from app.models import Document, DocumentSegment, KbCollection, User
 from app.services.chat import keyword_retrieval_service
 
@@ -26,13 +23,7 @@ _CHROMA_HIT_FIELDS = (
 
 
 def _create_temp_db():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    return engine, sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return make_sessionmaker()
 
 
 @pytest.fixture()
@@ -271,22 +262,69 @@ def test_config_helpers_track_backend(monkeypatch):
     assert config.is_dify_rag() is True
 
 
+def test_knowledge_retriever_search_is_async_and_keeps_hit_shape():
+    import asyncio
+    import inspect
+    import json
+
+    from app.services.tools.knowledge_retriever import KnowledgeRetriever
+
+    async def retrieve(user_id, query, top_k=5):
+        assert user_id == 0
+        assert query == "中国近代史"
+        return [
+            {
+                "score": 1.0,
+                "content": "命中",
+                "title": "第一章",
+                "display_name": "史.pdf",
+                "document_id": "d1",
+                "segment_id": "s1",
+            }
+        ]
+
+    retriever = KnowledgeRetriever(retrieve_fn=retrieve)
+    assert inspect.iscoroutinefunction(retriever.search)
+    payload = json.loads(asyncio.run(retriever.search("中国近代史")))
+    assert payload["count"] == 1
+    assert payload["hits"][0]["segment_id"] == "s1"
+    assert retriever.last_hits[0]["content"] == "命中"
+
+
 def test_zhixu_agent_retrieve_dispatches_to_keyword_search(monkeypatch):
+    from contextlib import asynccontextmanager
+
     from app.services.agents import zhixu_agent
 
     monkeypatch.setattr(config, "RAG_BACKEND", "keyword")
     fake_hits = [{"score": 1.0, "content": "命中内容", "segment_id": "s1"}]
-    monkeypatch.setattr(
-        zhixu_agent,
-        "keyword_search",
-        lambda db, query, **kwargs: fake_hits,
-    )
+    seen = {}
+
+    async def fake_keyword_search(db, query, **kwargs):
+        seen["db"] = db
+        seen["query"] = query
+        seen["kwargs"] = kwargs
+        return fake_hits
+
+    @asynccontextmanager
+    async def fake_async_short_session():
+        yield "short-async-db"
+
+    monkeypatch.setattr(zhixu_agent, "keyword_search_async", fake_keyword_search)
+    monkeypatch.setattr(zhixu_agent, "async_short_session", fake_async_short_session)
 
     agent = zhixu_agent.ZhixuAgent(user_id=7, dataset_id="")
-    retrieve = agent._make_retrieve_fn(db=object(), collection_id="collection-1")
+    retrieve = agent._make_retrieve_fn(collection_id="collection-1")
 
-    hits = retrieve(7, "中国近代史", top_k=3)
+    import asyncio
+
+    hits = asyncio.run(retrieve(7, "中国近代史", top_k=3))
     assert hits == fake_hits
+    assert seen["db"] == "short-async-db"
+    assert seen["query"] == "中国近代史"
+    assert seen["kwargs"]["user_id"] == 7
+    assert seen["kwargs"]["collection_id"] == "collection-1"
+    assert seen["kwargs"]["top_k"] == 3
 
 
 class _FakeDb:

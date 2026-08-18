@@ -1,17 +1,12 @@
 """用量记账与配额开关测试 — QUOTA_ENFORCE、业务日时区、方言兼容。"""
-import pytest
 from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from fastapi import HTTPException
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from pgutil import make_sessionmaker
 
 from app.api import deps_quota
 from app.services import usage_service
 from app.crud import crud
-from app.core.database import Base
 
 
 # ── check_quota 开关 ──
@@ -29,15 +24,15 @@ def test_check_quota_passthrough_when_disabled():
     monthly.assert_not_called()
 
 
-def test_check_quota_blocks_when_enabled():
-    """QUOTA_ENFORCE=true：日调用超限抛 429。"""
+def test_enforce_quota_for_user_skips_db_when_disabled():
+    """SSE 配额入口在开关关闭时不打开 Session。"""
     user = {"user_id": 1, "api_limit_daily": 10, "token_limit_monthly": 10000}
-    with patch.object(deps_quota, "QUOTA_ENFORCE", True), \
-         patch.object(deps_quota, "get_daily_api_calls", return_value=99), \
-         patch.object(deps_quota, "get_monthly_token_usage", return_value=0):
-        with pytest.raises(HTTPException) as exc:
-            deps_quota.check_quota(current_user=user, db=object())
-    assert exc.value.status_code == 429
+    with patch.object(deps_quota, "QUOTA_ENFORCE", False), \
+         patch.object(deps_quota, "short_session") as session_cm, \
+         patch.object(deps_quota, "get_daily_api_calls") as daily:
+        deps_quota.enforce_quota_for_user(user)
+    session_cm.assert_not_called()
+    daily.assert_not_called()
 
 
 # ── 业务日时区 ──
@@ -60,16 +55,11 @@ def test_business_day_uses_app_timezone():
         assert usage_service._current_yyyymm() == "202608"
 
 
-# ── record_turn_usage 计数（SQLite 内存库） ──
+# ── record_turn_usage 计数（PostgreSQL 测试库） ──
 
 def _session_factory():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    _engine, SessionLocal = make_sessionmaker()
+    return SessionLocal
 
 
 def test_record_turn_usage_accumulates_daily_and_monthly():
@@ -88,16 +78,15 @@ def test_record_turn_usage_accumulates_daily_and_monthly():
         assert usage_service.get_daily_api_calls(2, db) == 0
 
 
-def test_upsert_sql_mysql_variant():
-    assert "ON DUPLICATE KEY UPDATE" in usage_service._upsert_sql("mysql", "usage_daily")
-    assert "ON DUPLICATE KEY UPDATE" in usage_service._upsert_sql("mysql", "usage_token")
-    assert "ON CONFLICT" in usage_service._upsert_sql("postgresql", "usage_daily")
-    assert "ON CONFLICT" in usage_service._upsert_sql("sqlite", "usage_token")
+def test_upsert_sql_postgres():
+    assert "ON CONFLICT" in usage_service._upsert_sql("usage_daily")
+    assert "ON CONFLICT" in usage_service._upsert_sql("usage_token")
+    assert "ON DUPLICATE KEY UPDATE" not in usage_service._upsert_sql("usage_daily")
 
 
-# ── 配额查询方言兼容（SQLite 上必须可执行） ──
+# ── 配额查询（PostgreSQL） ──
 
-def test_get_user_with_plan_details_v2_runs_on_sqlite():
+def test_get_user_with_plan_details_v2_runs_on_postgres():
     SessionLocal = _session_factory()
     with SessionLocal() as db:
         from app.models import User

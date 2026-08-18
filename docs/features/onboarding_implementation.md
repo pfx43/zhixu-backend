@@ -361,7 +361,6 @@ POST /api/v1/onboarding/restart
 ### 6.4 数据库联调建议
 
 - 确认 onboarding_state 表已存在且 alembic_version 已记录当前迁移。
-- SQLite 环境注意单写锁场景。
 
 ### 6.5 当前实现范围
 

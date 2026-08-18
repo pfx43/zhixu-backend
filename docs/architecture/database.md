@@ -1,7 +1,6 @@
 # 知序数据库设计（PLAN 对齐版）
 
-> 作者：王晨 · fork 本地默认 SQLite，团队环境可切换 MySQL  
-> 同一套 SQLAlchemy models + Alembic migration，仅 `DATABASE_URL` 不同。
+> 业务库只用 **PostgreSQL**。本地 / 联调 / 生产同一引擎，不再使用 SQLite 或 MySQL。
 
 ---
 
@@ -9,18 +8,18 @@
 
 | 组件 | 方案 | 说明 |
 |------|------|------|
-| 业务数据库 | **SQLite**（本地）/ MySQL（团队） | 使用 **同步** SQLAlchemy `Session`，与 FastAPI 路由兼容 |
-| 登录会话 / Token | `auth_sessions`（SQLite / MySQL） | 仅保存 Token 哈希，服务重启后仍有效 |
+| 业务数据库 | **PostgreSQL** | 同步 SQLAlchemy `Session`（短 CRUD）+ 热路径 `AsyncSession` |
+| 登录会话 / Token | `auth_sessions`（PostgreSQL） | 仅保存 Token 哈希，服务重启后仍有效 |
 | 短期运行态缓存 | 进程内 `MemoryCache` | 验证码、密码重置令牌、聊天热数据等 |
-| 向量检索 | Dify | 不在 SQLite 做全文/向量 |
-| LLM / Agent | Tina `predict` / `apredict` | 异步在网络 I/O 层，不依赖 DB 异步 |
+| 向量检索 | Dify / keyword | 不在业务库做向量 |
+| LLM / Agent | Tina `predict` / `apredict` | 异步在网络 I/O 层 |
 
-SQLite 若未来要上 `AsyncSession`，需 `aiosqlite` 且仍受「单写锁」限制；**当前项目无需 async ORM**。
+未设置 `DATABASE_URL`、或 URL 不是 PostgreSQL，进程直接报错退出。
 
 本地配置示例：
 
 ```env
-DATABASE_URL=sqlite:///./data/zhishi.db
+DATABASE_URL=postgresql+psycopg2://zhixu:password@127.0.0.1:5432/zhixu
 ```
 
 ---
@@ -127,7 +126,7 @@ erDiagram
 
 **版本规则**：新建笔记的 `revision=1`；更新必须在单条 SQL 条件中同时校验
 `id`、`user_id` 和客户端 `expected_revision`，且成功时 `revision = revision + 1`。
-时钟精度、SQLite/MySQL 的时间表示、时区以及历史空时间都不参与冲突判断。既有
+时钟精度、时间表示、时区以及历史空时间都不参与冲突判断。既有
 `user_notes` 由 Alembic `20260802_note_revision` 增列并将已有行初始化为 `1`；
 该列禁止为 `NULL`。
 
@@ -433,19 +432,19 @@ INSERT kb_collections (zone=life,  name='生活区', is_default=0)
 
 1. 在 `app/models/` 按上表写 SQLAlchemy models（UUID 用 `String(36)`）
 2. Alembic `001_plan_schema.py`
-3. `config.py` 默认 SQLite + `PRAGMA foreign_keys=ON`
+3. `config.py` 要求 `DATABASE_URL` 为 PostgreSQL，禁止回落其它引擎
 4. 迁移 `kb.upload` 写入 `documents`，下线 `upload_hashes.json`
 5. 实现 `segment_service` → `document_segments`
 6. 实现 `question_gen_service` → `global_questions` + provenance + refs
 
 ---
 
-## 13. SQLite 类型对照
+## 13. PostgreSQL 类型对照
 
-| 逻辑类型 | SQLAlchemy | SQLite |
-|----------|------------|--------|
-| UUID | String(36) | TEXT |
+| 逻辑类型 | SQLAlchemy | PostgreSQL |
+|----------|------------|------------|
+| UUID | String(36) | VARCHAR(36) |
 | JSON | Text + app 校验 | TEXT |
-| BOOLEAN | Boolean | INTEGER 0/1 |
-| DATETIME | DateTime | TEXT ISO8601 |
-| DECIMAL | Numeric(10,2) | NUMERIC |
+| BOOLEAN | Boolean | BOOLEAN |
+| DATETIME | DateTime | TIMESTAMP |
+| DECIMAL | Numeric(10,2) | NUMERIC(10,2) |

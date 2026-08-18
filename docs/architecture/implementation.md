@@ -59,8 +59,7 @@ zhishi/
 │       ├── lib/api.ts      # HTTP 客户端（待改 VITE_API_BASE）
 │       └── features/       # 按页面划分
 ├── docs/             # 产品 & 工程文档（PLAN / TEAM / 本文）
-└── data/             # SQLite 文件等运行时数据（gitignore）
-    └── zhishi.db     # 本地默认库路径
+└── data/             # 运行时数据（gitignore）
 ```
 
 ### 2.2 分层约定
@@ -98,7 +97,7 @@ HTTP Request
 
 | 能力 | MVP（最小可验证） | 完整版 |
 |------|-------------------|--------|
-| 数据库 | SQLite 单文件 `data/zhishi.db` | 团队 MySQL，同一套 models |
+| 数据库 | PostgreSQL | 同一套 models + Alembic |
 | 知识库分区 | 注册时 seed 学习区/生活区；上传必选 collection | 用户自建多个 collection、独立 dataset |
 | 文档去重 | 用户级去重（`documents` 表） | + `global_documents` 全局去重 |
 | 分段 | Markdown 标题切分 + 定长 fallback | + PDF 结构感知、overlap 调优 |
@@ -147,11 +146,8 @@ flowchart LR
 ### 5.1 后端 `backend/.env`（示例）
 
 ```env
-# 数据库 — 本地开发推荐 SQLite（与 database.md 一致）
-DATABASE_URL=sqlite:///./data/zhishi.db
-
-# 团队联调可切 MySQL
-# DATABASE_URL=mysql+pymysql://user:pass@127.0.0.1:3306/my_ai_app
+# 数据库 — 只用 PostgreSQL
+DATABASE_URL=postgresql+psycopg2://zhixu:password@127.0.0.1:5432/zhixu
 
 SECRET_KEY=...
 REDIS_URL=redis://127.0.0.1:6379/0
@@ -165,16 +161,9 @@ USE_OSS=false
 DEBUG_MAX_UPLOAD_SIZE=10485760
 ```
 
-### 5.2 SQLite 专项
+### 5.2 PostgreSQL
 
-在 `app/core/database.py` 的 `create_engine` 中对 sqlite 连接加：
-
-```python
-connect_args={"check_same_thread": False}
-# 并在首次连接执行 PRAGMA foreign_keys=ON
-```
-
-`data/` 目录需存在且 gitignore。
+`app/core/database.py` 对 PostgreSQL 使用连接池（`pool_size` / `max_overflow` / `pool_pre_ping` / `pool_recycle`）。未设置或非 PostgreSQL 的 `DATABASE_URL` 直接报错。
 
 ### 5.3 前端 `frontend/.env.development`
 
@@ -234,14 +223,14 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8765"
 **常见坑**：
 
 - README 中 `kt_backend` 已更名为 `backend`，路径以仓库为准  
-- MySQL 未装时可先用 SQLite 完成 S0–S4  
+- 未配置 PostgreSQL 时进程不会启动，不要回落其它引擎
 - Redis 未起时 chat 会话可能失败；开发可暂用 memory cache（需确认 `app/core/redis.py` 是否支持）
 
 ---
 
 ### S1 — 数据库与 ORM 基础
 
-**目标**：按 database.md 建齐 ORM + 迁移机制；默认 SQLite。
+**目标**：按 database.md 建齐 ORM + 迁移机制；只用 PostgreSQL。
 
 **前置依赖**：S0
 
@@ -258,8 +247,8 @@ backend/app/models/
 backend/app/models/__init__.py   # 导出全部 Base 子类
 
 backend/app/core/
-├── config.py              # DATABASE_URL 默认改为 sqlite
-└── database.py            # sqlite connect_args + FK pragma
+├── config.py              # DATABASE_URL 必须是 PostgreSQL
+└── database.py            # PG 连接池 + asyncpg
 
 backend/alembic/           # 待建（S1 暂用 init_db create_all）
 ├── env.py
@@ -283,18 +272,17 @@ backend/alembic/           # 待建（S1 暂用 init_db create_all）
 
 **验收标准**：
 
-- [x] `init_db()` / `create_all` 无报错，`data/zhishi.db` 含全部 13 张表（users + plan_tiers + 10 张新表）
+- [x] `init_db()` / `create_all` 无报错，PostgreSQL 含全部业务表（users + plan_tiers + 10 张新表）
 - [ ] `alembic upgrade head` 无报错（S1 暂跳过 Alembic，后续补 `001_plan_schema.py`）
 - [x] 新用户注册后 `kb_collections` 有 2 行（S2 注册 seed，见 database.md §10）
 - [x] 外键：`documents.collection_id` → `kb_collections.id` 默认 RESTRICT（未设 `ondelete`）
 
-**S1 完成备注（2026-07-02）**：默认 `DATABASE_URL` 指向项目根 `data/zhishi.db`；models 拆分为 `kb.py` / `quiz.py` / `quiz_session.py` / `tutor.py`；SQLite `check_same_thread=False` + `PRAGMA foreign_keys=ON`。
+**S1 完成备注（2026-07-02）**：models 拆分为 `kb.py` / `quiz.py` / `quiz_session.py` / `tutor.py`。后续已收口为 PostgreSQL-only，不再使用 SQLite。
 
 **常见坑**：
 
-- SQLite 不支持部分 ALTER；表结构大改用新 migration 重建  
-- `models.py` 单文件过大可拆分，但 `init_db` 必须 import 到所有 model  
-- 现有 MySQL 部署需单独 migration，不要混用两套 schema 文件
+- 表结构变更走 Alembic revision，不要手改已应用的历史 migration
+- `models.py` 单文件过大可拆分，但 `init_db` 必须 import 到所有 model
 
 ---
 
@@ -703,7 +691,7 @@ frontend/src/routes/index.tsx
 
 | 决策 | 结论 | 影响 |
 |------|------|------|
-| **数据库默认** | 本地统一 SQLite（`data/zhishi.db`）；团队联调再切 MySQL | S1 需改 `config.py` 默认连接串；`database.md` 为 schema 真源 |
+| **数据库** | 只用 PostgreSQL；未配置或非 PG 的 `DATABASE_URL` 直接失败 | `database.md` 为 schema 真源 |
 | **全局去重** | S2 起必须上 `global_documents` 跨用户去重 | S2 models + S3 上传链路需同时实现 `global_documents` / `documents` 双表与 `content_hash` 逻辑 |
 
 ---

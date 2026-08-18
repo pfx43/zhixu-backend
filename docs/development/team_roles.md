@@ -25,7 +25,7 @@
 | 步骤 2 | 安装 Redis | `sudo apt install redis-server`，设置 `requirepass`，开启 AOF/RDB，禁止公网暴露 6379 |
 | 步骤 3 | 写入 `.env` 与 `config.yaml` | 配置 `DATABASE_URL`、`REDIS_URL`、`CACHE_BACKEND=redis`、`SECRET_KEY` 等 |
 | 步骤 4.1 | 真 Redis 实现 | `app/core/redis.py`：新增 `RedisCache`（含 `set_session`/`get_session`/`set_value`/`get_value`/`delete_key`/`scan_keys`/`lpush`/`lrange`），按 `CACHE_BACKEND` 切换 |
-| 步骤 4.2 | 数据库连接池 | `app/core/database.py`：PostgreSQL 加 `pool_size`/`max_overflow`/`pool_pre_ping=True`/`pool_recycle`；生产禁止默默回落 SQLite |
+| 步骤 4.2 | 数据库连接池 | `app/core/database.py`：PostgreSQL `pool_size`/`max_overflow`/`pool_pre_ping=True`/`pool_recycle`；未配置或非 PostgreSQL 的 `DATABASE_URL` 直接报错 |
 | 步骤 4.3 | 修复启动阻塞 | `app/core/config.py`：从 yaml `ocr.baidu` / 环境变量导出 `BAIDU_OCR_API_KEY`、`BAIDU_OCR_SECRET_KEY`、`BAIDU_OCR_API_URL`（可为空字符串），保证 `uvicorn server:app` 可启动 |
 | 步骤 4.4 | 依赖确认 | `requirements.txt` 增加 `redis` 包；确认 `psycopg2-binary` 已装 |
 | 步骤 5 | P0 验收 | API 可启动无 ImportError；`psql` 表存在；重启 API 后旧 token 仍可用 |

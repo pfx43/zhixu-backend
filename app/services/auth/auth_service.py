@@ -757,7 +757,7 @@ class AuthManager:
             db.rollback()
             constraint_info = ""
             if hasattr(e, 'orig') and hasattr(e.orig, 'args') and e.orig.args:
-                constraint_info = f" | MySQL detail: {e.orig.args[0] if e.orig.args else ''}"
+                constraint_info = f" | DB detail: {e.orig.args[0] if e.orig.args else ''}"
             logger.error(
                 f"注销账号失败 | user_id={user_id} | type={type(e).__name__} | "
                 f"message={str(e)}{constraint_info}"

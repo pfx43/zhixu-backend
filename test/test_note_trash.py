@@ -1,7 +1,5 @@
 """Tests for note soft-delete / restore / trash listing."""
 import sys
-import tempfile
-import os
 from pathlib import Path
 
 import pytest
@@ -9,30 +7,17 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.database import Base
 from app.models import User
 from app.crud import note as note_crud
 from app.api.v1.notes import router as notes_router
 from app.api.deps import get_db, get_current_active_user
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 from fastapi import FastAPI
+from pgutil import make_sessionmaker
 
 
 @pytest.fixture()
 def client():
-    fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_fks(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
+    engine, SessionLocal = make_sessionmaker()
 
     app = FastAPI()
     app.include_router(notes_router, prefix="/api/v1/notes")
@@ -72,10 +57,6 @@ def client():
         yield c
 
     engine.dispose()
-    try:
-        os.unlink(db_path)
-    except OSError:
-        pass
 
 
 class TestNoteSoftDelete:
@@ -193,18 +174,11 @@ class TestCrossUserIsolation:
 
 class TestPurgeExpired:
     def test_purge_expired_notes(self, client):
-        import os
         from app.crud.note import purge_expired_notes
         from app.models import UserNote
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
         from datetime import datetime, timezone, timedelta
 
-        fd, db_path = tempfile.mkstemp(suffix=".db")
-        os.close(fd)
-        engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-        Base.metadata.create_all(bind=engine)
-        SessionLocal = sessionmaker(bind=engine)
+        engine, SessionLocal = make_sessionmaker()
         db = SessionLocal()
 
         user = User(id=99, email="purge@test.com", password_hash="h", nickname="p", is_active=True)
@@ -244,4 +218,3 @@ class TestPurgeExpired:
 
         db.close()
         engine.dispose()
-        os.unlink(db_path)

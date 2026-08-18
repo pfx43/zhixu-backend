@@ -11,27 +11,26 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import AsyncGenerator, List, Optional, TYPE_CHECKING
+from typing import AsyncGenerator, List, Optional
 
 from tina import Agent
 
 from app.core.config import LLM_MAX_TOOL_LOOP, is_local_rag, is_keyword_rag
+from app.core.database import async_short_session
 
 from app.utils.prompt_loader import load_prompt
-from app.services.tutor.citation_service import build_citations_from_hits
+from app.services.tutor.citation_service import build_citations_from_hits_async
 from app.services.chat.local_retrieval_service import search as local_search
-from app.services.chat.keyword_retrieval_service import search as keyword_search
+from app.services.chat.keyword_retrieval_service import search_async as keyword_search_async
 from app.services.chat.chat_contract import ChatChunkNormalizer
 from app.services.tools.knowledge_retriever import KnowledgeRetriever
 from app.services.llm.llm_pool import llm_pool
 from app.services.usage_service import record_usage_for_token
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
-
 if not is_local_rag():
-    from app.services.tutor.citation_service import filter_hits_by_collection
+    from app.services.tutor.citation_service import filter_hits_by_collection_async
     from app.services.knowledge.dify_kb import DifyKB
 
 logger = logging.getLogger(__name__)
@@ -75,20 +74,25 @@ class ZhixuAgent:
     def is_ready(self) -> bool:
         return self._llm_ready
 
-    def _make_retrieve_fn(self, db, collection_id):
-        """按请求构造检索闭包：绑定本次 db / collection_id，user_id 由 RAGTools 动态传入。"""
+    def _make_retrieve_fn(self, collection_id):
+        """按请求构造检索闭包：只绑定 collection_id；查库用短 AsyncSession。
 
-        def retrieve(user_id: int, query: str, top_k: int = 5) -> List[dict]:
+        工具是 async def，Tina apredict 会直接 await，不再丢默认线程池。
+        """
+
+        async def retrieve(user_id: int, query: str, top_k: int = 5) -> List[dict]:
             if is_keyword_rag():
-                return keyword_search(
-                    db,
-                    query,
-                    user_id=user_id,
-                    collection_id=collection_id,
-                    top_k=top_k,
-                )
+                async with async_short_session() as db:
+                    return await keyword_search_async(
+                        db,
+                        query,
+                        user_id=user_id,
+                        collection_id=collection_id,
+                        top_k=top_k,
+                    )
             if is_local_rag():
-                return local_search(
+                return await asyncio.to_thread(
+                    local_search,
                     query,
                     user_id=user_id,
                     collection_id=collection_id,
@@ -96,9 +100,12 @@ class ZhixuAgent:
                 )
             if not self.kb:
                 return []
-            results = self.kb.query(query, top_k=top_k)
-            if db and collection_id is not None:
-                results = filter_hits_by_collection(db, user_id, collection_id, results)
+            results = await asyncio.to_thread(self.kb.query, query, top_k=top_k)
+            if collection_id is not None:
+                async with async_short_session() as db:
+                    results = await filter_hits_by_collection_async(
+                        db, user_id, collection_id, results
+                    )
             return results
 
         return retrieve
@@ -108,7 +115,6 @@ class ZhixuAgent:
         message: str,
         history: Optional[List[dict]] = None,
         collection_id: Optional[str] = None,
-        db: Optional["Session"] = None,
         mode: str = "qa",
         token: str = "",
     ) -> AsyncGenerator[dict, None]:
@@ -134,7 +140,9 @@ class ZhixuAgent:
             }
             return
 
-        retriever = KnowledgeRetriever(retrieve_fn=self._make_retrieve_fn(db, collection_id))
+        retriever = KnowledgeRetriever(
+            retrieve_fn=self._make_retrieve_fn(collection_id)
+        )
         await retriever.set_token(token)
 
         try:
@@ -159,15 +167,15 @@ class ZhixuAgent:
             async for chunk in agent.apredict(instruction=message, temperature=0.7):
                 if isinstance(chunk, dict) and chunk.get("usage"):
                     await record_usage_for_token(token, chunk["usage"])
-                event = normalizer.normalize(chunk)
-                if event:
+                for event in normalizer.normalize(chunk):
                     yield event
 
-            if db and retriever.last_hits:
+            if retriever.last_hits:
                 try:
-                    citations = build_citations_from_hits(
-                        db, retriever.user_id, collection_id, retriever.last_hits
-                    )
+                    async with async_short_session() as db:
+                        citations = await build_citations_from_hits_async(
+                            db, retriever.user_id, collection_id, retriever.last_hits
+                        )
                     if citations:
                         yield {
                             "type": "metadata",

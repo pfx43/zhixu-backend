@@ -1,7 +1,6 @@
 """Tests for note attachment upload / download / delete."""
 import sys
 import io
-import os
 from pathlib import Path
 
 import pytest
@@ -9,28 +8,16 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.database import Base
 from app.models import User, UserNote
 from app.api.v1.notes import router as notes_router
 from app.api.deps import get_db, get_current_active_user
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 from fastapi import FastAPI
+from pgutil import make_sessionmaker
 
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    db_path = tmp_path / "test.db"
-    engine = create_engine(f"sqlite:///{db_path.as_posix()}", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_fks(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
+    engine, SessionLocal = make_sessionmaker()
 
     # 重定向存储路径到临时目录
     storage_root = tmp_path / "storage"

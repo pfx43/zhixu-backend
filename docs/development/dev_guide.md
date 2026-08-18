@@ -13,7 +13,7 @@
 
 | 类型 | 代表模块 | 分层 | 适用场景 |
 |------|----------|------|----------|
-| **A. MySQL ORM 全链路** | `auth`、`plan` | router → service/crud → crud → models | 新表落库：`kb_collections`、`quiz_sessions` 等 |
+| **A. PostgreSQL ORM 全链路** | `auth`、`plan` | router → service/crud → crud → models | 新表落库：`kb_collections`、`quiz_sessions` 等 |
 | **B. 外部服务 + 薄路由** | `kb`、`dashboard` | router → `app/services/*`（Dify / 文件 / LLM） | 知识库上传、Dify 检索 |
 | **C. Redis/文件 + Schema** | `chat` | router + `schemas` + Redis/`storage_service` | 会话、流式 SSE |
 
@@ -599,7 +599,7 @@ sequenceDiagram
     participant RT as api/v1/quiz.py
     participant SV as services/quiz_service.py
     participant CR as crud/quiz.py
-    participant DB as MySQL/SQLite
+    participant DB as PostgreSQL
 
     FE->>RT: POST /api/v1/quiz/sessions<br/>Authorization: Bearer
     RT->>RT: Depends(get_current_active_user)<br/>Depends(get_db)

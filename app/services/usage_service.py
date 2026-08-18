@@ -66,23 +66,8 @@ def _today() -> date:
     return datetime.now(_BUSINESS_TZ).date()
 
 
-def _upsert_sql(dialect: str, table: str) -> str:
-    """按方言生成原子累加 upsert；SQLite/PostgreSQL 走 ON CONFLICT，MySQL 走 ON DUPLICATE KEY UPDATE。"""
-    if dialect == "mysql":
-        if table == "usage_token":
-            return """
-                INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
-                VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
-                ON DUPLICATE KEY UPDATE
-                    prompt_tokens = usage_token.prompt_tokens + VALUES(prompt_tokens),
-                    completion_tokens = usage_token.completion_tokens + VALUES(completion_tokens),
-                    total_tokens = usage_token.total_tokens + VALUES(total_tokens)
-                """
-        return """
-            INSERT INTO usage_daily (user_id, date, api_calls)
-            VALUES (:user_id, :date, 1)
-            ON DUPLICATE KEY UPDATE api_calls = usage_daily.api_calls + 1
-            """
+def _upsert_sql(table: str) -> str:
+    """PostgreSQL ON CONFLICT 原子累加。"""
     if table == "usage_token":
         return """
             INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
@@ -150,9 +135,8 @@ async def record_usage_for_token(token: str, usage: dict) -> None:
         today = _today()
 
         async with AsyncSessionLocal() as db:
-            dialect = db.bind.dialect.name
-            token_sql = _upsert_sql(dialect, "usage_token")
-            daily_sql = _upsert_sql(dialect, "usage_daily")
+            token_sql = _upsert_sql("usage_token")
+            daily_sql = _upsert_sql("usage_daily")
             await db.execute(
                 text(token_sql),
                 {
@@ -224,9 +208,8 @@ def record_turn_usage(
         yyyymm = _current_yyyymm()
         today = _today()
 
-        dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
-        token_sql = _upsert_sql(dialect, "usage_token")
-        daily_sql = _upsert_sql(dialect, "usage_daily")
+        token_sql = _upsert_sql("usage_token")
+        daily_sql = _upsert_sql("usage_daily")
 
         # ── usage_token 按月原子累加 ──
         db.execute(

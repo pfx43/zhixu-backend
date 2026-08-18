@@ -3,29 +3,20 @@ from __future__ import annotations
 import pytest
 from fastapi import Header, HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from pgutil import make_sessionmaker
 
 from app.api.deps import get_current_active_user, get_db
-from app.core.database import Base
 from server import app
 from app.models import User
 
 
 def _create_temp_db():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    return engine, sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return make_sessionmaker()
 
 
 @pytest.fixture()
 def notes_client(monkeypatch):
-    """在隔离 SQLite 数据库上暴露 Notes HTTP 契约。"""
+    """在隔离 PostgreSQL 测试库上暴露 Notes HTTP 契约。"""
     engine, SessionLocal = _create_temp_db()
     monkeypatch.setattr("app.core.database.init_db", lambda: None)
 

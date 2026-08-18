@@ -2497,7 +2497,7 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
 `DELETE` 或 `POST /restore` 恰好递增 `1`。列表、详情、创建和更新响应均
 返回它，客户端应把该值持久化为离线 outbox 操作的基线。
 
-`created_at` / `updated_at` 仅用于展示。历史 SQLite 数据可能为 `null`，且当前服务
+`created_at` / `updated_at` 仅用于展示。历史数据可能为 `null`，且当前服务
 沿用无偏移量的 UTC ISO 8601 表示；客户端不得根据时间戳精度、时区或空值推导版本。
 
 ---
@@ -2704,7 +2704,7 @@ POST /api/v1/notes/{note_id}/restore
 | 跨账号隔离 | 所有回收站操作均按 `user_id` 过滤，用户 A 无法查看或操作用户 B 的已删除笔记 |
 | 幂等性 | 重复删除已删除笔记 → 200；重复恢复已恢复笔记 → 200 |
 | 编辑限制 | 已删除笔记不能通过 PATCH 更新，必须先恢复 |
-| 迁移 | 新增 `deleted_at`（DateTime）和 `deleted_by_revision`（Integer）可空列；SQLite 回滚使用 batch mode |
+| 迁移 | 新增 `deleted_at`（DateTime）和 `deleted_by_revision`（Integer）可空列 |
 | 客户端注意 | 当前后端负责 7 天清理，客户端不应自行计算和展示"剩余恢复天数"计时器 |
 
 ### 13.9 上传附件
@@ -2848,7 +2848,7 @@ GET /api/v1/notes/{note_id}/attachments
 | 孤儿清理 | 上传后若笔记未保存，超过 60 分钟的未挂载附件会被自动物理清理 |
 | 生命周期 | 附件随笔记软删除进入回收站，笔记物理删除时附件不自动清理（需手动删除或依赖孤儿机制） |
 | 安全 | 下载时检查 `user_id` 匹配；图片不内联返回原始二进制，统一使用 `Content-Disposition: inline` |
-| 迁移 | 新增 `note_attachments` 表；SQLite 回滚使用 batch mode |
+| 迁移 | 新增 `note_attachments` 表 |
 
 ---
 

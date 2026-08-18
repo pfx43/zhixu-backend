@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from uuid import uuid4
@@ -6,12 +7,12 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_current_token, get_db
-from app.api.deps_quota import check_quota
+from app.api.deps import get_current_active_user, get_current_token, get_streaming_user
+from app.api.deps_quota import enforce_quota_for_user
 from app.core.config import is_local_rag
-from app.core.redis import cache
+from app.core.database import short_session
+from app.core.redis import async_cache, cache
 from app.core.agent_manager import agent_manager
 from app.schemas.common import (
     ChatBreakRequest,
@@ -53,22 +54,22 @@ def _mark_interrupt(user_id: int, session_id: str) -> None:
         logger.warning(f"标记打断失败: {e}")
 
 
-def _check_interrupt(user_id: int, session_id: str) -> bool:
+async def _check_interrupt(user_id: int, session_id: str) -> bool:
     """检查并消费打断标记（一次性：取到即删除，不会残留影响下次对话）。"""
     try:
         key = _interrupt_key(user_id, session_id)
-        if cache.get_value(key):
-            cache.delete_key(key)
+        if await async_cache.get_value(key):
+            await async_cache.delete_key(key)
             return True
         return False
     except Exception:
         return False
 
 
-def _clear_interrupt(user_id: int, session_id: str) -> None:
+async def _clear_interrupt(user_id: int, session_id: str) -> None:
     """清除残留标记（新流启动时调用，防止上次的打断信号误中断本轮）。"""
     try:
-        cache.delete_key(_interrupt_key(user_id, session_id))
+        await async_cache.delete_key(_interrupt_key(user_id, session_id))
     except Exception:
         pass
 
@@ -142,7 +143,18 @@ def _save_session_meta(user_id: int, session_id: str, meta: dict):
     cache.lpush(_session_list_key(user_id), session_id)
 
 
-def _save_message(
+async def _asave_session_meta(user_id: int, session_id: str, meta: dict):
+    await async_cache.set_value(_session_meta_key(user_id, session_id), json.dumps(meta))
+    await async_cache.lrem(_session_list_key(user_id), 0, session_id)
+    await async_cache.lpush(_session_list_key(user_id), session_id)
+
+
+async def _aload_session_meta(user_id: int, session_id: str) -> Optional[dict]:
+    raw = await async_cache.get_value(_session_meta_key(user_id, session_id))
+    return json.loads(raw) if raw else None
+
+
+async def _save_message(
     user_id: int,
     session_id: str,
     role: str,
@@ -161,11 +173,10 @@ def _save_message(
     if tool_names:
         message["tool_names"] = list(tool_names)
 
-    # 1. 写入内存缓存
-    cache.rpush(_session_history_key(user_id, session_id), json.dumps(message))
+    history_key = _session_history_key(user_id, session_id)
+    await async_cache.rpush(history_key, json.dumps(message))
 
-    # 2. 更新或创建 meta
-    meta = _load_session_meta(user_id, session_id)
+    meta = await _aload_session_meta(user_id, session_id)
     if not meta:
         meta = {
             "id": session_id,
@@ -180,11 +191,14 @@ def _save_message(
         if not meta.get("title") and role == "user":
             meta["title"] = content[:40]
 
-    _save_session_meta(user_id, session_id, meta)
+    await _asave_session_meta(user_id, session_id, meta)
 
-    # 3. 同步写入文件持久化
-    full_messages = _load_history(user_id, session_id)
-    _file_save_full(user_id, session_id, meta, full_messages)
+    raw_messages = await async_cache.lrange(history_key, 0, -1)
+    if raw_messages:
+        full_messages = [json.loads(item) for item in raw_messages]
+    else:
+        full_messages = await asyncio.to_thread(_load_history, user_id, session_id)
+    await asyncio.to_thread(_file_save_full, user_id, session_id, meta, full_messages)
 
     return message
 
@@ -237,7 +251,6 @@ async def _stream_agent_response(
     message: str,
     dataset_id: str,
     collection_id: Optional[str] = None,
-    db: Optional[Session] = None,
     history: Optional[list] = None,
     user_hash: Optional[str] = None,
     tc_node_id: Optional[str] = None,
@@ -293,16 +306,16 @@ async def _stream_agent_response(
     failed = False
 
     # 新流启动：清除上次残留的打断标记，避免误中断本轮
-    _clear_interrupt(user_id, session_id)
+    await _clear_interrupt(user_id, session_id)
 
     chunk_counter = 0
     try:
         async for chunk in agent.generate(
-            message, history, collection_id=collection_id, db=db, mode=mode, token=token
+            message, history, collection_id=collection_id, mode=mode, token=token
         ):
             chunk_counter += 1
             # 用户打断：降频检查（每 8 chunk 一次 Redis 往返），命中则停止产出
-            if chunk_counter % 8 == 0 and _check_interrupt(user_id, session_id):
+            if chunk_counter % 8 == 0 and await _check_interrupt(user_id, session_id):
                 interrupted = True
                 break
 
@@ -321,7 +334,7 @@ async def _stream_agent_response(
                     reasoning_parts.append(rc)
             elif event_type == "tool_call":
                 tn = chunk.get("tool_name")
-                if tn:
+                if tn and tn not in tool_names:
                     tool_names.append(tn)
 
             payload: dict = {
@@ -359,7 +372,7 @@ async def _stream_agent_response(
     if full_content or interrupted:
         content = full_content + (INTERRUPT_NOTICE if interrupted else "")
         try:
-            _save_message(
+            await _save_message(
                 user_id,
                 session_id,
                 "assistant",
@@ -399,9 +412,22 @@ async def _stream_agent_response(
 
     # ── 清理：断连/打断/正常路径均清除打断标记 ──
     try:
-        _clear_interrupt(user_id, session_id)
+        await _clear_interrupt(user_id, session_id)
     except Exception:
         pass
+
+
+def _resolve_chat_collection_snapshot(
+    user_id: int,
+    collection_id: Optional[str],
+    user_dataset_id: Optional[str],
+):
+    """短 Session 解析分区；供 async 路由丢到线程里跑。"""
+    with short_session() as db:
+        collection, dataset_id = resolve_chat_collection(
+            db, user_id, collection_id, user_dataset_id
+        )
+        return collection.id, dataset_id
 
 
 @router.get("")
@@ -421,9 +447,7 @@ def chat_info():
 @router.post("", response_model=ChatResponse)
 async def send_chat(
     request: ChatRequest,
-    current_user: dict = Depends(get_current_active_user),
-    _quota: dict = Depends(check_quota),
-    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_streaming_user),
     token: str = Depends(get_current_token),
 ):
     mode = request.mode or "qa"
@@ -433,15 +457,19 @@ async def send_chat(
             detail=f"不支持的 mode: {mode}，支持的模式: {', '.join(sorted(VALID_MODES))}",
         )
 
+    await asyncio.to_thread(enforce_quota_for_user, current_user)
+
     user_id = current_user["user_id"]
     user_dataset_id = current_user.get("dataset_id")
-    collection, dataset_id = resolve_chat_collection(
-        db, user_id, request.collection_id, user_dataset_id
+    collection_id, dataset_id = await asyncio.to_thread(
+        _resolve_chat_collection_snapshot,
+        user_id,
+        request.collection_id,
+        user_dataset_id,
     )
-    collection_id = collection.id
 
     session_id = request.session_id or uuid4().hex
-    session_meta = _load_session_meta(user_id, session_id)
+    session_meta = await _aload_session_meta(user_id, session_id)
 
     if session_meta is None and not request.content:
         raise HTTPException(
@@ -449,9 +477,9 @@ async def send_chat(
             detail="新会话必须提供 content"
         )
 
-    _save_message(user_id, session_id, "user", request.content)
+    await _save_message(user_id, session_id, "user", request.content)
 
-    history = _load_history(user_id, session_id)
+    history = await asyncio.to_thread(_load_history, user_id, session_id)
     if history:
         history = history[:-1]
 
@@ -463,7 +491,6 @@ async def send_chat(
             message=request.content,
             dataset_id=dataset_id,
             collection_id=collection_id,
-            db=db,
             history=history,
             user_hash=user_hash,
             tc_node_id=request.tc_node_id,

@@ -3,12 +3,9 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.database import Base
 from app.models import (
     User, KbCollection, Document, DocumentSegment,
     GlobalQuestion, GlobalDocument,
@@ -18,26 +15,18 @@ from app.models import (
 )
 from app.services.auth import auth_service
 from app.services.auth.auth_service import AuthManager
+from pgutil import make_sessionmaker
 
 
 @pytest.fixture()
 def db_session():
-    engine = create_engine("sqlite:///:memory:")
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
+    engine, SessionLocal = make_sessionmaker()
     session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
 
 def test_delete_account_basic(monkeypatch, db_session):
