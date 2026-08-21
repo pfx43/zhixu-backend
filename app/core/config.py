@@ -148,6 +148,11 @@ MAX_QUESTIONS_PER_DOCUMENT = int(
     )
 )
 
+# 单次按页出题最多页数（config.json max_pages_per_gen，前后端同一数字 10）
+MAX_PAGES_PER_GEN = int(
+    os.getenv("MAX_PAGES_PER_GEN", str(_app_cfg.max_pages_per_gen))
+)
+
 # Dify 知识库单文件大小上限（字节）；0 表示不限制，仅在上传前做本地预检
 # 显式设置 DIFY_MAX_UPLOAD_SIZE 后才拦截；实际能否入库仍受 Dify Cloud 侧限制
 DIFY_MAX_UPLOAD_SIZE = int(os.getenv("DIFY_MAX_UPLOAD_SIZE", "0"))

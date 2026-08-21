@@ -15,6 +15,8 @@ class DocumentPageOut(BaseModel):
     segment_id: Optional[str] = None
     preview_mode: str = "markdown"
     file_type: Optional[str] = None
+    # 该页当前用户已入库的题目数（按页出题/提取后 > 0）
+    question_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

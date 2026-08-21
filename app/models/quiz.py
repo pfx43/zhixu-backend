@@ -34,6 +34,7 @@ class QuestionProvenance(Base):
     __table_args__ = (
         Index("ix_question_provenance_question", "question_id"),
         Index("ix_question_provenance_segment", "segment_id"),
+        Index("ix_question_provenance_doc_page", "document_id", "page_number"),
     )
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -41,6 +42,8 @@ class QuestionProvenance(Base):
     global_document_id = Column(String(36), ForeignKey("global_documents.id"), nullable=True)
     document_id = Column(String(36), ForeignKey("documents.id"), nullable=True)
     segment_id = Column(String(36), ForeignKey("document_segments.id"), nullable=True)
+    # 题目来自第几页；旧数据可空，新写入必填（按页出题/提取时落库）
+    page_number = Column(Integer, nullable=True, index=True)
     excerpt = Column(Text, nullable=True)
 
     question = relationship("GlobalQuestion", back_populates="provenance")

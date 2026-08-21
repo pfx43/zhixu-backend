@@ -13,6 +13,7 @@ class ProvenanceOut(BaseModel):
     id: str
     document_id: Optional[str] = None
     segment_id: Optional[str] = None
+    page_number: Optional[int] = None
     excerpt: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
