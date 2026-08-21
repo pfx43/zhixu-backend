@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260807_add_usage_tables"
-down_revision = "20260805_add_note_soft_delete"
+down_revision = "20260805_note_soft_delete"
 branch_labels = None
 depends_on = None
 

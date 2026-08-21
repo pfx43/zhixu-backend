@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_current_token, get_db
 from app.api.deps_quota import check_quota
 from app.schemas.training import (
     TargetedTrainingActiveSessionOut,
@@ -30,6 +30,7 @@ def start_targeted_training(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
     _quota: dict = Depends(check_quota),
+    token: str = Depends(get_current_token),
 ):
     """Agent 制定训练计划：选题 + rationale，并创建刷题会话。支持 report_id 与恢复未完成会话。"""
     result = training_service.start_targeted_training(
@@ -37,6 +38,7 @@ def start_targeted_training(
         current_user["user_id"],
         report_id=payload.report_id,
         force_new=payload.force_new,
+        token=token,
     )
     db.commit()
     return result
@@ -82,6 +84,7 @@ def training_tutor_message(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
     _quota: dict = Depends(check_quota),
+    token: str = Depends(get_current_token),
 ) -> Union[TrainingTutorReplyOut, StreamingResponse]:
     """针对训练页 AI 辅导 — 复用制定计划时的 Agent 上下文。"""
     user_id = current_user["user_id"]
@@ -91,7 +94,7 @@ def training_tutor_message(
         def sse_stream():
             try:
                 for chunk in training_service.stream_training_tutor(
-                    db, user_id, agent_session_id, payload.content
+                    db, user_id, agent_session_id, payload.content, token=token
                 ):
                     data = json.dumps(
                         {
@@ -123,7 +126,7 @@ def training_tutor_message(
 
     full_content = ""
     for chunk in training_service.stream_training_tutor(
-        db, user_id, agent_session_id, payload.content
+        db, user_id, agent_session_id, payload.content, token=token
     ):
         if chunk.get("content"):
             full_content += chunk["content"]

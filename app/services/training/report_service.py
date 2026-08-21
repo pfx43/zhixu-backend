@@ -13,27 +13,16 @@ from app.schemas.report import LearningReportGenerateOut, ReportOut
 from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import llm_predict_no_stream
 from app.services.training import analytics_service
+from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
-REPORT_SYSTEM_PROMPT = """你是知拾学习分析助手。根据用户的学习统计数据，生成一份清晰、可执行的 Markdown 学习报告。
-报告结构建议：
-1. ## 学习概览
-2. ## 薄弱知识点（按 tag）
-3. ## 题型表现
-4. ## 建议与下一步
-使用中文，语气鼓励但具体；列出优先复习的 tag 名称，便于后续针对训练。"""
-
-_llm_instance = None
-
+REPORT_SYSTEM_PROMPT = load_prompt("report_analysis")
 
 def _get_llm():
-    global _llm_instance
-    if _llm_instance is not None:
-        return _llm_instance
+    """创建 Tina LLM 实例（每次新建，避免共享实例在并发下串 token 记账）。"""
     try:
-        _llm_instance = create_base_api()
-        return _llm_instance
+        return create_base_api()
     except Exception:
         logger.warning("Tina LLM 不可用，将使用模板报告", exc_info=True)
         return None
@@ -93,7 +82,7 @@ def _build_stats_payload(db: Session, user_id: int) -> str:
 
 
 def generate_learning_report(
-    db: Session, user_id: int
+    db: Session, user_id: int, token: str = ""
 ) -> LearningReportGenerateOut:
     stats_text = _build_stats_payload(db, user_id)
     llm = _get_llm()
@@ -101,6 +90,7 @@ def generate_learning_report(
 
     if llm:
         try:
+            llm.set_token(token)
             resp = llm_predict_no_stream(
                 llm,
                 input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",

@@ -5,22 +5,18 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_active_user
+from app.api.deps import get_current_active_user, get_current_token
 from app.core.config import LLM_ASYNC, is_local_rag
 from app.services.knowledge.dify_kb import DifyKB
 from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import llm_predict_no_stream
+from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["首页建议"])
 
-SYSTEM_PROMPT = """你是知拾（Zhishi）的知识管理助手 Tina。请根据用户知识库中的文档列表，生成 2-3 条简洁的个性化学习建议（每条不超过 30 字）。
-建议方向：
-- 提醒复习某些文档
-- 建议整理或补充某个主题
-- 推荐ai对话的方向
-只输出建议列表，每行一条，以 "- " 开头，不要其他内容。"""
+SYSTEM_PROMPT = load_prompt("dashboard_suggestions")
 
 _FALLBACK = [
     "查看知识库中的文档",
@@ -41,6 +37,7 @@ def _parse_suggestions(content: str) -> list[str]:
 @router.get("/suggestions")
 async def get_dashboard_suggestions(
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ):
     """
     根据用户知识库文档生成个性化建议
@@ -90,6 +87,7 @@ async def get_dashboard_suggestions(
 
     try:
         llm = create_base_api()
+        llm.set_token(token)
         if LLM_ASYNC:
             response = await llm.apredict_no_stream(
                 messages=messages, temperature=0.7, max_tokens=300

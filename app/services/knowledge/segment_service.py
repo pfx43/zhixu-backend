@@ -161,18 +161,23 @@ def segment_document(document_id: str, db: Session) -> int:
             len(segment_dicts),
         )
 
-        from app.core.config import is_local_rag
+        from app.core.config import is_local_rag, is_keyword_rag
         if is_local_rag():
-            from app.services.knowledge.index_service import index_document_segments
-
-            try:
-                index_document_segments(db, doc)
-            except Exception:
-                logger.exception(
-                    "Chroma index failed: document_id=%s", document_id
-                )
-                doc.indexing_status = "failed"
+            if is_keyword_rag():
+                # 关键词检索：不写 Chroma 向量，分段入库即完成索引
+                doc.indexing_status = "completed"
                 db.flush()
+            else:
+                from app.services.knowledge.index_service import index_document_segments
+
+                try:
+                    index_document_segments(db, doc)
+                except Exception:
+                    logger.exception(
+                        "Chroma index failed: document_id=%s", document_id
+                    )
+                    doc.indexing_status = "failed"
+                    db.flush()
 
         return len(segment_dicts)
     except Exception:

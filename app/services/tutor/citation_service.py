@@ -4,11 +4,13 @@
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.crud import kb as kb_crud
 from app.crud import segment as segment_crud
-from app.models import DocumentSegment, KbCollection
+from app.models import Document, DocumentSegment, KbCollection
 from app.schemas.quiz import CitationOut
 
 
@@ -56,6 +58,41 @@ def filter_hits_by_collection(
         if not dify_doc_id:
             continue
         doc = kb_crud.get_document_by_id_or_dify(db, user_id, dify_doc_id)
+        if doc and doc.collection_id == collection_id:
+            filtered.append(hit)
+    return filtered
+
+
+async def _aget_document_by_id_or_dify(
+    db: AsyncSession, user_id: int, doc_id: str
+) -> Optional[Document]:
+    stmt = select(Document).where(
+        Document.user_id == user_id,
+        or_(Document.id == doc_id, Document.dify_document_id == doc_id),
+    )
+    return (await db.execute(stmt)).scalars().first()
+
+
+async def filter_hits_by_collection_async(
+    db: AsyncSession,
+    user_id: int,
+    collection_id: Optional[str],
+    hits: List[dict],
+) -> List[dict]:
+    """按分区过滤检索命中（AsyncSession）。"""
+    if not collection_id:
+        return hits
+
+    filtered: List[dict] = []
+    for hit in hits:
+        if hit.get("collection_id"):
+            if hit["collection_id"] == collection_id:
+                filtered.append(hit)
+            continue
+        dify_doc_id = hit.get("dify_document_id")
+        if not dify_doc_id:
+            continue
+        doc = await _aget_document_by_id_or_dify(db, user_id, dify_doc_id)
         if doc and doc.collection_id == collection_id:
             filtered.append(hit)
     return filtered
@@ -142,6 +179,80 @@ def build_citations_from_hits(
             continue
 
         segments = segment_crud.list_segments_for_document(db, doc.id)
+        segment = _match_segment(segments, content) if segments else None
+
+        dedupe_key = (doc.id, segment.id if segment else None)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        snippet = content[:500] if content else None
+        citations.append(
+            CitationOut(
+                doc_id=doc.id,
+                segment_id=segment.id if segment else None,
+                title=(segment.title if segment else None) or doc.display_name,
+                char_start=segment.char_start if segment else None,
+                char_end=segment.char_end if segment else None,
+                snippet=snippet,
+            )
+        )
+
+    return citations
+
+
+async def build_citations_from_hits_async(
+    db: AsyncSession,
+    user_id: int,
+    collection_id: Optional[str],
+    hits: List[dict],
+) -> List[CitationOut]:
+    """从 RAG 命中构建 citations[]（AsyncSession）。"""
+    citations: List[CitationOut] = []
+    seen: set = set()
+
+    for hit in hits:
+        content = (hit.get("content") or "").strip()
+
+        if hit.get("segment_id") and hit.get("document_id"):
+            doc_id = hit["document_id"]
+            if collection_id and hit.get("collection_id") != collection_id:
+                continue
+            dedupe_key = (doc_id, hit["segment_id"])
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            title = hit.get("title") or hit.get("display_name")
+            citations.append(
+                CitationOut(
+                    doc_id=doc_id,
+                    segment_id=hit["segment_id"],
+                    title=title,
+                    char_start=hit.get("char_start"),
+                    char_end=hit.get("char_end"),
+                    snippet=content[:500] if content else None,
+                )
+            )
+            continue
+
+        dify_doc_id = hit.get("dify_document_id")
+        if not content and not dify_doc_id:
+            continue
+
+        doc = None
+        if dify_doc_id:
+            doc = await _aget_document_by_id_or_dify(db, user_id, dify_doc_id)
+        if not doc:
+            continue
+        if collection_id and doc.collection_id != collection_id:
+            continue
+
+        stmt = (
+            select(DocumentSegment)
+            .where(DocumentSegment.document_id == doc.id)
+            .order_by(DocumentSegment.order_index.asc())
+        )
+        segments = list((await db.execute(stmt)).scalars().all())
         segment = _match_segment(segments, content) if segments else None
 
         dedupe_key = (doc.id, segment.id if segment else None)

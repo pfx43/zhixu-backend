@@ -29,15 +29,14 @@ def delete_user_by_id(db: Session, user_id: int):
 # 🔥 新增：获取用户完整信息（包含套餐详情）
 def get_user_with_plan_details_v2(db: Session, user_id: int):
     """获取用户信息及套餐详情"""
-    # 使用原生SQL查询，关联users和plan_tiers表
-    # MySQL syntax for date difference
-    query = text("""
+    days_expr = "CAST(EXTRACT(EPOCH FROM (u.expires_at - CURRENT_TIMESTAMP)) / 86400 AS INTEGER)"
+    query = text(f"""
     SELECT 
         u.*, 
         p.name as plan_name, 
         p.price_monthly, 
         p.price_yearly, 
-        CAST(julianday(u.expires_at) - julianday('now') AS INTEGER) as days_remaining 
+        {days_expr} as days_remaining
     FROM users u 
     LEFT JOIN plan_tiers p ON u.plan_level = p.level 
     WHERE u.id = :user_id

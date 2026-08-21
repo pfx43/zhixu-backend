@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_current_token, get_db
 from app.schemas.report import LearningReportGenerateOut, ReportListOut, ReportOut
 from app.services.training import report_service
 
@@ -13,9 +13,12 @@ router = APIRouter(tags=["学习报告"])
 def generate_learning_report(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    token: str = Depends(get_current_token),
 ):
     """基于 tag 统计与刷题数据生成 LLM 学习报告，并自动保存到生活区笔记。"""
-    result = report_service.generate_learning_report(db, current_user["user_id"])
+    result = report_service.generate_learning_report(
+        db, current_user["user_id"], token=token
+    )
     db.commit()
     return result
 

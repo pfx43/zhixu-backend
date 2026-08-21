@@ -71,7 +71,7 @@ storage/
 backend/storage/
 backend/content_cache/
 backend/upload_hashes.json
-
+.opencode/
 # Chroma å‘é‡ç´¢å¼•
 data/chroma/
 
@@ -80,6 +80,15 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+app/data/
+
+# è¿è¡Œæ—¶ç”Ÿæˆçš„æ•°æ®/æµ‹è¯•æ•°æ®ï¼ˆè¯¯å…¥è·Ÿè¸ªï¼Œgit rm --cached ç§»é™¤ï¼‰
+data/knowledge_graph/
+data/*.csv
+data/*.npy
+
+# opencode æœ¬åœ°é…ç½®
+opencode.json
 releases/
 # â”€â”€â”€ LEKT æœ¬åœ°ç¼–è¯‘äº§ç‰©ï¼ˆæŒ‰éœ€æäº¤åˆ™æ³¨é‡Šæ‰ï¼‰â”€â”€
 # backend/*.pyd
@@ -89,7 +98,8 @@ releases/
 *.zip
 *.rar
 *.7z
-# ©¤©¤©¤ ÊÓÆµäÖÈ¾»º´æ ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤ 
-renders/ 
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æµï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+renders/
 zhishi-web/renders/ 
 zhishi-web/video/
+.opencode/

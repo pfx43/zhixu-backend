@@ -1,7 +1,6 @@
 import os
 
 from app.core import paddle_env  # noqa: F401
-import urllib.parse
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,21 +17,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 # 项目根目录（zhishi/），无论从 backend/ 还是仓库根启动均可解析
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _BACKEND_DIR
-_DEFAULT_SQLITE_PATH = _REPO_ROOT / "data" / "zhishi.db"
 
 
-def _default_database_url() -> str:
-    return f"sqlite:///{_DEFAULT_SQLITE_PATH.as_posix()}"
+def _require_postgres_url() -> str:
+    url = os.getenv("DATABASE_URL", "").strip()
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL 未设置。知序只用 PostgreSQL，请在 .env 中配置，例如 "
+            "postgresql+psycopg2://zhixu:password@127.0.0.1:5432/zhixu"
+        )
+    scheme = url.split("://", 1)[0].lower()
+    if not scheme.startswith("postgresql"):
+        raise RuntimeError(
+            f"DATABASE_URL 必须是 PostgreSQL，当前是 {scheme!r}。"
+            "不再支持 SQLite / MySQL。"
+        )
+    return url
 
 
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", _default_database_url())
-
-# MySQL 连接参数（仅当 DATABASE_URL 未设置且需回退 MySQL 时使用；团队环境请直接设 DATABASE_URL）
-password = urllib.parse.quote_plus(os.getenv("DB_PASSWORD", "@430524Lj"))
-host = os.getenv("DB_HOST", "127.0.0.1")
-port = os.getenv("DB_PORT", "3306")
-db_name = os.getenv("DB_NAME", "my_ai_app")
-user = os.getenv("DB_USER", "root")
+SQLALCHEMY_DATABASE_URL = _require_postgres_url()
 
 # SMTP 邮件配置
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -40,7 +43,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USER = os.getenv("SMTP_USER", "your-email@gmail.com")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "your-app-password")
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER)
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Zhishi Backend")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Zhixu Backend")
 
 # 邮箱验证码有效期（分钟）
 EMAIL_VERIFICATION_EXPIRE_MINUTES = int(os.getenv("EMAIL_VERIFICATION_EXPIRE_MINUTES", 15))
@@ -73,7 +76,7 @@ DIFY_RERANKING_PROVIDER = os.getenv("DIFY_RERANKING_PROVIDER", "tongyi")
 DIFY_RERANKING_MODEL = os.getenv("DIFY_RERANKING_MODEL", "gte-rerank")
 
 # 欢迎文档路径（相对于 kt_backend 目录）
-WELCOME_DOC_PATH = os.getenv("WELCOME_DOC_PATH", "docs/欢迎使用知拾.md")
+WELCOME_DOC_PATH = os.getenv("WELCOME_DOC_PATH", "docs/欢迎使用知序.md")
 
 # 文件存储配置
 USE_OSS = os.getenv("USE_OSS", "false").lower() == "true"
@@ -149,8 +152,17 @@ MAX_QUESTIONS_PER_DOCUMENT = int(
 # 显式设置 DIFY_MAX_UPLOAD_SIZE 后才拦截；实际能否入库仍受 Dify Cloud 侧限制
 DIFY_MAX_UPLOAD_SIZE = int(os.getenv("DIFY_MAX_UPLOAD_SIZE", "0"))
 
-# 本地向量 RAG（Chroma + sentence-transformers）
-RAG_BACKEND = os.getenv("RAG_BACKEND", "local").lower()  # local | dify
+# 配额强制开关：false（默认）时不通过套餐计划限制用户（记账仍照常写入）
+QUOTA_ENFORCE = os.getenv("QUOTA_ENFORCE", "false").lower() == "true"
+
+# Agent 最大工具调用次数（tina 工具循环上限，防止死循环；默认 30）
+LLM_MAX_TOOL_LOOP = int(os.getenv("LLM_MAX_TOOL_LOOP", "30"))
+
+# 业务日时区：用量按此切分日/月（面向中国大陆用户，默认 Asia/Shanghai）
+APP_TIMEZONE = os.getenv("APP_TIMEZONE", "Asia/Shanghai")
+
+# 检索后端：local（Chroma 本地向量）| keyword（纯关键词检索，不走向量）| dify
+RAG_BACKEND = os.getenv("RAG_BACKEND", "local").lower()
 _CHROMA_DEFAULT = _REPO_ROOT / "data" / "chroma"
 _CHROMA_ENV = os.getenv("CHROMA_PERSIST_DIR", "")
 if _CHROMA_ENV:
@@ -164,7 +176,17 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
 
 
 def is_local_rag() -> bool:
-    return RAG_BACKEND == "local"
+    # local（Chroma 向量）与 keyword（纯词法）均不依赖 Dify，走本地存储/分段管线
+    return RAG_BACKEND in ("local", "keyword")
+
+
+def is_keyword_rag() -> bool:
+    """纯关键词检索：不写/不读 Chroma 向量，直接对 document_segments 做词法匹配。"""
+    return RAG_BACKEND == "keyword"
+
+
+def is_dify_rag() -> bool:
+    return RAG_BACKEND == "dify"
 
 # 百度 OCR 配置（从 zhishi_app/assets/config/baidu_ocr.json 读取）
 import json as _json

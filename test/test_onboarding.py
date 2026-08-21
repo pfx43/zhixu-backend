@@ -1,33 +1,23 @@
-import os
-import tempfile
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+
+from pgutil import make_sessionmaker
 
 from server import app
 from app.api.deps import get_db, get_current_user
-from app.core.database import Base
 from app.models import User
 from app.models.onboarding import OnboardingState
 
 
 def _create_temp_db():
-    """Create a temp SQLite database with all ORM tables."""
-    temp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    temp_file.close()
-    db_url = f"sqlite:///{Path(temp_file.name).as_posix()}"
-    engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return temp_file.name, engine, SessionLocal
+    return make_sessionmaker()
 
 
 def _seed_user(session):
     user = User(
+        id=9991,
         email="onbtest@example.com",
         password_hash="hashed",
         nickname="OnboardingTest",
@@ -41,8 +31,8 @@ def _seed_user(session):
 
 @pytest.fixture()
 def onboarding_client(monkeypatch):
-    """Fixture that creates an isolated SQLite DB + user, overrides deps."""
-    db_path, engine, SessionLocal = _create_temp_db()
+    """Fixture that creates an isolated PostgreSQL test DB + user, overrides deps."""
+    engine, SessionLocal = _create_temp_db()
     monkeypatch.setattr("app.core.database.init_db", lambda: None)
 
     def override_get_db():
@@ -66,8 +56,6 @@ def onboarding_client(monkeypatch):
 
     engine.dispose()
     app.dependency_overrides.clear()
-    if os.path.exists(db_path):
-        os.unlink(db_path)
 
 
 # ── state ──

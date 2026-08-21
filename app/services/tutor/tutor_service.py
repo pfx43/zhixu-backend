@@ -114,7 +114,7 @@ def _build_system_prompt(
         user_part = ""
 
     return (
-        "你是知拾（Zhishi）的苏格拉底式辅导老师 Tina。\n\n"
+        "你是知序（Zhixu）的苏格拉底式辅导老师 Tina。\n\n"
         f"{SOCRATIC_RULES}\n"
         f"## 当前辅导题目\n{_format_question_block(question)}\n"
         f"{user_part}"
@@ -221,18 +221,19 @@ def _resolve_quiz_context(
 class SocraticTutorAgent:
     """轻量 Tina Agent — 仅用于辅导，不挂载知识库工具。"""
 
-    def __init__(self, system_prompt: str, name: str = "socratic_tutor"):
+    def __init__(self, system_prompt: str, name: str = "socratic_tutor", token: str = ""):
         self.system_prompt = system_prompt
         self._agent = None
         self._llm = None
         self._name = name
+        self._token = token or ""
         self._init_agent()
 
     def _init_agent(self) -> None:
         try:
             self._llm = create_base_api()
-            from tina import Agent
-            from tina.agent.core.context_manager import ContextManager
+            self._llm.set_token(self._token)
+            from tina import Agent, ContextManager
 
             context_manager = ContextManager(max_length=80000, max_tool_result_length=4000)
             context_manager.set_system_message(self.system_prompt)
@@ -302,8 +303,9 @@ def _call_tutor_agent(
     history: Optional[List[dict]] = None,
     *,
     stream: bool = False,
+    token: str = "",
 ):
-    agent = SocraticTutorAgent(system_prompt=system_prompt)
+    agent = SocraticTutorAgent(system_prompt=system_prompt, token=token)
     if stream:
         return agent.predict_stream(message, history)
     return agent.predict_sync(message, history)
@@ -431,6 +433,7 @@ def send_tutor_message(
     user_id: int,
     session_id: str,
     content: str,
+    token: str = "",
 ) -> TutorReplyOut:
     session = tutor_crud.get_session(db, session_id, user_id)
     if not session:
@@ -448,7 +451,7 @@ def send_tutor_message(
     ][:-1]
 
     reply = _call_tutor_agent(
-        system_prompt, content, conv_history, stream=False
+        system_prompt, content, conv_history, stream=False, token=token
     )
     if not isinstance(reply, str):
         reply = "抱歉，未能生成辅导回复。"
@@ -465,6 +468,7 @@ def stream_tutor_message(
     user_id: int,
     session_id: str,
     content: str,
+    token: str = "",
 ) -> Generator[str, None, None]:
     session = tutor_crud.get_session(db, session_id, user_id)
     if not session:
@@ -485,7 +489,7 @@ def stream_tutor_message(
     ][:-1]
 
     stream = _call_tutor_agent(
-        system_prompt, content, conv_history, stream=True
+        system_prompt, content, conv_history, stream=True, token=token
     )
     full_content = ""
     if hasattr(stream, "__iter__"):

@@ -5,6 +5,8 @@ import time
 
 import redis
 
+from app.core.async_cache import MemoryAsyncCache, RedisAsyncCache
+
 
 class MemoryCache:
     """进程内缓存，用于 auth token、验证码、聊天历史等。"""
@@ -220,5 +222,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 if CACHE_BACKEND == "redis":
     cache = RedisCache(REDIS_URL)
+    async_cache = RedisAsyncCache(REDIS_URL)
 else:
     cache = MemoryCache()
+    async_cache = MemoryAsyncCache(cache)

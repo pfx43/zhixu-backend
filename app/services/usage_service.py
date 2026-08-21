@@ -6,15 +6,21 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.core.database import SessionLocal
+from app.core.config import APP_TIMEZONE
+from app.core.database import AsyncSessionLocal, SessionLocal
+from app.models import AuthSession, User
+from app.services.auth.auth_session_service import _utc_now, get_session_user, hash_token
 
 logger = logging.getLogger(__name__)
+
+_BUSINESS_TZ = ZoneInfo(APP_TIMEZONE)
 
 
 # ── tiktoken 估算（可选依赖） ──
@@ -51,16 +57,103 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _current_yyyymm() -> str:
-    """返回当前年月字符串，如 '202608'。"""
-    return datetime.now(timezone.utc).strftime("%Y%m")
+    """返回业务日所在年月字符串，如 '202608'（按 APP_TIMEZONE）。"""
+    return datetime.now(_BUSINESS_TZ).strftime("%Y%m")
 
 
 def _today() -> date:
-    """返回当前 UTC 日期。"""
-    return datetime.now(timezone.utc).date()
+    """返回业务日日期（按 APP_TIMEZONE）。"""
+    return datetime.now(_BUSINESS_TZ).date()
+
+
+def _upsert_sql(table: str) -> str:
+    """PostgreSQL ON CONFLICT 原子累加。"""
+    if table == "usage_token":
+        return """
+            INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
+            VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
+            ON CONFLICT (user_id, yyyymm)
+            DO UPDATE SET
+                prompt_tokens = usage_token.prompt_tokens + :prompt,
+                completion_tokens = usage_token.completion_tokens + :completion,
+                total_tokens = usage_token.total_tokens + :total
+            """
+    return """
+        INSERT INTO usage_daily (user_id, date, api_calls)
+        VALUES (:user_id, :date, 1)
+        ON CONFLICT (user_id, date)
+        DO UPDATE SET api_calls = usage_daily.api_calls + 1
+        """
 
 
 # ── 公开 API ──
+
+
+async def resolve_user_id_by_token(token: str) -> int:
+    """客户端登录 token → user_id（异步 DB 访问）；token 为空或解析不到返回 0。
+
+    供 RAGTools 等组件按客户端凭据动态绑定用户身份（反查逻辑唯一出处）。
+    """
+    if not token:
+        return 0
+    try:
+        async with AsyncSessionLocal() as db:
+            session = (
+                await db.execute(
+                    select(AuthSession).where(
+                        AuthSession.token_hash == hash_token(token),
+                        AuthSession.expires_at > _utc_now(),
+                    )
+                )
+            ).scalar_one_or_none()
+            if session is None:
+                return 0
+            user = await db.get(User, session.user_id)
+            return user.id if user else 0
+    except Exception:
+        logger.exception("resolve_user_id_by_token 反查用户失败: token=<redacted>")
+        return 0
+
+
+async def record_usage_for_token(token: str, usage: dict) -> None:
+    """按客户端登录 token 反查 user_id 并异步写入用量表。
+
+    每次 LLM 调用（含 Agent 工具循环内每一轮）记录一条；token 为空、
+    解析不到用户或记账失败均跳过，不阻塞生成。
+    """
+    user_id = await resolve_user_id_by_token(token)
+    if not user_id:
+        return
+    try:
+        prompt_tokens = usage.get("prompt_tokens")
+        completion_tokens = usage.get("completion_tokens")
+        total_tokens = usage.get("total_tokens")
+        if total_tokens is None:
+            total_tokens = (prompt_tokens or 0) + (completion_tokens or 0)
+
+        yyyymm = _current_yyyymm()
+        today = _today()
+
+        async with AsyncSessionLocal() as db:
+            token_sql = _upsert_sql("usage_token")
+            daily_sql = _upsert_sql("usage_daily")
+            await db.execute(
+                text(token_sql),
+                {
+                    "user_id": user_id,
+                    "yyyymm": yyyymm,
+                    "prompt": prompt_tokens or 0,
+                    "completion": completion_tokens or 0,
+                    "total": total_tokens or 0,
+                },
+            )
+            await db.execute(
+                text(daily_sql),
+                {"user_id": user_id, "date": today},
+            )
+            await db.commit()
+    except Exception:
+        logger.exception("record_usage_for_token 记账失败: token=<redacted>")
 
 
 def record_turn_usage(
@@ -106,26 +199,21 @@ def record_turn_usage(
                 completion_tokens = max(0, final_total - prompt_tokens)
         else:
             estimated = True
-            prompt_tokens = prompt_tokens or _estimate_tokens(prompt)
-            completion_tokens = completion_tokens or _estimate_tokens(completion)
+            if prompt_tokens is None:
+                prompt_tokens = _estimate_tokens(prompt)
+            if completion_tokens is None:
+                completion_tokens = _estimate_tokens(completion)
             final_total = prompt_tokens + completion_tokens
 
         yyyymm = _current_yyyymm()
         today = _today()
 
+        token_sql = _upsert_sql("usage_token")
+        daily_sql = _upsert_sql("usage_daily")
+
         # ── usage_token 按月原子累加 ──
         db.execute(
-            text(
-                """
-                INSERT INTO usage_token (user_id, yyyymm, prompt_tokens, completion_tokens, total_tokens)
-                VALUES (:user_id, :yyyymm, :prompt, :completion, :total)
-                ON CONFLICT (user_id, yyyymm)
-                DO UPDATE SET
-                    prompt_tokens = usage_token.prompt_tokens + :prompt,
-                    completion_tokens = usage_token.completion_tokens + :completion,
-                    total_tokens = usage_token.total_tokens + :total
-                """
-            ),
+            text(token_sql),
             {
                 "user_id": user_id,
                 "yyyymm": yyyymm,
@@ -137,14 +225,7 @@ def record_turn_usage(
 
         # ── usage_daily 按日原子累加 ──
         db.execute(
-            text(
-                """
-                INSERT INTO usage_daily (user_id, date, api_calls)
-                VALUES (:user_id, :date, 1)
-                ON CONFLICT (user_id, date)
-                DO UPDATE SET api_calls = usage_daily.api_calls + 1
-                """
-            ),
+            text(daily_sql),
             {"user_id": user_id, "date": today},
         )
 
@@ -199,7 +280,7 @@ def get_monthly_token_usage(user_id: int, db: Session) -> int:
     yyyymm = _current_yyyymm()
     row = db.execute(
         text(
-            "SELECT total_tokens FROM usage_token WHERE user_id = :uid AND yyyymm = :ym"
+            "SELECT total_tokens FROM usage_token WHERE user_id = :uid AND yyyymm = :yyyymm"
         ),
         {"uid": user_id, "yyyymm": yyyymm},
     ).fetchone()

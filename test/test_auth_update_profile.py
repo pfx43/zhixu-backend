@@ -1,7 +1,5 @@
 """Tests for PATCH /api/v1/auth/users/me — profile update validation."""
 import sys
-import tempfile
-import os
 from pathlib import Path
 
 import pytest
@@ -9,30 +7,16 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.database import Base
 from app.models import User
 from app.api.v1.auth import router as auth_router
 from app.api.deps import get_db, get_current_active_user
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
 from fastapi import FastAPI
+from pgutil import make_sessionmaker
 
 
 @pytest.fixture()
 def client():
-    # Use file-based SQLite so TestClient threads share the same DB
-    fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-
-    @event.listens_for(engine, "connect")
-    def enable_sqlite_fks(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(bind=engine)
+    engine, SessionLocal = make_sessionmaker()
 
     app = FastAPI()
     app.include_router(auth_router, prefix="/api/v1/auth")
@@ -72,12 +56,7 @@ def client():
     with TestClient(app) as c:
         yield c
 
-    # Cleanup
     engine.dispose()
-    try:
-        os.unlink(db_path)
-    except OSError:
-        pass
 
 
 # ── phone tests ───────────────────────────────────────────

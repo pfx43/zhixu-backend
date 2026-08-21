@@ -25,7 +25,7 @@ class EmailService:
         """
         try:
             # 构建邮件内容
-            subject = "邮箱验证 - Zhishi"
+            subject = "邮箱验证 - Zhixu"
             html_body = f"""
             <html>
                 <head>
@@ -44,11 +44,11 @@ class EmailService:
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>Zhishi 邮箱验证</h1>
+                            <h1>Zhixu 邮箱验证</h1>
                         </div>
                         <div class="content">
                             <p>您好！</p>
-                            <p>感谢您注册 Zhishi。请使用以下验证码验证您的邮箱：</p>
+                            <p>感谢您注册 Zhixu。请使用以下验证码验证您的邮箱：</p>
                             <div class="code">{verification_code}</div>
                             <p>验证码有效期为 15 分钟。</p>
                             <div class="link">
@@ -59,7 +59,7 @@ class EmailService:
                         </div>
                         <div class="footer">
                             <p>这是一封自动发送的邮件，请勿回复。</p>
-                            <p>© 2025 Zhishi. All rights reserved.</p>
+                            <p>© 2025 Zhixu. All rights reserved.</p>
                         </div>
                     </div>
                 </body>
@@ -86,7 +86,7 @@ class EmailService:
             bool: 发送成功返回 True，失败返回 False
         """
         try:
-            subject = "重置密码 - Zhishi"
+            subject = "重置密码 - Zhixu"
             html_body = f"""
             <html>
                 <head>
@@ -109,7 +109,7 @@ class EmailService:
                         </div>
                         <div class="content">
                             <p>您好！</p>
-                            <p>我们收到了重置您 Zhishi 账户密码的请求。</p>
+                            <p>我们收到了重置您 Zhixu 账户密码的请求。</p>
                             <p>请点击下方按钮重置您的密码：</p>
                             <div class="link">
                                 <a href="{frontend_url}" class="button">重置密码</a>
@@ -121,7 +121,7 @@ class EmailService:
                         </div>
                         <div class="footer">
                             <p>这是一封自动发送的邮件，请勿回复。</p>
-                            <p>© 2025 Zhishi. All rights reserved.</p>
+                            <p>© 2025 Zhixu. All rights reserved.</p>
                         </div>
                     </div>
                 </body>

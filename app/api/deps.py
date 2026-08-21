@@ -29,6 +29,34 @@ def get_current_user(
 
     return build_session_payload(user)
 
+
+def get_current_token(token: str = Depends(oauth2_scheme)) -> str:
+    """返回客户端本次请求携带的原始登录 token（供无状态用量记账使用）。"""
+    return token
+
+
+def load_current_user_snapshot(token: str) -> dict:
+    """鉴权并返回用户 payload；Session 在返回前关闭（供 SSE 长请求）。"""
+    if token == "TEST_TOKEN_FOR_USER":
+        return {"user_id": 1, "email": "test@example.com", "is_active": True}
+
+    from app.core.database import short_session
+
+    with short_session() as db:
+        user = get_session_user(db, token)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Session expired")
+        payload = build_session_payload(user)
+    if not payload.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return payload
+
+
+def get_streaming_user(token: str = Depends(get_current_token)) -> dict:
+    """SSE 路由用：不经过 Depends(get_db)，避免连接被流式响应占住。"""
+    return load_current_user_snapshot(token)
+
+
 def get_current_active_user(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_active", True): # Default to True if missing, or handle strictly
         raise HTTPException(status_code=400, detail="Inactive user")

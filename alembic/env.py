@@ -24,7 +24,8 @@ from app.core.database import Base
 import app.models  # noqa: F401
 
 # override sqlalchemy.url from environment if present
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+# ConfigParser 把 % 当插值，URL 查询串必须写成 %%
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 

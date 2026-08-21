@@ -1,5 +1,5 @@
 """
-知拾 KT 后端服务 — FastAPI
+知序 KT 后端服务 — FastAPI
 启动方式（任选其一）:
     cd backend && uvicorn server:app --host 127.0.0.1 --port 8765
     cd backend && python server.py
@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
         app.state.tcn_nodes = 0
         tcn_client._enabled = False  # 同步客户端状态，使 KT 路由直接返回 503
 
-    # 4. 初始化 AgentManager（按用户维度管理 ZhishiAgent 实例）
+    # 4. 初始化 AgentManager（按用户维度管理 ZhixuAgent 实例）
     try:
         from app.core.agent_manager import agent_manager as _agent_mgr
 
@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
     logger.info("服务关闭")
 
 
-app = FastAPI(title="知拾 KT 后端", version="2.1.0", lifespan=lifespan)
+app = FastAPI(title="知序 KT 后端", version="2.1.0", lifespan=lifespan)
 
 # ── CORS 配置 ──
 import os as _os
@@ -107,7 +107,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"service": "知拾 KT 后端", "version": "2.1.0", "status": "running"}
+    return {"service": "知序 KT 后端", "version": "2.1.0", "status": "running"}
 
 
 @app.exception_handler(Exception)
@@ -135,7 +135,7 @@ REQUIRED_DEPLOYMENT_PATHS = (
 def _question_generation_readiness() -> dict:
     """独立探测 Question Agent/LLM，不复用 TCN 的 model_loaded。"""
     try:
-        from app.services.quiz.question_gen_agent import (
+        from app.services.agents.question_gen_agent import (
             get_question_agent_readiness,
         )
 
@@ -207,4 +207,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8765)
+    uvicorn.run(app, host="0.0.0.0", port=8765)

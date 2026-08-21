@@ -225,7 +225,6 @@ from app.schemas.quiz import CitationOut
 class ChatRequest(BaseModel):
     content: str
     session_id: Optional[str] = None
-    stream: bool = False
     collection_id: Optional[str] = None
     # 对话模式: qa / learning / classroom_note / verify
     mode: Optional[str] = "qa"
@@ -234,6 +233,11 @@ class ChatRequest(BaseModel):
     tc_user_action: Optional[str] = None  # "correct" | "incorrect"
     tc_domain_id: Optional[str] = None
 
+
+class ChatBreakRequest(BaseModel):
+    """用户打断当前流式输出。"""
+    session_id: str
+
 class ChatResponse(BaseModel):
     session_id: str
     session_title: Optional[str] = None
@@ -241,11 +245,17 @@ class ChatResponse(BaseModel):
     content: str
     created_at: datetime
     citations: Optional[List[CitationOut]] = None
+    # 可选：完整思考内容 + 按调用顺序的完整工具名序列（去重/计数由前端完成，旧客户端可忽略）
+    reasoning_content: Optional[str] = None
+    tool_names: Optional[List[str]] = None
 
 class ChatHistoryItem(BaseModel):
     role: str
     content: str
     created_at: datetime
+    # 可选：历史恢复思考内容与工具名（旧历史数据缺失时为空）
+    reasoning_content: Optional[str] = None
+    tool_names: Optional[List[str]] = None
 
 class ChatSession(BaseModel):
     id: str
