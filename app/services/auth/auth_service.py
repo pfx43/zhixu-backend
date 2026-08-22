@@ -13,6 +13,7 @@ from app.models import (
     KbCollection,
     Document,
     DocumentSegment,
+    DocumentToc,
     QuestionProvenance,
     QuizSession,
     QuizSessionQuestion,
@@ -708,6 +709,11 @@ class AuthManager:
                 # 按 document_id 删除还能处理历史上 user_id 与文档归属不一致的数据。
                 db.query(QuestionTag).filter(
                     QuestionTag.document_id.in_(document_ids)
+                ).delete(synchronize_session=False)
+
+                # DocumentToc（章节目录）也引用 documents，需在删除文档前清理。
+                db.query(DocumentToc).filter(
+                    DocumentToc.document_id.in_(document_ids)
                 ).delete(synchronize_session=False)
 
             # 无文档关联的用户标签仍需在删除用户主记录前清理。

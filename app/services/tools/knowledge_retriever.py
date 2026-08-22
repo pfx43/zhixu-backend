@@ -76,6 +76,8 @@ class KnowledgeRetriever:
                     "display_name": h.get("display_name"),
                     "document_id": h.get("document_id"),
                     "segment_id": h.get("segment_id"),
+                    "page_start": h.get("page_start"),
+                    "page_end": h.get("page_end"),
                 }
             )
         return json.dumps(

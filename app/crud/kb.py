@@ -264,10 +264,15 @@ def delete_related_for_document(db: Session, document_id: str) -> None:
     """删除文档前清理 segments、题目关联、辅导会话等外键引用。"""
     from app.models import (
         DocumentSegment,
+        DocumentToc,
         QuestionProvenance,
         QuizSession,
         TutorSession,
         UserQuestionRef,
+    )
+
+    db.query(DocumentToc).filter(DocumentToc.document_id == document_id).delete(
+        synchronize_session=False
     )
 
     segment_ids = [
