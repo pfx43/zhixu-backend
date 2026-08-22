@@ -22,6 +22,12 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+
+    # 历史遗留库可能没有 question_provenance 表（create_all 未建/旧库），
+    # 表不存在时跳过，避免 NoSuchTableError。
+    if not inspector.has_table("question_provenance"):
+        return
+
     columns = {c["name"] for c in inspector.get_columns("question_provenance")}
 
     if "page_number" not in columns:
@@ -42,6 +48,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
+
+    if not inspector.has_table("question_provenance"):
+        return
 
     indexes = {ix["name"] for ix in inspector.get_indexes("question_provenance")}
     if "ix_question_provenance_doc_page" in indexes:
