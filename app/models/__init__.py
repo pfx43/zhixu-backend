@@ -1,5 +1,5 @@
 from .models import User, PlanTier
-from .kb import KbCollection, GlobalDocument, Document, DocumentSegment
+from .kb import KbCollection, GlobalDocument, Document, DocumentSegment, DocumentToc
 from .quiz import GlobalQuestion, QuestionProvenance, UserQuestionRef
 from .quiz_session import QuizSession, QuizSessionQuestion, QuizAnswer
 from .tutor import TutorSession
@@ -17,6 +17,7 @@ __all__ = [
     "GlobalDocument",
     "Document",
     "DocumentSegment",
+    "DocumentToc",
     "GlobalQuestion",
     "QuestionProvenance",
     "UserQuestionRef",
