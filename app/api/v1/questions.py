@@ -1,12 +1,19 @@
 """
 题目 API — 生成、列表、详情（含 provenance）
 """
+import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_current_token, get_db
+from app.api.deps import (
+    get_current_active_user,
+    get_current_token,
+    get_db,
+    get_streaming_user,
+)
 from app.schemas.page import PageExtractRequest, PageGenerateRequest
 from app.schemas.question import (
     PageQuestionResponse,
@@ -150,6 +157,39 @@ async def generate_from_pages(
         )
     db.commit()
     return result
+
+
+@router.post("/generate-stream")
+async def generate_stream_from_pages(
+    payload: PageGenerateRequest,
+    current_user: dict = Depends(get_streaming_user),
+    token: str = Depends(get_current_token),
+):
+    """模式 B（SSE）：对选中页逐页出题，推送每页进度。
+
+    事件（`event: message`，data 内 `type` 区分）：
+      page_start / page_complete / page_failed / done
+    """
+
+    async def _event_stream():
+        async for event_name, data in question_gen_service.stream_generate_from_pages(
+            user_id=current_user["user_id"],
+            document_id=payload.document_id,
+            page_numbers=payload.page_numbers,
+            questions_per_page=payload.questions_per_page,
+            token=token,
+        ):
+            yield f"event: {event_name}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        _event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post(

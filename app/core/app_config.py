@@ -25,6 +25,7 @@ class AppConfig:
     pdf_max_pages: int = 0
     pdf_ocr_render_dpi: int = 150
     max_questions_per_document: int = 20
+    max_pages_per_gen: int = 10
     document_pipeline_async: bool = True
     question_gen_async: bool = True
     llm_async: bool = True

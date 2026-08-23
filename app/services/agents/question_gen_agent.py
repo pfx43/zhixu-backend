@@ -75,7 +75,14 @@ def get_question_agent_readiness(*, probe: bool = True) -> dict:
 class QuestionGenAgent:
     """出题 Agent — 通过 submit_question 工具结构化输出题目。"""
 
-    def __init__(self, mode: str = "generate"):
+    def __init__(
+        self,
+        mode: str = "generate",
+        *,
+        pages=None,
+        allowed_page_numbers=None,
+        max_near_lookups: int = 3,
+    ):
         self.mode = mode
         self.question_tools: Optional[QuestionGenTools] = None
         self.failure_reason: Optional[str] = None
@@ -90,7 +97,11 @@ class QuestionGenAgent:
             self.llm = llm_pool.acquire()
             if self.llm is None:
                 raise RuntimeError("LLMPool 为空，出题 Agent 不可用")
-            self.question_tools = QuestionGenTools()
+            self.question_tools = QuestionGenTools(
+                pages=pages,
+                allowed_page_numbers=allowed_page_numbers,
+                max_near_lookups=max_near_lookups,
+            )
             self.tools = self.question_tools.get_tools()
 
             self.agent = Agent(
@@ -214,10 +225,24 @@ async def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Opti
 
 
 async def agent_generate_for_page(
-    page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
+    page: dict,
+    *,
+    count: int = 1,
+    tag_hint: str = "",
+    token: Optional[str] = None,
+    near_pages=None,
+    allowed_page_numbers=None,
 ) -> List[dict]:
-    """Agent 路径：按页出题；失败时返回内部失败标记。"""
-    agent = QuestionGenAgent(mode="generate")
+    """Agent 路径：按页出题；失败时返回内部失败标记。
+
+    near_pages / allowed_page_numbers 用于注册 get_near_page 邻页工具：
+    Agent 只能查看本次选中范围 ±1 内的页，且翻页次数受限。
+    """
+    agent = QuestionGenAgent(
+        mode="generate",
+        pages=near_pages,
+        allowed_page_numbers=allowed_page_numbers,
+    )
     if not agent.is_ready:
         return _failure_marker(agent.failure_reason or "agent_unavailable")
     title = page.get("title") or f"第 {page.get('page_number', '?')} 页"
