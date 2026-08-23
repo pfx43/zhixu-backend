@@ -20,20 +20,21 @@ def upgrade():
     inspector = sa.inspect(bind)
 
     # ── document_segments 页码列 ──
-    seg_cols = {c["name"] for c in inspector.get_columns("document_segments")}
-    if "page_start" not in seg_cols:
-        op.add_column(
-            "document_segments",
-            sa.Column("page_start", sa.Integer(), nullable=True),
-        )
-    if "page_end" not in seg_cols:
-        op.add_column(
-            "document_segments",
-            sa.Column("page_end", sa.Integer(), nullable=True),
-        )
+    if inspector.has_table("document_segments"):
+        seg_cols = {c["name"] for c in inspector.get_columns("document_segments")}
+        if "page_start" not in seg_cols:
+            op.add_column(
+                "document_segments",
+                sa.Column("page_start", sa.Integer(), nullable=True),
+            )
+        if "page_end" not in seg_cols:
+            op.add_column(
+                "document_segments",
+                sa.Column("page_end", sa.Integer(), nullable=True),
+            )
 
     # ── document_tocs ──
-    if not inspector.has_table("document_tocs"):
+    if not inspector.has_table("document_tocs") and inspector.has_table("documents"):
         op.create_table(
             "document_tocs",
             sa.Column("id", sa.String(36), nullable=False),
@@ -62,8 +63,9 @@ def downgrade():
         op.drop_index("ix_document_tocs_document", table_name="document_tocs")
         op.drop_table("document_tocs")
 
-    seg_cols = {c["name"] for c in inspector.get_columns("document_segments")}
-    if "page_start" in seg_cols:
-        op.drop_column("document_segments", "page_start")
-    if "page_end" in seg_cols:
-        op.drop_column("document_segments", "page_end")
+    if inspector.has_table("document_segments"):
+        seg_cols = {c["name"] for c in inspector.get_columns("document_segments")}
+        if "page_start" in seg_cols:
+            op.drop_column("document_segments", "page_start")
+        if "page_end" in seg_cols:
+            op.drop_column("document_segments", "page_end")

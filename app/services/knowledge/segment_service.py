@@ -145,9 +145,12 @@ def _apply_structure(
     """
     page_ranges = doc_structure.extract_page_ranges(text)
     for seg in segments:
-        seg["page_start"], seg["page_end"] = doc_structure.map_segment_pages(
-            seg["char_start"], seg["char_end"], page_ranges
-        )
+        if "char_start" in seg and "char_end" in seg:
+            seg["page_start"], seg["page_end"] = doc_structure.map_segment_pages(
+                seg["char_start"], seg["char_end"], page_ranges
+            )
+        else:
+            seg["page_start"], seg["page_end"] = None, None
 
     toc_entries = doc_structure.extract_toc_from_pdf_bookmarks(
         _resolve_storage_path(document) or ""

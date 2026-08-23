@@ -369,6 +369,11 @@ def test_segment_document_skips_chroma_and_completes_in_keyword_mode(monkeypatch
         "bulk_create_segments",
         lambda db, did, segs: None,
     )
+    monkeypatch.setattr(
+        segment_service.toc_crud,
+        "replace_toc_for_document",
+        lambda db, did, entries: None,
+    )
 
     with patch(
         "app.services.knowledge.index_service.index_document_segments",
