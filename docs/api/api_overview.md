@@ -1291,15 +1291,32 @@ GET /api/v1/kb/documents/{doc_id}/pages
 
 ```json
 {
+  "document_id": "doc_001",
+  "document_name": "高等数学（上）",
+  "total_pages": 8,
+  "has_page_markers": true,
+  "preview_mode": "markdown",
+  "has_raw_file": true,
   "pages": [
     {
       "page_number": 1,
-      "content": "该页文本内容...",
-      "segment_count": 2
+      "title": "第 1 页",
+      "preview": "该页文本预览...",
+      "char_start": 0,
+      "char_end": 120,
+      "content_length": 200,
+      "has_builtin_questions": false,
+      "is_key_page": true,
+      "segment_id": null,
+      "preview_mode": "markdown",
+      "question_count": 3
     }
   ]
 }
 ```
+
+> `question_count`：该页当前登录用户已入库的题目数（按页出题/提取后 > 0），
+> 按当前用户隔离，他人看不到。
 
 ---
 
@@ -1348,9 +1365,13 @@ GET /api/v1/kb/config
   "use_oss": false,
   "max_upload_size": 10485760,
   "max_upload_size_display": "10.0 MB",
-  "supported_extensions": ["txt", "md", "csv", "json", "html", "pdf", "docx", "png", "jpg", "jpeg"]
+  "supported_extensions": ["txt", "md", "csv", "json", "html", "pdf", "docx", "png", "jpg", "jpeg"],
+  "max_pages_per_gen": 10
 }
 ```
+
+> `max_pages_per_gen`：单次按页出题/提取的页数上限，前后端同一数字（默认 10）。
+> 后端服务层同样强制截断，不依赖前端勾选上限。
 
 ---
 
@@ -1550,8 +1571,8 @@ POST /api/v1/questions/generate-from-pages
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
 | `document_id` | string | ✓ | 文档 ID |
-| `page_numbers` | int[] | ✓ | 页码列表 |
-| `questions_per_page` | int | | 每页出题数，默认 3 |
+| `page_numbers` | int[] | ✓ | 页码列表；单次最多 `max_pages_per_gen`（默认 10）页，超出由服务层截断 |
+| `questions_per_page` | int | | 每页出题数，默认 1 |
 
 **成功响应** (200)：
 
@@ -1567,9 +1588,52 @@ POST /api/v1/questions/generate-from-pages
 }
 ```
 
+> 异步开关（`config.json question_gen_async`）开启时，本接口可能立即返回
+> `question_gen_status: "processing"`，出题在后台继续。**不要**把 `processing`
+> 当成完成；请用下方 `6.7 generate-stream` 逐页进度，或等 `GET .../pages`
+> 的 `question_count` 反映结果。
+>
+> 题目落库时会写入来源页码（`question_provenance.page_number`），
+> 页列表 `question_count` 才能按页显示「已出题 N」。
+
 ---
 
-### 6.7 从选中页提取教材题目（模式 A）
+### 6.7 从选中页 AI 出题（SSE 逐页进度）
+
+```
+POST /api/v1/questions/generate-stream
+```
+
+**需要鉴权**：是
+
+**请求 Body**：同 6.6（`document_id`、`page_numbers`、`questions_per_page`）。
+
+**响应**：`text/event-stream`。每页一个独立出题 Agent、约 3 路并行，
+逐页推送进度事件（`event: message`，`data` 内 `type` 区分，空字段不上送）：
+
+```text
+event: message
+data: {"type": "page_start", "page_number": 5}
+
+event: message
+data: {"type": "page_complete", "page_number": 5, "status": "completed", "questions_created": 1, "questions_reused": 0, "total_questions": 1}
+
+event: message
+data: {"type": "done", "document_id": "doc_001", "document_name": "高等数学", "status": "completed", "page_numbers": [5, 6], "total_pages": 2, "questions_created": 2, "questions_reused": 0, "total_questions": 2}
+```
+
+事件类型：
+
+| type | 说明 |
+|------|------|
+| `page_start` | 该页开始出题 |
+| `page_complete` | 该页出题完成（`status=completed`，含该页 created/reused/total） |
+| `page_failed` | 该页出题失败（`status=failed`） |
+| `done` | 全部页处理完成（汇总统计与 `page_numbers`） |
+
+---
+
+### 6.8 从选中页提取教材题目（模式 A）
 
 ```
 POST /api/v1/questions/extract-from-pages

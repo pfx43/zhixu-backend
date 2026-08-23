@@ -2,6 +2,7 @@ import json
 import logging
 from typing import List, Optional, Tuple
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import GlobalQuestion, QuestionProvenance, UserQuestionRef
@@ -109,6 +110,7 @@ def create_provenance(
     segment_id: Optional[str],
     excerpt: Optional[str],
     global_document_id: Optional[str] = None,
+    page_number: Optional[int] = None,
 ) -> QuestionProvenance:
     row = QuestionProvenance(
         question_id=question_id,
@@ -116,10 +118,46 @@ def create_provenance(
         segment_id=segment_id,
         excerpt=excerpt,
         global_document_id=global_document_id,
+        page_number=page_number,
     )
     db.add(row)
     db.flush()
     return row
+
+
+def count_questions_per_page(
+    db: Session,
+    user_id: int,
+    document_id: str,
+    page_numbers: List[int],
+) -> dict[int, int]:
+    """统计当前用户在某文档若干页上已有的题目数（用户隔离）。
+
+    按页出题落库后，题目通过 user_question_refs 关联到用户，页码记在
+    question_provenance.page_number；这里 join 两个表按页码聚合。
+    返回 {page_number: question_count}，未命中页不出现。
+    """
+    if not page_numbers:
+        return {}
+    rows = (
+        db.query(
+            QuestionProvenance.page_number,
+            func.count(func.distinct(UserQuestionRef.question_id)),
+        )
+        .join(
+            UserQuestionRef,
+            (UserQuestionRef.question_id == QuestionProvenance.question_id)
+            & (UserQuestionRef.document_id == QuestionProvenance.document_id),
+        )
+        .filter(
+            UserQuestionRef.user_id == user_id,
+            QuestionProvenance.document_id == document_id,
+            QuestionProvenance.page_number.in_(page_numbers),
+        )
+        .group_by(QuestionProvenance.page_number)
+        .all()
+    )
+    return {page_num: count for page_num, count in rows}
 
 
 def get_user_ref(

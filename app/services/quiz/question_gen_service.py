@@ -12,8 +12,12 @@ from typing import Callable, List, Optional, Tuple
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.config import MAX_QUESTIONS_PER_DOCUMENT, QUESTION_GEN_ASYNC
-from app.core.database import SessionLocal
+from app.core.config import (
+    MAX_PAGES_PER_GEN,
+    MAX_QUESTIONS_PER_DOCUMENT,
+    QUESTION_GEN_ASYNC,
+)
+from app.core.database import SessionLocal, short_session
 
 from app.crud import kb as kb_crud
 from app.crud import question as question_crud
@@ -31,7 +35,10 @@ from app.schemas.question import (
     QuestionOut,
     ProvenanceOut,
 )
-from app.services.knowledge.page_service import get_pages_by_numbers
+from app.services.knowledge.page_service import (
+    build_near_page_context,
+    get_pages_by_numbers,
+)
 from app.services.llm.llm_pool import llm_pool
 from app.services.quiz.question_hash import compute_content_hash
 from app.services.usage_service import record_usage_for_token
@@ -189,11 +196,24 @@ def _template_questions_for_page(page: dict) -> List[dict]:
 
 
 async def _llm_generate_for_page(
-    page: dict, *, count: int = 1, tag_hint: str = "", token: Optional[str] = None
+    page: dict,
+    *,
+    count: int = 1,
+    tag_hint: str = "",
+    token: Optional[str] = None,
+    near_pages=None,
+    allowed_page_numbers=None,
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_page
 
-    result = await agent_generate_for_page(page, count=count, tag_hint=tag_hint, token=token)
+    result = await agent_generate_for_page(
+        page,
+        count=count,
+        tag_hint=tag_hint,
+        token=token,
+        near_pages=near_pages,
+        allowed_page_numbers=allowed_page_numbers,
+    )
     if result:
         return result[:count]
 
@@ -402,6 +422,7 @@ def _persist_question_from_page(
         source_type=source_type,
         segment_id=page.get("segment_id"),
         excerpt=excerpt,
+        page_number=page.get("page_number"),
     )
 
 
@@ -414,6 +435,7 @@ def _persist_question_core(
     source_type: str,
     segment_id: Optional[str],
     excerpt: str,
+    page_number: Optional[int] = None,
 ) -> Tuple[bool, bool]:
     """返回 (created, reused)。"""
     tag_crud.ensure_tags(
@@ -452,27 +474,16 @@ def _persist_question_core(
         created = True
         reused = False
 
-    if segment_id:
-        if not question_crud.get_provenance_for_segment(db, question.id, segment_id):
-            question_crud.create_provenance(
-                db,
-                question_id=question.id,
-                document_id=document.id,
-                segment_id=segment_id,
-                excerpt=excerpt,
-                global_document_id=document.global_document_id,
-            )
-    elif not question_crud.get_provenance_for_document_excerpt(
-        db, question.id, document.id, excerpt
-    ):
-        question_crud.create_provenance(
-            db,
-            question_id=question.id,
-            document_id=document.id,
-            segment_id=None,
-            excerpt=excerpt,
-            global_document_id=document.global_document_id,
-        )
+    # 建立 / 补全 provenance（含 page_number）。
+    # 按页出题落库必须写页码；旧数据 provenance 无页码时尽量补上。
+    _ensure_provenance(
+        db,
+        question=question,
+        document=document,
+        segment_id=segment_id,
+        excerpt=excerpt,
+        page_number=page_number,
+    )
 
     if not question_crud.get_user_ref(db, user_id, question.id, document.id):
         question_crud.create_user_ref(
@@ -485,6 +496,65 @@ def _persist_question_core(
         )
 
     return created, reused
+
+
+def _ensure_provenance(
+    db: Session,
+    *,
+    question,
+    document: Document,
+    segment_id: Optional[str],
+    excerpt: str,
+    page_number: Optional[int],
+) -> None:
+    """创建题目来源记录；同一条已存在且缺页码时补写页码。"""
+    if segment_id:
+        existing = question_crud.get_provenance_for_segment(
+            db, question.id, segment_id
+        )
+        if existing is None:
+            question_crud.create_provenance(
+                db,
+                question_id=question.id,
+                document_id=document.id,
+                segment_id=segment_id,
+                excerpt=excerpt,
+                global_document_id=document.global_document_id,
+                page_number=page_number,
+            )
+        elif existing.page_number is None and page_number is not None:
+            existing.page_number = page_number
+        return
+
+    if page_number is not None:
+        existing = question_crud.get_provenance_for_document_excerpt(
+            db, question.id, document.id, excerpt
+        )
+        if existing is None:
+            question_crud.create_provenance(
+                db,
+                question_id=question.id,
+                document_id=document.id,
+                segment_id=None,
+                excerpt=excerpt,
+                global_document_id=document.global_document_id,
+                page_number=page_number,
+            )
+        elif existing.page_number is None:
+            existing.page_number = page_number
+        return
+
+    if not question_crud.get_provenance_for_document_excerpt(
+        db, question.id, document.id, excerpt
+    ):
+        question_crud.create_provenance(
+            db,
+            question_id=question.id,
+            document_id=document.id,
+            segment_id=None,
+            excerpt=excerpt,
+            global_document_id=document.global_document_id,
+        )
 
 
 def _validate_document_for_generation(doc: Optional[Document]) -> Document:
@@ -504,6 +574,18 @@ def _validate_document_for_page_ops(doc: Optional[Document]) -> Document:
     if doc.zone != "study":
         raise HTTPException(status_code=400, detail="仅学习区文档可出题")
     return doc
+
+
+def cap_page_numbers(page_numbers: List[int]) -> List[int]:
+    """单次按页出题/提取的页数上限（服务层强制，与前端 max_pages_per_gen 同数字）。"""
+    if len(page_numbers) <= MAX_PAGES_PER_GEN:
+        return page_numbers
+    logger.warning(
+        "按页出题页数超限，截断: requested=%d cap=%d",
+        len(page_numbers),
+        MAX_PAGES_PER_GEN,
+    )
+    return page_numbers[:MAX_PAGES_PER_GEN]
 
 
 async def generate_questions(
@@ -728,6 +810,7 @@ async def schedule_generate_from_pages(
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
+    page_numbers = cap_page_numbers(page_numbers)
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
     get_pages_by_numbers(db, doc, page_numbers)
@@ -784,6 +867,7 @@ async def schedule_extract_from_pages(
     page_numbers: List[int],
     provider: Optional[PageProvider] = None,
 ) -> PageQuestionResponse:
+    page_numbers = cap_page_numbers(page_numbers)
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
     get_pages_by_numbers(db, doc, page_numbers)
@@ -965,6 +1049,7 @@ async def generate_from_pages(
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
     """模式 B：对选中页批量 AI 出题。"""
+    page_numbers = cap_page_numbers(page_numbers)
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
 
@@ -987,8 +1072,16 @@ async def generate_from_pages(
                 provider=provider,
             )
         else:
+            near_pages, allowed_range = build_near_page_context(
+                db, doc, page_numbers
+            )
             page_provider = lambda p: _llm_generate_for_page(
-                p, count=questions_per_page, tag_hint=tag_hint, token=token
+                p,
+                count=questions_per_page,
+                tag_hint=tag_hint,
+                token=token,
+                near_pages=near_pages,
+                allowed_page_numbers=allowed_range,
             )
             pairs = await batch_generate_questions(
                 pages,
@@ -1037,6 +1130,7 @@ async def extract_from_pages(
     provider: Optional[PageProvider] = None,
 ) -> PageQuestionResponse:
     """模式 A：从选中页提取教材自带题目。"""
+    page_numbers = cap_page_numbers(page_numbers)
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
 
@@ -1093,6 +1187,161 @@ async def extract_from_pages(
         doc.question_gen_status = "failed"
         db.flush()
         raise
+
+
+_PAGE_CONCURRENCY = 3
+
+
+async def _generate_one_page(
+    *,
+    user_id: int,
+    document_id: str,
+    page_number: int,
+    questions_per_page: int,
+    provider: Optional[PageProvider] = None,
+    token: Optional[str] = None,
+) -> dict:
+    """单页出题并落库（独立短 Session），返回该页结果统计。"""
+    try:
+        with short_session() as db:
+            result = await generate_from_pages(
+                db,
+                user_id=user_id,
+                document_id=document_id,
+                page_numbers=[page_number],
+                questions_per_page=questions_per_page,
+                provider=provider,
+                token=token,
+            )
+            db.commit()
+            return {
+                "page_number": page_number,
+                "status": result.question_gen_status,
+                "questions_created": result.questions_created,
+                "questions_reused": result.questions_reused,
+                "total_questions": result.total_questions,
+            }
+    except Exception:
+        logger.exception(
+            "SSE 按页出题失败: document_id=%s page=%s", document_id, page_number
+        )
+        return {
+            "page_number": page_number,
+            "status": "failed",
+            "questions_created": 0,
+            "questions_reused": 0,
+            "total_questions": 0,
+        }
+
+
+async def stream_generate_from_pages(
+    user_id: int,
+    document_id: str,
+    page_numbers: List[int],
+    questions_per_page: int = 1,
+    provider: Optional[PageProvider] = None,
+    token: Optional[str] = None,
+):
+    """SSE 出题：每页独立 Agent、约 3 路并行，逐页推送进度事件。
+
+    用于 `POST /api/v1/questions/generate-stream`，由路由包成 StreamingResponse。
+    yield (event_name, payload_dict)；调用方负责序列化。
+
+    事件类型（均按 `type` 组字段，空字段不上送）：
+      page_start    — {type, page_number}
+      page_complete — {type, page_number, status, questions_created, questions_reused, total_questions}
+      page_failed   — {type, page_number, status}
+      done          — {type, document_id, document_name, status, page_numbers,
+                       total_pages, questions_created, questions_reused, total_questions}
+    """
+    page_numbers = cap_page_numbers(page_numbers)
+
+    with short_session() as db:
+        doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
+        doc = _validate_document_for_page_ops(doc)
+        get_pages_by_numbers(db, doc, page_numbers)
+        document_id = doc.id
+        document_name = doc.display_name
+
+    if provider is None:
+        _require_question_generation_ready()
+
+    for page_number in page_numbers:
+        yield ("message", {"type": "page_start", "page_number": page_number})
+
+    sem = asyncio.Semaphore(_PAGE_CONCURRENCY)
+
+    async def _worker(page_number: int) -> dict:
+        async with sem:
+            return await _generate_one_page(
+                user_id=user_id,
+                document_id=document_id,
+                page_number=page_number,
+                questions_per_page=questions_per_page,
+                provider=provider,
+                token=token,
+            )
+
+    tasks = {asyncio.create_task(_worker(n)): n for n in page_numbers}
+    per_page: dict[int, dict] = {}
+    while tasks:
+        done, _pending = await asyncio.wait(
+            tasks, return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in done:
+            page_number = tasks.pop(task)
+            try:
+                res = task.result()
+            except Exception:
+                logger.exception("SSE 按页任务异常: page=%s", page_number)
+                res = {
+                    "page_number": page_number,
+                    "status": "failed",
+                    "questions_created": 0,
+                    "questions_reused": 0,
+                    "total_questions": 0,
+                }
+            per_page[page_number] = res
+            if res["status"] == "completed":
+                yield (
+                    "message",
+                    {
+                        "type": "page_complete",
+                        "page_number": page_number,
+                        "status": res["status"],
+                        "questions_created": res["questions_created"],
+                        "questions_reused": res["questions_reused"],
+                        "total_questions": res["total_questions"],
+                    },
+                )
+            else:
+                yield (
+                    "message",
+                    {
+                        "type": "page_failed",
+                        "page_number": page_number,
+                        "status": res["status"],
+                    },
+                )
+
+    total_created = sum(r["questions_created"] for r in per_page.values())
+    total_reused = sum(r["questions_reused"] for r in per_page.values())
+    total_questions = sum(r["total_questions"] for r in per_page.values())
+    final_status = "completed" if total_questions > 0 else "failed"
+    yield (
+        "message",
+        {
+            "type": "done",
+            "document_id": document_id,
+            "document_name": document_name,
+            "status": final_status,
+            "page_numbers": page_numbers,
+            "total_pages": len(page_numbers),
+            "questions_created": total_created,
+            "questions_reused": total_reused,
+            "total_questions": total_questions,
+        },
+    )
 
 
 def get_question_detail(

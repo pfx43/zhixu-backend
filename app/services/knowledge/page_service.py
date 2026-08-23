@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.crud import kb as kb_crud
+from app.crud import question as question_crud
 from app.crud import segment as segment_crud
 from app.models import Document
 from app.schemas.page import (
@@ -105,7 +106,9 @@ def _expand_single_page_pdf(document: Document, pages_raw: List[dict]) -> List[d
     return expanded
 
 
-def _page_out(document: Document, page: dict) -> DocumentPageOut:
+def _page_out(
+    document: Document, page: dict, *, question_count: int = 0
+) -> DocumentPageOut:
     preview_mode = page.get("preview_mode") or _preview_mode_for_document(document)
     return DocumentPageOut(
         page_number=page["page_number"],
@@ -119,6 +122,7 @@ def _page_out(document: Document, page: dict) -> DocumentPageOut:
         segment_id=page.get("segment_id"),
         preview_mode=preview_mode,
         file_type="pdf" if preview_mode == "pdf" else None,
+        question_count=question_count,
     )
 
 
@@ -279,7 +283,14 @@ def list_document_pages(
         raise HTTPException(status_code=404, detail="文档不存在")
 
     pages_raw, has_markers = _load_pages_for_document(db, doc)
-    pages = [_page_out(doc, p) for p in pages_raw]
+    page_numbers = [p["page_number"] for p in pages_raw]
+    question_counts = question_crud.count_questions_per_page(
+        db, user_id, doc.id, page_numbers
+    )
+    pages = [
+        _page_out(doc, p, question_count=question_counts.get(p["page_number"], 0))
+        for p in pages_raw
+    ]
     preview_mode = _preview_mode_for_document(doc)
     return DocumentPageListOut(
         document_id=doc.id,
@@ -344,3 +355,38 @@ def get_pages_by_numbers(
             raise HTTPException(status_code=404, detail=f"页码不存在: {num}")
         result.append(by_num[num])
     return result
+
+
+def load_pages_by_number_index(
+    db: Session, document: Document
+) -> dict[int, dict]:
+    """加载文档全部页，返回 {page_number: page dict}（供出题邻页上下文等使用）。"""
+    pages_raw, _ = _load_pages_for_document(db, document)
+    return {p["page_number"]: p for p in pages_raw}
+
+
+def build_near_page_context(
+    db: Session,
+    document: Document,
+    page_numbers: List[int],
+    *,
+    max_near_lookups: int = 3,
+) -> tuple[dict[int, dict], set[int]]:
+    """构建按页出题的邻页上下文。
+
+    返回 (near_pages, allowed_range)：
+      - near_pages：本次选中范围 ±1 内、文档实际存在的页 dict（含选中页）
+      - allowed_range：允许 Agent 通过 get_near_page 翻到的页码集合
+        （= 选中范围 ±1 ∩ 文档实际页码），超出即拒绝
+    """
+    if not page_numbers:
+        return {}, set()
+    lo, hi = min(page_numbers), max(page_numbers)
+    by_num = load_pages_by_number_index(db, document)
+    near_pages: dict[int, dict] = {}
+    allowed: set[int] = set()
+    for num in range(lo - 1, hi + 2):
+        if num in by_num:
+            near_pages[num] = by_num[num]
+            allowed.add(num)
+    return near_pages, allowed

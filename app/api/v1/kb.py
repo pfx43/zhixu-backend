@@ -10,7 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.api.deps_quota import check_kb_quota
-from app.core.config import DEBUG_MAX_UPLOAD_SIZE, USE_OSS, is_local_rag, is_keyword_rag
+from app.core.config import (
+    DEBUG_MAX_UPLOAD_SIZE,
+    MAX_PAGES_PER_GEN,
+    USE_OSS,
+    is_local_rag,
+    is_keyword_rag,
+)
 from app.schemas.kb import CollectionCreate, CollectionUpdate
 from app.services.knowledge import kb_service
 from app.services.knowledge import page_service
@@ -363,4 +369,6 @@ def get_kb_config(
             _format_size(DEBUG_MAX_UPLOAD_SIZE) if DEBUG_MAX_UPLOAD_SIZE else None
         ),
         "supported_extensions": list(SUPPORTED_EXTENSIONS.keys()),
+        # 单次按页出题/提取的页数上限（前后端同一数字，服务层同样强制截断）
+        "max_pages_per_gen": MAX_PAGES_PER_GEN,
     }
