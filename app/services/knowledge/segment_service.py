@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 
 from app.crud import kb as kb_crud
 from app.crud import segment as segment_crud
+from app.crud import toc as toc_crud
 from app.models import Document
 from app.schemas.segment import SegmentListOut, SegmentOut
+from app.services.knowledge import doc_structure
 from app.services.knowledge.file_parser import parse_file_detailed
 from app.services.knowledge.storage_service import storage_service
 
@@ -127,6 +129,81 @@ def split_text(text: str) -> List[dict]:
     return raw
 
 
+def _resolve_storage_path(document: Document) -> Optional[str]:
+    global_doc = document.global_document
+    if global_doc and global_doc.storage_path:
+        return global_doc.storage_path
+    return None
+
+
+def _apply_structure(
+    db: Session, document: Document, text: str, segments: List[dict]
+) -> None:
+    """给段写入 page_start/page_end，并写入章节目录（PDF 书签优先）。
+
+    页码只来自文本页标记 / PDF 书签；无任何来源时页码留空、目录为空。
+    """
+    page_ranges = doc_structure.extract_page_ranges(text)
+    for seg in segments:
+        if "char_start" in seg and "char_end" in seg:
+            seg["page_start"], seg["page_end"] = doc_structure.map_segment_pages(
+                seg["char_start"], seg["char_end"], page_ranges
+            )
+        else:
+            seg["page_start"], seg["page_end"] = None, None
+
+    toc_entries = doc_structure.extract_toc_from_pdf_bookmarks(
+        _resolve_storage_path(document) or ""
+    )
+    if not toc_entries:
+        toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
+    toc_crud.replace_toc_for_document(db, document.id, toc_entries)
+
+
+def recompute_document_structure(document_id: str, db: Session) -> int:
+    """重算文档的段页码与目录（供旧书补页 / 幂等重跑）。
+
+    不改动已有段的内容与切分结果，只回填 page_start/page_end 和 toc。
+    返回被更新的段数；文档不存在或非 study 返回 0。
+    """
+    doc = segment_crud.get_document_by_id(db, document_id)
+    if not doc:
+        logger.warning("recompute_document_structure: document not found %s", document_id)
+        return 0
+    if doc.zone != "study":
+        return 0
+
+    text, parse_error = _load_document_text(doc)
+    if text is None:
+        logger.warning(
+            "recompute_document_structure: 无法读取文本 %s: %s",
+            document_id,
+            parse_error,
+        )
+        return 0
+
+    page_ranges = doc_structure.extract_page_ranges(text)
+    segments = segment_crud.list_segments_for_document(db, document_id)
+    updated = 0
+    for seg in segments:
+        page_start, page_end = doc_structure.map_segment_pages(
+            seg.char_start, seg.char_end, page_ranges
+        )
+        if seg.page_start != page_start or seg.page_end != page_end:
+            seg.page_start = page_start
+            seg.page_end = page_end
+            updated += 1
+
+    toc_entries = doc_structure.extract_toc_from_pdf_bookmarks(
+        _resolve_storage_path(doc) or ""
+    )
+    if not toc_entries:
+        toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
+    toc_crud.replace_toc_for_document(db, document_id, toc_entries)
+    db.flush()
+    return updated
+
+
 def segment_document(document_id: str, db: Session) -> int:
     """
     对指定文档执行分段。仅 zone=study 会写入 document_segments。
@@ -150,6 +227,7 @@ def segment_document(document_id: str, db: Session) -> int:
             raise ValueError(parse_error or "无法获取文档文本")
 
         segment_dicts = split_text(text)
+        _apply_structure(db, doc, text, segment_dicts)
         segment_crud.delete_segments_for_document(db, document_id)
         segment_crud.bulk_create_segments(db, document_id, segment_dicts)
 

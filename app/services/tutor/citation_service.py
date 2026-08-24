@@ -161,6 +161,8 @@ def build_citations_from_hits(
                     title=title,
                     char_start=hit.get("char_start"),
                     char_end=hit.get("char_end"),
+                    page_start=hit.get("page_start"),
+                    page_end=hit.get("page_end"),
                     snippet=content[:500] if content else None,
                 )
             )
@@ -194,6 +196,8 @@ def build_citations_from_hits(
                 title=(segment.title if segment else None) or doc.display_name,
                 char_start=segment.char_start if segment else None,
                 char_end=segment.char_end if segment else None,
+                page_start=segment.page_start if segment else None,
+                page_end=segment.page_end if segment else None,
                 snippet=snippet,
             )
         )
@@ -230,6 +234,8 @@ async def build_citations_from_hits_async(
                     title=title,
                     char_start=hit.get("char_start"),
                     char_end=hit.get("char_end"),
+                    page_start=hit.get("page_start"),
+                    page_end=hit.get("page_end"),
                     snippet=content[:500] if content else None,
                 )
             )
@@ -268,6 +274,8 @@ async def build_citations_from_hits_async(
                 title=(segment.title if segment else None) or doc.display_name,
                 char_start=segment.char_start if segment else None,
                 char_end=segment.char_end if segment else None,
+                page_start=segment.page_start if segment else None,
+                page_end=segment.page_end if segment else None,
                 snippet=snippet,
             )
         )

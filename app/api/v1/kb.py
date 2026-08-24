@@ -22,6 +22,8 @@ from app.services.knowledge import kb_service
 from app.services.knowledge import page_service
 from app.services.knowledge import segment_service
 from app.crud import kb as kb_crud
+from app.crud import toc as toc_crud
+from app.schemas.toc import TocListOut, TocOut
 from app.services.knowledge.file_parser import SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
@@ -328,6 +330,24 @@ def get_document_page(
     """单页详情（双击进详情用）"""
     return page_service.get_document_page_detail(
         db, current_user["user_id"], doc_id, page_number
+    )
+
+
+@router.get("/documents/{doc_id}/toc")
+def list_document_toc(
+    doc_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """文档章节目录（章 → 页范围），按 order_index 排序。"""
+    doc = kb_crud.get_document_by_id_or_dify(db, current_user["user_id"], doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    rows = toc_crud.list_toc_for_document(db, doc.id)
+    return TocListOut(
+        document_id=doc.id,
+        toc=[TocOut.model_validate(r) for r in rows],
+        total=len(rows),
     )
 
 

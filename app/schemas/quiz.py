@@ -12,6 +12,8 @@ class CitationOut(BaseModel):
     title: Optional[str] = None
     char_start: Optional[int] = None
     char_end: Optional[int] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
     snippet: Optional[str] = None
 
 

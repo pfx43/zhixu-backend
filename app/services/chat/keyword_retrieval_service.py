@@ -85,6 +85,8 @@ def _hits_from_rows(rows, terms: List[str], top_k: int) -> List[dict]:
                 "display_name": doc.display_name,
                 "char_start": seg.char_start,
                 "char_end": seg.char_end,
+                "page_start": seg.page_start,
+                "page_end": seg.page_end,
             }
         )
 

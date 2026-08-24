@@ -83,6 +83,7 @@ class Document(Base):
     collection = relationship("KbCollection", back_populates="documents")
     global_document = relationship("GlobalDocument", back_populates="documents")
     segments = relationship("DocumentSegment", back_populates="document")
+    toc_entries = relationship("DocumentToc", back_populates="document")
 
 
 class DocumentSegment(Base):
@@ -98,7 +99,29 @@ class DocumentSegment(Base):
     content = Column(Text, nullable=False)
     char_start = Column(Integer, nullable=False)
     char_end = Column(Integer, nullable=False)
+    page_start = Column(Integer, nullable=True)
+    page_end = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     document = relationship("Document", back_populates="segments")
     question_provenance = relationship("QuestionProvenance", back_populates="segment")
+
+
+class DocumentToc(Base):
+    """章节目录（章 → 页范围），数据来自书签 / 标题，禁止模型编页码。"""
+
+    __tablename__ = "document_tocs"
+    __table_args__ = (
+        UniqueConstraint("document_id", "order_index", name="uq_document_tocs_doc_order"),
+        Index("ix_document_tocs_document", "document_id"),
+    )
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_id = Column(String(36), ForeignKey("documents.id"), nullable=False, index=True)
+    order_index = Column(Integer, nullable=False)
+    title = Column(String(255), nullable=False)
+    page_start = Column(Integer, nullable=False)
+    page_end = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document", back_populates="toc_entries")

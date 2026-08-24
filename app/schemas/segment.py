@@ -12,6 +12,8 @@ class SegmentOut(BaseModel):
     content: str
     char_start: int
     char_end: int
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

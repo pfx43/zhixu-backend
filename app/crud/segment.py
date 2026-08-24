@@ -34,6 +34,8 @@ def bulk_create_segments(
             content=item["content"],
             char_start=item["char_start"],
             char_end=item["char_end"],
+            page_start=item.get("page_start"),
+            page_end=item.get("page_end"),
         )
         db.add(row)
         rows.append(row)

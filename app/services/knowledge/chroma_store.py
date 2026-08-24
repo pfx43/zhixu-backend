@@ -115,6 +115,8 @@ class ChromaStore:
                     "segment_id": str(seg_id),
                     "char_start": int(_seg_field(seg, "char_start", 0)),
                     "char_end": int(_seg_field(seg, "char_end", 0)),
+                    "page_start": _seg_field(seg, "page_start"),
+                    "page_end": _seg_field(seg, "page_end"),
                     "title": str(_seg_field(seg, "title") or ""),
                     "display_name": str(display_name),
                 })
@@ -202,6 +204,8 @@ class ChromaStore:
                     "display_name": meta.get("display_name"),
                     "char_start": meta.get("char_start"),
                     "char_end": meta.get("char_end"),
+                    "page_start": meta.get("page_start"),
+                    "page_end": meta.get("page_end"),
                 })
 
             return hits[:top_k]
