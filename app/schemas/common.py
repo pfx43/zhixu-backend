@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, Field
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Literal
 import re
 
 # Token 响应模型
@@ -266,3 +266,52 @@ class ChatSession(BaseModel):
 
 class ChatSessionList(BaseModel):
     sessions: List[ChatSession]
+
+
+# ============ Profile / Goals Schemas (Issue #15) ============
+
+class MeProfileOut(BaseModel):
+    """GET /api/v1/me/profile — 当前用户称呼等资料"""
+    nickname: str
+    user_id: int
+
+
+class MeProfileUpdate(BaseModel):
+    """PUT /api/v1/me/profile — 更新称呼"""
+    nickname: str = Field(..., min_length=1, max_length=50)
+
+
+class GoalOut(BaseModel):
+    """Goal 返回结构"""
+    id: int
+    text: str
+    attributes: Optional[Dict[str, Any]] = None
+    valid_until: Optional[datetime] = None
+    status: Literal["active", "paused", "completed"]
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GoalActiveUpdate(BaseModel):
+    """PUT /api/v1/goals/active — 设置/修改进行中的目标
+
+    一人同时只能有一条 active。调用此接口时：
+    - 若已存在 active goal，则更新其 text/attributes/valid_until；
+    - 若不存在 active goal，则新建一条 active；
+    - 其余历史 goals 保持不变（不会被自动改为 paused）。
+    """
+    text: str = Field(..., min_length=1, max_length=500)
+    attributes: Optional[Dict[str, Any]] = None
+    valid_until: Optional[datetime] = None
+
+
+class OnboardingFinishWithGoal(BaseModel):
+    """引导结束时一次性写入 nickname + active goal（老五步可跳过）"""
+    nickname: str = Field(..., min_length=1, max_length=50)
+    goal_text: str = Field(..., min_length=1, max_length=500)
+    goal_attributes: Optional[Dict[str, Any]] = None
+    goal_valid_until: Optional[datetime] = None
+    expected_revision: Optional[int] = 0
+    action: Literal["skip_remaining", "completed"] = "skip_remaining"

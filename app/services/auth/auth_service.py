@@ -24,6 +24,7 @@ from app.models import (
     QuestionTag,
     UserQuestionRef,
     OnboardingState,
+    Goal,
 )
 from app.core.security import get_password_hash, verify_password
 from app.core.redis import cache
@@ -752,6 +753,7 @@ class AuthManager:
             db.query(KbCollection).filter(KbCollection.user_id == user_id).delete(synchronize_session=False)
 
             # 阶段 4 — 其余独立表（无 FK 到上述已清理表）+ 用户主记录
+            db.query(Goal).filter(Goal.user_id == user_id).delete(synchronize_session=False)
             db.query(OnboardingState).filter(OnboardingState.user_id == user_id).delete(synchronize_session=False)
             delete_user_auth_sessions(db, user_id)
 
