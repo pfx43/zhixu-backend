@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.question import QuestionOption
+from app.schemas.task import TaskCompletedOut
 
 
 class CitationOut(BaseModel):
@@ -67,6 +68,8 @@ class AnswerResult(BaseModel):
     answered_count: int
     total_questions: int
     session_status: str
+    # 检查器挂载：任务范围内交够约定道数即自动完成今日刷题任务（空则不弹窗）
+    completed_tasks: List[TaskCompletedOut] = []
 
 
 class QuizReviewItemOut(BaseModel):

@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.task import TaskCompletedOut
+
 
 class CollectionOut(BaseModel):
     id: str
@@ -77,3 +79,5 @@ class UploadResponse(BaseModel):
     ocr_status: Optional[str] = None
     ocr_current_page: Optional[int] = None
     ocr_total_pages: Optional[int] = None
+    # 检查器挂载：本次成功路径完成后自动判定的今日任务（空则不弹窗）
+    completed_tasks: List[TaskCompletedOut] = []

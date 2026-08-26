@@ -26,6 +26,7 @@ from app.services.chat.local_retrieval_service import search as local_search
 from app.services.chat.keyword_retrieval_service import search_async as keyword_search_async
 from app.services.chat.chat_contract import ChatChunkNormalizer
 from app.services.tools.knowledge_retriever import KnowledgeRetriever
+from app.services.tools.task_tools import TaskPlannerTools, build_user_context
 from app.services.llm.llm_pool import llm_pool
 from app.services.usage_service import record_usage_for_token
 
@@ -145,11 +146,23 @@ class ZhixuAgent:
         )
         await retriever.set_token(token)
 
+        # Issue #20：主对话注册「派任务」工具包（只调已有接口，user_id 只来自登录）。
+        # 内部出题 submit_question 不挂到这里。
+        task_tools = TaskPlannerTools(user_id=self.user_id, token=token)
+
         try:
+            base_prompt = MODE_PROMPTS.get(mode, SYSTEM_PROMPT)
+            try:
+                context = build_user_context(self.user_id)
+                if context:
+                    base_prompt = f"{base_prompt}\n\n【当前状态】\n{context}"
+            except Exception as e:
+                logger.warning(f"构建任务上下文失败: {e}")
+
             agent = Agent(
                 llm=llm,
-                tools=[retriever.get_tools()],
-                system_prompt=MODE_PROMPTS.get(mode, SYSTEM_PROMPT),
+                tools=[retriever.get_tools(), task_tools.get_tools()],
+                system_prompt=base_prompt,
                 max_context_length=80000,
                 max_tool_result_length=6000,
                 max_tool_loop=LLM_MAX_TOOL_LOOP,

@@ -1096,9 +1096,18 @@ POST /api/v1/kb/upload
   "filename": "机器学习入门.pdf",
   "status": "indexing",
   "file_size": 1048576,
-  "collection_id": "col_001"
+  "collection_id": "col_001",
+  "completed_tasks": [
+    {"id": 12, "title": "上传一本学习资料"}
+  ]
 }
 ```
+
+> `completed_tasks`：检查器判定结果。上传成功且学习区多了一本**能解析的**新书时，
+> 今日「上传」任务自动完成并出现在这里（传错书也算完成）；hash 去重 / 解析失败 /
+> 空文件不会触发完成。空数组表示没有新完成的任务，前端不弹窗。
+
+---
 
 ---
 
@@ -3021,7 +3030,91 @@ GET /api/v1/dashboard/suggestions
 
 ---
 
-## 16. 系统/测试接口
+## 16. 今日任务 (Tasks) — `/api/v1/tasks`
+
+今日任务由程序按缺口生成（没书→上传；有书没题→出题；有题→刷题），
+**用户不能勾选完成**：完成只能由检查器挂在「上传 / 按页出题 / 交卷」成功路径后自动判定，
+响应带 `completed_tasks`（空数组前端不弹窗，弹窗文案固定「该任务已经完成！」）。
+
+### 16.1 查看今日任务
+
+```
+GET /api/v1/tasks/today
+```
+
+**需要鉴权**：是
+
+**成功响应** (200)：
+
+```json
+{
+  "date": "2026-08-26",
+  "tasks": [
+    {
+      "id": 12,
+      "goal_id": 3,
+      "task_date": "2026-08-26",
+      "title": "给《高等数学.pdf》的这几页出题",
+      "reason": "有书还没题，先按页出题（每页独立进度），出完才能刷题。",
+      "task_type": "generate_questions",
+      "payload": {
+        "document_id": "doc_001",
+        "document_name": "高等数学.pdf",
+        "page_numbers": [1, 2, 3]
+      },
+      "completion_rule": {
+        "kind": "pages_have_questions",
+        "document_id": "doc_001",
+        "page_numbers": [1, 2, 3]
+      },
+      "status": "pending",
+      "created_at": "2026-08-26T10:00:00"
+    }
+  ],
+  "completed_tasks": []
+}
+```
+
+`task_type` 取值：`upload`（上传资料）、`generate_questions`（按页出题）、`practice`（刷题）。
+`status` 取值：`pending`（进行中）、`completed`（检查器已判定完成）。
+页码只来自目录或入库分段页码，禁止模型手填。
+
+### 16.2 确保今日任务（按缺口生成）
+
+```
+POST /api/v1/tasks/today/ensure
+```
+
+**需要鉴权**：是
+
+当天存在未完成任务时直接返回（不重复派）；否则按缺口生成 1～3 件任务。
+响应结构与 `GET /tasks/today` 相同（`date` + `tasks` + `completed_tasks`）。
+
+---
+
+## 17. 对话 Tina 派任务工具（Issue #20）
+
+主对话 Tina（`POST /api/v1/chat/message`）注册了 `task_planner` 工具包，
+只调 Goal / KB / Question / Task 已有接口，`user_id` 只来自登录（工具参数不带用户 id）：
+
+| 工具 | 干什么 | 积木 |
+|------|--------|------|
+| `get_active_goal` / `revise_goal` | 读 / 改那一条进行中的目标 | Goal |
+| `get_document_toc` | 章 → 页，标出每章已有题数 | KB、Question |
+| `generate_questions` | 书 id + 页码 → 现有按页出题 | KB、Question |
+| `get_learning_gaps` | 没书 / 有书没题 / 错、不会 | 书、题、刷 |
+| `ensure_today_tasks` | 按缺口写入当天任务（写入同一张 `daily_tasks`） | Task |
+
+规则：
+- 页码只来自目录（`document_tocs`）或入库分段页码（`document_segments.page_start/page_end`），
+  超范围页码直接拒绝（禁止模型手填）。
+- 任务 kind / 完成规则由程序定，模型只写标题和理由。
+- 主对话工具列表**不含**内部出题 Agent 的 `submit_question` / `get_near_page`。
+- 用户 A 的工具调不到用户 B 的书和题（文档 / 题目归属二次校验）。
+
+---
+
+## 18. 系统/测试接口
 
 ### 16.1 健康检查与部署契约
 
