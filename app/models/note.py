@@ -23,6 +23,12 @@ class UserNote(Base):
     tags = Column(JSONB, nullable=True)
     # Issue #18 tip：来源（tina / quiz / kb），列表可按来源筛选
     source = Column(String(20), nullable=True)
+    # Issue #5.X tip 跨端锚点：选区的页/字符位置 + 回源（哪条 Tina/哪道题/哪段）
+    page_number = Column(Integer, nullable=True)
+    char_start = Column(Integer, nullable=True)
+    char_end = Column(Integer, nullable=True)
+    source_ref_type = Column(String(20), nullable=True)  # tina_message | quiz_session | tutor
+    source_ref_id = Column(String(64), nullable=True)
     # 稳定的乐观锁令牌，刻意独立于展示时间，避免受数据库精度和时区表示影响。
     revision = Column(Integer, nullable=False, default=1, server_default="1")
     created_at = Column(DateTime, default=datetime.utcnow)

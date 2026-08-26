@@ -53,6 +53,10 @@ class DailyTask(Base):
     completion_rule = Column(JSON, nullable=True)
     # 状态：pending | completed（无勾选完成接口，只能由检查器翻转）
     status = Column(String(20), nullable=False, server_default="pending", index=True)
+    # Issue #5.X Evidence Impact：完成时记录证据（session_id / document_id /
+    # question_ids / before_status / after_status / completed_at），用于目标详情
+    # 页"从一次答题推断因果"。
+    evidence_json = Column(JSON, nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

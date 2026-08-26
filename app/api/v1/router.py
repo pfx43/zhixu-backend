@@ -10,6 +10,7 @@ from app.api.v1 import (
     kt,
     learning_path,
     notes,
+    notification,
     onboarding,
     plan,
     progress,
@@ -40,5 +41,14 @@ api_router.include_router(search.router, prefix="/search", tags=["知识搜索"]
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["引导"])
 api_router.include_router(goals.router, tags=["目标与个人资料"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["今日任务"])
+api_router.include_router(
+    notification.notif_router, prefix="/notifications", tags=["通知"]
+)
+api_router.include_router(
+    notification.reminder_router, prefix="/reminders", tags=["提醒"]
+)
+api_router.include_router(
+    notification.profile_router, prefix="/profile", tags=["画像"]
+)
 api_router.include_router(progress.router, prefix="/progress", tags=["进度与学习路径"])
 api_router.include_router(learning_path.router, prefix="/learning-path", tags=["学习路径"])

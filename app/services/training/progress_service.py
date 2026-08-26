@@ -193,9 +193,19 @@ def _provenance_page_map(
     return {qid: page for qid, page in rows}
 
 
-def get_learning_path(db: Session, user_id: int) -> LearningPathOut:
+def get_learning_path(
+    db: Session, user_id: int, goal_id: Optional[int] = None
+) -> LearningPathOut:
+    """学习路径（Issue #5.X 支持按目标范围）。
+
+    ``goal_id`` 非 None 时：只纳入与该目标相关的文档（取 goals.id 命中
+    文档范围，目前按「用户所有文档」落地，后续接 Goal 文档关联表时可收紧）。
+    """
     docs, _ = kb_crud.list_documents(db, user_id, page=1, limit=10000)
     study_docs = [d for d in docs if d.zone == "study"]
+    # Issue #5.X：goal_id 过滤只是「当前目标范围内的路径」切换；后端不做语义
+    # 收紧（保留全部 study_docs），前端若需收紧可再传范围参数。
+    _ = goal_id  # 暂作语义占位，避免 pylint unused
 
     document_paths: List[DocumentLearningPathOut] = []
     tag_stat_map: Dict[str, Dict[str, int]] = defaultdict(

@@ -76,6 +76,9 @@ class Document(Base):
     indexing_status = Column(String(20), default="pending")
     segment_status = Column(String(20), default="not_started")
     question_gen_status = Column(String(20), default="not_started")
+    # Issue #5.X：资料真实封面/缩略图（可空，前端按文件类型兜底）
+    cover_url = Column(String(512), nullable=True)
+    thumbnail_url = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

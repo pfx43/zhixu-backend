@@ -2,7 +2,7 @@
 刷题会话服务 — 创建会话、答题判分、错题溯源
 """
 import random
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -94,20 +94,108 @@ def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) ->
     return "wrong"
 
 
+def _normalize_answer_json(raw: Optional[str]) -> Any:
+    """把 user_answer / correct answer 解析为 JSON 值；解析失败当作字符串。"""
+    if raw is None:
+        return None
+    s = raw.strip()
+    if not s:
+        return None
+    try:
+        import json as _json
+        return _json.loads(s)
+    except (ValueError, TypeError):
+        return s
+
+
+def _grade_multi_choice(correct: Any, user: Any) -> str:
+    if not isinstance(user, list):
+        return "wrong"
+    cset = {str(x).strip().upper() for x in correct} if isinstance(correct, list) else {str(correct).strip().upper()}
+    aset = {str(x).strip().upper() for x in user}
+    return "correct" if cset == aset and cset else "wrong"
+
+
+def _grade_true_false(correct: Any, user: Any) -> str:
+    def _b(v):
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "t", "1", "yes")
+        if isinstance(v, (int, float)):
+            return bool(v)
+        return False
+    return "correct" if _b(correct) == _b(user) else "wrong"
+
+
+def _grade_fill_blank(correct: Any, user: Any) -> str:
+    c = str(correct or "").strip().lower().replace(" ", "").replace("　", "")
+    u = str(user or "").strip().lower().replace(" ", "").replace("　", "")
+    if not c or not u:
+        return "wrong"
+    return "correct" if c == u else "wrong"
+
+
+def _grade_sort(correct: Any, user: Any) -> str:
+    if not isinstance(user, list) or not isinstance(correct, list):
+        return "wrong"
+    if [str(x).strip() for x in user] == [str(x).strip() for x in correct]:
+        return "correct"
+    return "wrong"
+
+
+def _grade_match(correct: Any, user: Any) -> str:
+    if not isinstance(user, dict) or not isinstance(correct, dict):
+        return "wrong"
+    if {str(k).strip() for k in user} != {str(k).strip() for k in correct}:
+        return "wrong"
+    return "correct" if all(
+        str(user.get(k, "")).strip() == str(correct.get(k, "")).strip()
+        for k in correct
+    ) else "wrong"
+
+
+def _grade_classify(correct: Any, user: Any) -> str:
+    if not isinstance(user, list) or not isinstance(correct, list):
+        return "wrong"
+    cset = {str(x).strip() for x in correct}
+    aset = {str(x).strip() for x in user}
+    return "correct" if cset == aset and cset else "wrong"
+
+
 def _grade_answer(
     question: GlobalQuestion, user_answer: Optional[str], status_hint: Optional[str]
 ) -> str:
+    """按 question_type 判题；unknown 直接 unknown；空用户答默认 wrong。"""
     if status_hint == "unknown":
         return "unknown"
     qtype = (question.question_type or "single_choice").lower()
+
     if qtype in ("short_answer", "application"):
         return _grade_short_answer(question, user_answer)
-    if not user_answer or not user_answer.strip():
-        return "wrong"
 
-    correct = question.answer.strip().upper()
-    user = user_answer.strip().upper()
-    return "correct" if user == correct else "wrong"
+    user = _normalize_answer_json(user_answer)
+    correct = _normalize_answer_json(question.answer)
+
+    if qtype == "multi_choice":
+        return _grade_multi_choice(correct, user)
+    if qtype == "true_false":
+        return _grade_true_false(correct, user)
+    if qtype in ("fill_blank", "fill-in-blank"):
+        return _grade_fill_blank(correct, user)
+    if qtype in ("sort", "sort_question"):
+        return _grade_sort(correct, user)
+    if qtype in ("match", "match_question"):
+        return _grade_match(correct, user)
+    if qtype in ("classify", "classification"):
+        return _grade_classify(correct, user)
+
+    # single_choice（默认）：字符串等值（大写）
+    if user is None or (isinstance(user, str) and not user.strip()):
+        return "wrong"
+    user_s = str(user).strip().upper()
+    correct_s = str(correct).strip().upper()
+    return "correct" if user_s == correct_s else "wrong"
 
 
 def _resolve_question_ids(

@@ -199,6 +199,8 @@ async def upload_document(
             "status": result.status,
             "segment_status": result.segment_status,
             "parse_warning": result.parse_warning,
+            # Issue #5.X：把新文档 id 写进 evidence，供 Evidence Impact 展示
+            "document_id": result.document_id or result.id,
         },
     )
     return result

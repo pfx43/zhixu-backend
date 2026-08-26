@@ -960,6 +960,9 @@ def list_documents(
                 segment_status=doc.segment_status,
                 question_gen_status=doc.question_gen_status,
                 dify_document_id=doc.dify_document_id,
+                # Issue #5.X：资料真实封面/缩略图
+                cover_url=doc.cover_url,
+                thumbnail_url=doc.thumbnail_url,
                 created_at=doc.created_at,
                 updated_at=doc.updated_at,
                 **_ocr_fields_for_doc(doc),

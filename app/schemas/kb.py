@@ -49,6 +49,9 @@ class DocumentOut(BaseModel):
     ocr_current_page: Optional[int] = None
     ocr_total_pages: Optional[int] = None
     dify_document_id: Optional[str] = None
+    # Issue #5.X：资料真实封面/缩略图（可空；前端按文件类型兜底）
+    cover_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

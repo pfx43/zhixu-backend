@@ -9,6 +9,7 @@
   - generate_questions：payload 那些页上已经都有题（不看整本 status）
   - practice：任务范围内交够约定道数（含「不会」）
 """
+import hashlib
 import logging
 from datetime import date, datetime
 from typing import List, Optional
@@ -266,29 +267,86 @@ def run_completion_checks(
 ) -> List[dict]:
     """对当天 pending 任务跑一遍对应事件检查，翻转完成的并落库。
 
-    返回 [{"id": int, "title": str}]，空表示没有新完成的任务（前端不弹窗）。
+    返回 ``TaskCompletedOut`` 回执列表（Issue #5.X CompletionReceipt）：
+    含 ``idempotency_key`` / ``source_action`` / ``before/after_status`` /
+    ``evidence`` / ``completed_at``。空表示没有新完成的任务（前端不弹窗）。
+
+    ``ctx`` 里可传 ``source_action``（默认取 event）+ ``evidence`` 字典，
+    下传给各 _check_*，再写到 daily_tasks.evidence_json。
     """
     task_date = today_local()
     completed: List[dict] = []
+    ctx = ctx or {}
 
     if event == "upload":
-        completed = _check_upload(db, user_id, task_date, ctx or {})
+        completed = _check_upload(db, user_id, task_date, ctx)
     elif event == "questions_generated":
-        completed = _check_pages_have_questions(db, user_id, task_date)
+        completed = _check_pages_have_questions(db, user_id, task_date, ctx)
     elif event == "answer_submitted":
-        completed = _check_practice(db, user_id, task_date, ctx or {})
+        completed = _check_practice(db, user_id, task_date, ctx)
 
     return completed
 
 
-def _complete_tasks(db: Session, tasks: List[DailyTask]) -> List[dict]:
+def _make_receipt(
+    task: DailyTask,
+    source_action: str,
+    evidence: Optional[dict],
+    before_status: str = "pending",
+) -> dict:
+    """生成 #5.X 完成回执：含幂等键 + 证据，供前端弹窗 + Evidence Impact 复用。"""
+    completed_at = datetime.now()
+    # 幂等键：同一用户 + 任务 + 来源动作 始终一致；前端用于去重弹窗
+    payload = f"{task.user_id}:{task.id}:{source_action}".encode()
+    idempotency_key = hashlib.sha256(payload).hexdigest()
+    return {
+        "id": task.id,
+        "title": task.title,
+        "idempotency_key": idempotency_key,
+        "completed_at": completed_at,
+        "source_action": source_action,
+        "before_status": before_status,
+        "after_status": "completed",
+        "evidence": evidence or {},
+    }
+
+
+def _complete_tasks(
+    db: Session,
+    tasks: List[DailyTask],
+    source_action: str,
+    evidence_for_task: Optional[dict] = None,
+) -> List[dict]:
+    """标完成并写 evidence_json；返回 #5.X 回执列表。
+
+    ``evidence_for_task``：按 task.id 给出每条任务的证据；或单个 dict 应用到所有。
+    """
     if not tasks:
         return []
+    receipts: List[dict] = []
+    now = datetime.now()
     for t in tasks:
-        if t.status != "completed":
-            t.status = "completed"
-    db.commit()
-    return [{"id": t.id, "title": t.title} for t in tasks]
+        if t.status == "completed":
+            continue
+        t.status = "completed"
+        # Evidence Impact：把证据写到 daily_tasks.evidence_json
+        if evidence_for_task is None:
+            t.evidence_json = None
+        elif isinstance(evidence_for_task, dict) and t.id in evidence_for_task:
+            t.evidence_json = {
+                **(evidence_for_task[t.id] or {}),
+                "completed_at": now.isoformat(),
+            }
+        else:
+            t.evidence_json = {
+                **(evidence_for_task or {}),
+                "completed_at": now.isoformat(),
+            }
+        receipt = _make_receipt(t, source_action, t.evidence_json)
+        receipts.append(receipt)
+    if receipts:
+        db.commit()
+    return receipts
 
 
 def _check_upload(
@@ -303,14 +361,23 @@ def _check_upload(
         return []
 
     tasks = task_crud.list_pending_by_type(db, user_id, TYPE_UPLOAD, task_date)
-    return _complete_tasks(db, tasks)
+    # Issue #5.X 证据：上传成功后的文档 id 与解析状态，供 Evidence Impact 展示
+    evidence = {
+        "document_id": ctx.get("document_id"),
+        "segment_status": ctx.get("segment_status"),
+        "status": ctx.get("status"),
+    }
+    return _complete_tasks(
+        db, tasks, source_action="upload", evidence_for_task=evidence
+    )
 
 
 def _check_pages_have_questions(
-    db: Session, user_id: int, task_date: date
+    db: Session, user_id: int, task_date: date, ctx: dict = None
 ) -> List[dict]:
     tasks = task_crud.list_pending_by_type(db, user_id, TYPE_GENERATE, task_date)
     done: List[DailyTask] = []
+    evidence_by_task: dict = {}
     for t in tasks:
         rule = t.completion_rule or {}
         doc_id = rule.get("document_id")
@@ -321,7 +388,17 @@ def _check_pages_have_questions(
         counts = question_crud.count_questions_per_page(db, user_id, doc_id, pages)
         if all(counts.get(p, 0) > 0 for p in pages):
             done.append(t)
-    return _complete_tasks(db, done)
+            evidence_by_task[t.id] = {
+                "document_id": doc_id,
+                "page_numbers": pages,
+                "questions_count": sum(counts.get(p, 0) for p in pages),
+            }
+    return _complete_tasks(
+        db,
+        done,
+        source_action="generate_questions",
+        evidence_for_task=evidence_by_task,
+    )
 
 
 def _check_practice(
@@ -333,9 +410,9 @@ def _check_practice(
     session = quiz_crud.get_session(db, session_id, user_id)
     if not session:
         return []
-
     tasks = task_crud.list_pending_by_type(db, user_id, TYPE_PRACTICE, task_date)
     done: List[DailyTask] = []
+    evidence_by_task: dict = {}
     for t in tasks:
         rule = t.completion_rule or {}
         count = int(rule.get("count") or 0)
@@ -349,4 +426,15 @@ def _check_practice(
         answered = quiz_crud.count_answers(db, session.id)
         if answered >= count:
             done.append(t)
-    return _complete_tasks(db, done)
+            evidence_by_task[t.id] = {
+                "session_id": session.id,
+                "document_id": session.document_id,
+                "answered_count": answered,
+                "target_count": count,
+            }
+    return _complete_tasks(
+        db,
+        done,
+        source_action="answer_submitted",
+        evidence_for_task=evidence_by_task,
+    )

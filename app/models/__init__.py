@@ -11,6 +11,9 @@ from .auth_session import AuthSession
 from .usage import UsageDaily, UsageToken
 from .goal import Goal
 from .daily_task import DailyTask
+from .notification import Notification
+from .reminder import Reminder
+from .profile_graph import ProfileGraph, ProfileInference
 
 __all__ = [
     "User",
@@ -37,4 +40,8 @@ __all__ = [
     "UsageToken",
     "Goal",
     "DailyTask",
+    "Notification",
+    "Reminder",
+    "ProfileGraph",
+    "ProfileInference",
 ]
