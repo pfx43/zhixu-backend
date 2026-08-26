@@ -179,21 +179,26 @@ async def _fake_generate_from_pages(**kwargs):
     )
 
 
-@pytest.mark.asyncio
-async def test_generate_questions_rejects_guessed_pages(task_tools_env, monkeypatch):
-    """越界页码（不在目录/入库分段范围）被拒绝，并返回合法页码。"""
+def test_generate_questions_rejects_guessed_pages(task_tools_env, monkeypatch):
+    """越界页码（不在目录/入库分段范围）被拒绝，并返回合法页码。
+
+    工具是 async def，这里用 asyncio.run 跑；CI 不装 pytest-asyncio，函数保持同步。
+    """
+    import asyncio
+
     monkeypatch.setattr(question_gen_service, "is_question_gen_async", lambda: False)
     monkeypatch.setattr(question_gen_service, "generate_from_pages", _fake_generate_from_pages)
 
-    resp = json.loads(await _tools_a().generate_questions("doc-a", "99"))
+    resp = json.loads(asyncio.run(_tools_a().generate_questions("doc-a", "99")))
     assert "error" in resp
     assert "禁止手填" in resp["error"]
     assert 1 in resp["valid_pages"]  # 合法页来自分段 page_start=1
 
 
-@pytest.mark.asyncio
-async def test_generate_questions_accepts_toc_pages(task_tools_env, monkeypatch):
+def test_generate_questions_accepts_toc_pages(task_tools_env, monkeypatch):
     """页码来自目录/入库分段（合法）时正常调用现有按页出题。"""
+    import asyncio
+
     called = {}
 
     async def fake_generate(**kwargs):
@@ -203,7 +208,7 @@ async def test_generate_questions_accepts_toc_pages(task_tools_env, monkeypatch)
     monkeypatch.setattr(question_gen_service, "is_question_gen_async", lambda: False)
     monkeypatch.setattr(question_gen_service, "generate_from_pages", fake_generate)
 
-    resp = json.loads(await _tools_a().generate_questions("doc-a", "1,2"))
+    resp = json.loads(asyncio.run(_tools_a().generate_questions("doc-a", "1,2")))
     assert resp["status"] == "completed"
     assert called["user_id"] == 8801
     assert called["page_numbers"] == [1, 2]
