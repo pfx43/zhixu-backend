@@ -1,11 +1,12 @@
-"""Tina 派任务工具包（Issue #20）。
+"""Tina 派任务工具包（Issue #20 + #18 tip）。
 
-只调 Goal / KB / Question / Task 已有能力（积木），不新造数据通道：
+只调 Goal / KB / Question / Task / Note 已有能力（积木），不新造数据通道：
 
 - `user_id` 只来自登录：构造时由 Agent 注入（登录上下文），工具参数不带 user_id；
 - 页码只来自目录（document_tocs）或入库分段页码（document_segments.page_start），
   超出范围的页码直接拒绝（禁止模型手填）；
 - kind / 完成规则程序定（复用 task_service），模型只写标题和理由；
+- tip（#18）：只读写当前用户的 tip；关联文档必须属于当前用户，否则拒绝；
 - 不暴露内部出题 Agent 的 `submit_question`。
 
 提示词上下文（资料列表 / 当前目标 / 已布置今日任务）见 `build_user_context`。
@@ -19,9 +20,10 @@ from tina import Tools
 
 from app.core.database import short_session
 from app.crud import kb as kb_crud
+from app.crud import note as note_crud
 from app.crud import question as question_crud
 from app.crud import toc as toc_crud
-from app.models import Document, Goal, QuizAnswer, QuizSession
+from app.models import Document, Goal, QuizAnswer, QuizSession, UserNote
 from app.services.quiz import question_gen_service
 from app.services.tasks import task_service
 
@@ -83,6 +85,8 @@ class TaskPlannerTools:
             self.generate_questions,
             self.get_learning_gaps,
             self.ensure_today_tasks,
+            self.list_tips,
+            self.create_tip,
         ):
             self.tools.register_tool(fn)
 
@@ -425,6 +429,93 @@ class TaskPlannerTools:
             ]
         return json.dumps(
             {"status": "ok", "tasks": out}, ensure_ascii=False
+        )
+
+    # ── tip（#18：走笔记接口 note_type=tip，只动当前用户） ──────
+
+    def list_tips(self, tag: str = "", limit: int = 20) -> str:
+        """
+        查看当前用户收的 tip（note_type=tip，新的在前），可按用户给的类型筛选。
+
+        Args:
+            tag (str): 可选，按用户给 tip 打的类型筛选（难词 / 易错点…），
+                       不传或为空则返回最近的全部 tip
+            limit (int): 最多返回条数，默认 20
+        """
+        with short_session() as db:
+            rows = note_crud.list_notes(
+                db,
+                self._user_id,
+                note_type="tip",
+                tag=(tag.strip() or None),
+                limit=max(1, min(int(limit), 50)),
+            )
+            tips = [
+                {
+                    "id": r.id,
+                    "title": r.title,
+                    "content_md": r.content_md,
+                    "tags": r.tags,
+                    "document_id": r.document_id,
+                    "source": r.source,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }
+                for r in rows
+            ]
+        return json.dumps({"tips": tips, "count": len(tips)}, ensure_ascii=False)
+
+    def create_tip(
+        self,
+        title: str,
+        content_md: str = "",
+        tags: str = "",
+        document_id: str = "",
+    ) -> str:
+        """
+        代做一张 tip（note_type=tip，写入当前用户的笔记）。
+
+        Args:
+            title (str): tip 标题（用用户话里的简短说法）
+            content_md (str): 划选原文 / 那句要收的话
+            tags (str): 可选，逗号分隔的用户分类（难词 / 易错点…）。
+                        用户没说要归哪类就留空，不要替用户乱分类
+            document_id (str): 可选，关联哪本资料。只能填当前用户自己
+                                资料列表里出现过的 id；填他人文档会被拒绝
+        """
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags.strip() else None
+        doc_id = document_id.strip() or None
+
+        with short_session() as db:
+            if doc_id:
+                doc = kb_crud.get_document_by_id_or_dify(db, self._user_id, doc_id)
+                if not doc:
+                    return json.dumps(
+                        {"error": "文档不存在或无权访问，只能关联当前用户自己的资料"},
+                        ensure_ascii=False,
+                    )
+            note = note_crud.create_note(
+                db,
+                user_id=self._user_id,
+                title=(title or "").strip()[:255],
+                content_md=content_md,
+                note_type="tip",
+                tags=tag_list,
+                document_id=doc_id,
+                source="tina",
+            )
+            db.commit()
+            db.refresh(note)
+        return json.dumps(
+            {
+                "status": "ok",
+                "tip": {
+                    "id": note.id,
+                    "title": note.title,
+                    "tags": note.tags,
+                    "document_id": note.document_id,
+                },
+            },
+            ensure_ascii=False,
         )
 
 
