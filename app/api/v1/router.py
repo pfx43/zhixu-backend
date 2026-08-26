@@ -5,6 +5,7 @@ from app.api.v1 import (
     auth,
     chat,
     dashboard,
+    goals,
     kb,
     kt,
     notes,
@@ -34,3 +35,4 @@ api_router.include_router(training.router, prefix="/training", tags=["针对训�
 api_router.include_router(notes.router, prefix="/notes", tags=["笔记系统"])
 api_router.include_router(search.router, prefix="/search", tags=["知识搜索"])
 api_router.include_router(onboarding.router, prefix="/onboarding", tags=["引导"])
+api_router.include_router(goals.router, tags=["目标与个人资料"])

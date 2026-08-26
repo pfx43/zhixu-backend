@@ -9,6 +9,7 @@ from .training_plan import TrainingPlan
 from .onboarding import OnboardingState
 from .auth_session import AuthSession
 from .usage import UsageDaily, UsageToken
+from .goal import Goal
 
 __all__ = [
     "User",
@@ -33,4 +34,5 @@ __all__ = [
     "AuthSession",
     "UsageDaily",
     "UsageToken",
+    "Goal",
 ]

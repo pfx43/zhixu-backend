@@ -21,6 +21,10 @@ from pgutil import empty_test_engine, test_database_url as postgres_url
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
+# Alembic HEAD revision：每次新增迁移都要同步更新这个版本号。
+# 新增 20260824_add_goals 后，head = 20260824_goals。
+ALEMBIC_HEAD_REVISION = "20260824_goals"
+
 
 def _create_all_except(engine, excluded: set[str]) -> None:
     Base.metadata.create_all(
@@ -118,7 +122,7 @@ def test_alembic_upgrade_adopts_existing_create_all_database():
             revision = connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-        assert revision == "20260822_segment_pages_toc"
+        assert revision == ALEMBIC_HEAD_REVISION
     finally:
         engine.dispose()
 
@@ -151,7 +155,7 @@ def test_alembic_upgrade_from_legacy_chain_backfills_missing_branches():
             revision = connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar_one()
-        assert revision == "20260822_segment_pages_toc"
+        assert revision == ALEMBIC_HEAD_REVISION
     finally:
         engine.dispose()
 

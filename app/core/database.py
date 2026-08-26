@@ -71,18 +71,25 @@ _async_url = _re.sub(
     count=1,
 )
 
-async_engine = create_async_engine(_async_url, **_engine_kwargs)
-AsyncSessionLocal = async_sessionmaker(
-    async_engine, class_=AsyncSession, expire_on_commit=False
-)
+try:
+    async_engine = create_async_engine(_async_url, **_engine_kwargs)
+    AsyncSessionLocal = async_sessionmaker(
+        async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+except Exception as _async_engine_err:
+    import warnings as _w
+    _w.warn(
+        f"asyncpg 异步引擎初始化失败（测试/开发可忽略，生产需要 asyncpg）：{_async_engine_err}",
+        RuntimeWarning,
+    )
+    async_engine = None
+    AsyncSessionLocal = None
 
 
 @asynccontextmanager
 async def async_short_session():
-    """独立于请求 DI 的短 AsyncSession：用完即关。
-
-    供 SSE / Agent 工具在事件循环上检索、citation，不占用默认线程池。
-    """
+    if AsyncSessionLocal is None:
+        raise RuntimeError("异步会话不可用：请先安装 asyncpg 并配置 PostgreSQL 异步连接")
     db = AsyncSessionLocal()
     try:
         yield db

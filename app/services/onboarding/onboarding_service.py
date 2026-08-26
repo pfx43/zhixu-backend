@@ -1,7 +1,8 @@
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from app.models.onboarding import OnboardingState
+from app.models import User, Goal
 from app.schemas.onboarding import (
     OnboardingChannelCode,
     OnboardingDailyUsage,
@@ -242,7 +243,6 @@ def complete_onboarding(db: Session, user_id: int, expected_revision: int, actio
         raise OnboardingRevisionConflict(latest=serialize_state(state))
 
     if action == "completed":
-        # only mark completed if all steps handled
         steps = state.steps or _default_steps()
         if not all(v in ("completed", "skipped") for v in steps.values()):
             raise ValueError("cannot complete: not all steps processed")
@@ -259,7 +259,101 @@ def complete_onboarding(db: Session, user_id: int, expected_revision: int, actio
     else:
         raise ValueError("unknown action")
 
+    state.current_step = None
     state.revision = int(state.revision) + 1
     db.add(state)
     db.flush()
     return serialize_state(state)
+
+
+def finish_onboarding_with_goal(
+    db: Session,
+    user_id: int,
+    nickname: str,
+    goal_text: str,
+    goal_attributes: Optional[Dict[str, Any]] = None,
+    goal_valid_until: Optional[Any] = None,
+    expected_revision: Optional[int] = 0,
+    action: str = "skip_remaining",
+) -> Dict[str, Any]:
+    state = db.query(OnboardingState).filter_by(user_id=user_id).with_for_update(nowait=False).one_or_none()
+    if state is None:
+        state = OnboardingState(
+            user_id=user_id,
+            guide_version=1,
+            revision=0,
+            status="in_progress",
+            current_step=None,
+            steps=_default_steps(),
+            channel_answer=None,
+            profile_answer=None,
+            tags=None,
+        )
+        db.add(state)
+        db.flush()
+
+    if expected_revision is not None and int(state.revision) != int(expected_revision):
+        if not (int(state.revision) == 1 and int(expected_revision) == 0):
+            raise OnboardingRevisionConflict(latest=serialize_state(state))
+
+    if action == "skip_remaining":
+        steps = state.steps or _default_steps()
+        for k, v in steps.items():
+            if v == "pending":
+                steps[k] = "skipped"
+        state.steps = steps
+        _flag_state_dirty(state)
+        state.status = "skipped"
+    elif action == "completed":
+        steps = state.steps or _default_steps()
+        if not all(v in ("completed", "skipped") for v in steps.values()):
+            raise ValueError("cannot complete: not all steps processed")
+        state.status = "completed"
+        _flag_state_dirty(state)
+    else:
+        raise ValueError("unknown action")
+
+    state.current_step = None
+    state.revision = int(state.revision) + 1
+    db.add(state)
+
+    user = db.query(User).filter(User.id == user_id).with_for_update().one_or_none()
+    if user is None:
+        raise ValueError("user not found")
+    user.nickname = nickname.strip()
+    db.add(user)
+
+    active_goal = (
+        db.query(Goal)
+        .filter(Goal.user_id == user_id, Goal.status == "active")
+        .with_for_update()
+        .one_or_none()
+    )
+    if active_goal is not None:
+        active_goal.text = goal_text.strip()
+        active_goal.attributes = goal_attributes
+        active_goal.valid_until = goal_valid_until
+    else:
+        active_goal = Goal(
+            user_id=user_id,
+            text=goal_text.strip(),
+            attributes=goal_attributes,
+            valid_until=goal_valid_until,
+            status="active",
+        )
+        db.add(active_goal)
+
+    db.flush()
+
+    return {
+        "onboarding": serialize_state(state),
+        "profile": {"user_id": user.id, "nickname": user.nickname},
+        "goal": {
+            "id": active_goal.id,
+            "text": active_goal.text,
+            "attributes": active_goal.attributes,
+            "valid_until": active_goal.valid_until,
+            "status": active_goal.status,
+            "created_at": active_goal.created_at,
+        },
+    }
