@@ -30,6 +30,12 @@ class NoteCreate(BaseModel):
     content_md: str = ""
     collection_id: str | None = None
     note_type: str = "manual"
+    # Issue #18 tip：用户给短卡片打的类型（难词/易错点…），没有也可以收
+    tags: list[str] | None = None
+    # Issue #18 tip：关联哪本资料（可空，必须属于当前用户）
+    document_id: str | None = None
+    # Issue #18 tip：来源（tina / quiz / kb）
+    source: str | None = None
 
 
 class NoteUpdate(BaseModel):
@@ -41,6 +47,9 @@ class NoteUpdate(BaseModel):
     content_md: str | None = None
     collection_id: str | None = None
     note_type: str | None = None
+    tags: list[str] | None = None
+    document_id: str | None = None
+    source: str | None = None
 
 
 class NoteDelete(BaseModel):
@@ -63,6 +72,9 @@ class NoteResponse(BaseModel):
     content_md: str
     note_type: str
     collection_id: str | None = None
+    document_id: str | None = None
+    tags: list[str] | None = None
+    source: str | None = None
     revision: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -104,6 +116,19 @@ class AttachmentResponse(BaseModel):
 router = APIRouter(tags=["笔记系统"])
 
 
+def _ensure_document_owned(
+    db: Session, user_id: int, document_id: str | None
+) -> None:
+    """Issue #18 tip：关联的文档必须属于当前用户，否则拒绝（不许编造他人文档 id）。"""
+    if not document_id:
+        return
+    from app.crud import kb as kb_crud
+
+    doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+
+
 def _note_response(r):
     return {
         "id": r.id,
@@ -111,6 +136,9 @@ def _note_response(r):
         "content_md": r.content_md,
         "note_type": r.note_type,
         "collection_id": r.collection_id,
+        "document_id": r.document_id,
+        "tags": r.tags,
+        "source": r.source,
         "revision": r.revision,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
@@ -152,13 +180,20 @@ def _attachment_response(a):
 def list_notes(
     page: int = Query(1, ge=1),
     limit: int = Query(100, ge=1, le=200),
-    note_type: str = Query(None),
+    note_type: str = Query(None, description="如 tip / manual / report"),
+    tag: str = Query(None, description="按用户给 tip 打的类型筛选"),
+    source: str = Query(None, description="按来源筛选：tina / quiz / kb"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """列出当前用户的笔记（默认排除已删除）"""
+    """列出当前用户的笔记（默认排除已删除，新的在前）"""
     rows = note_crud.list_notes(
-        db, current_user["user_id"], note_type=note_type, limit=limit
+        db,
+        current_user["user_id"],
+        note_type=note_type,
+        tag=tag,
+        source=source,
+        limit=limit,
     )
     return [_note_response(r) for r in rows]
 
@@ -247,7 +282,8 @@ def create_note(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """创建笔记"""
+    """创建笔记（tip 走同一接口：note_type=tip + 可选 tags/document_id/source）"""
+    _ensure_document_owned(db, current_user["user_id"], payload.document_id)
     row = note_crud.create_note(
         db,
         user_id=current_user["user_id"],
@@ -255,6 +291,9 @@ def create_note(
         content_md=payload.content_md,
         collection_id=payload.collection_id,
         note_type=payload.note_type,
+        tags=payload.tags,
+        document_id=payload.document_id,
+        source=payload.source,
     )
     db.commit()
     return _note_response(row)
@@ -315,6 +354,7 @@ def update_note(
     current_user: dict = Depends(get_current_active_user),
 ):
     """更新笔记"""
+    _ensure_document_owned(db, current_user["user_id"], payload.document_id)
     result = note_crud.update_note(
         db,
         current_user["user_id"],
@@ -324,6 +364,9 @@ def update_note(
         content_md=payload.content_md,
         collection_id=payload.collection_id,
         note_type=payload.note_type,
+        tags=payload.tags,
+        document_id=payload.document_id,
+        source=payload.source,
     )
     if result.note is None:
         if result.current_revision is not None:
