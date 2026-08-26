@@ -13,6 +13,7 @@ from app.schemas.quiz import (
     QuizSessionOut,
 )
 from app.services.quiz import quiz_service
+from app.services.tasks import task_service
 
 router = APIRouter(tags=["刷题"])
 
@@ -65,6 +66,13 @@ def submit_answer(
         time_spent_seconds=payload.time_spent_seconds,
     )
     db.commit()
+    # 检查器：任务范围内交够约定道数（含「不会」）→ 今日刷题任务自动完成
+    result.completed_tasks = task_service.run_completion_checks(
+        db,
+        current_user["user_id"],
+        "answer_submitted",
+        {"session_id": session_id},
+    )
     return result
 
 

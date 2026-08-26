@@ -25,6 +25,7 @@ from app.crud import kb as kb_crud
 from app.crud import toc as toc_crud
 from app.schemas.toc import TocListOut, TocOut
 from app.services.knowledge.file_parser import SUPPORTED_EXTENSIONS
+from app.services.tasks import task_service
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ async def upload_document(
     """
     content_bytes = await file.read()
     try:
-        return kb_service.upload_document(
+        result = kb_service.upload_document(
             db=db,
             user_id=current_user["user_id"],
             user_dataset_id=current_user.get("dataset_id"),
@@ -187,6 +188,20 @@ async def upload_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"上传失败: {str(e)}",
         )
+
+    # 检查器：上传成功且学习区多了「能解析的」新书 → 今日上传任务自动完成。
+    # 传错书也算完成；空文件 / 解析失败 / hash 去重没有新书则继续挂。
+    result.completed_tasks = task_service.run_completion_checks(
+        db,
+        current_user["user_id"],
+        "upload",
+        {
+            "status": result.status,
+            "segment_status": result.segment_status,
+            "parse_warning": result.parse_warning,
+        },
+    )
+    return result
 
 
 # ─── 文档列表 ────────────────────────────────────────────

@@ -2,6 +2,7 @@
 题目 API — 生成、列表、详情（含 provenance）
 """
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, status
@@ -14,6 +15,7 @@ from app.api.deps import (
     get_db,
     get_streaming_user,
 )
+from app.core.database import short_session
 from app.schemas.page import PageExtractRequest, PageGenerateRequest
 from app.schemas.question import (
     PageQuestionResponse,
@@ -25,6 +27,9 @@ from app.schemas.question import (
     QuestionListOut,
 )
 from app.services.quiz import question_gen_service
+from app.services.tasks import task_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["题目"])
 
@@ -156,6 +161,11 @@ async def generate_from_pages(
             token=token,
         )
     db.commit()
+    # 检查器：payload 那些页已经有题 → 今日出题任务自动完成。
+    # 不看整本 question_gen_status；异步场景这里可能还查不到题，继续挂着。
+    result.completed_tasks = task_service.run_completion_checks(
+        db, current_user["user_id"], "questions_generated"
+    )
     return result
 
 
@@ -179,6 +189,15 @@ async def generate_stream_from_pages(
             questions_per_page=payload.questions_per_page,
             token=token,
         ):
+            # 检查器：流结束后看 payload 页是否已有题，done 事件带 completed_tasks
+            if event_name == "message" and data.get("type") == "done":
+                try:
+                    with short_session() as db:
+                        data["completed_tasks"] = task_service.run_completion_checks(
+                            db, current_user["user_id"], "questions_generated"
+                        )
+                except Exception as e:
+                    logger.warning(f"出题检查器执行失败: {e}")
             yield f"event: {event_name}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
@@ -218,4 +237,8 @@ async def extract_from_pages(
             page_numbers=payload.page_numbers,
         )
     db.commit()
+    # 检查器：payload 页已有题 → 今日出题任务自动完成（与 AI 出题同一判定）
+    result.completed_tasks = task_service.run_completion_checks(
+        db, current_user["user_id"], "questions_generated"
+    )
     return result
