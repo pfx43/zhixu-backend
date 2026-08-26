@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 revision = "20260824_goals"
-down_revision = "20260821_question_page_number"
+down_revision = "20260822_segment_pages_toc"
 branch_labels = None
 depends_on = None
 
