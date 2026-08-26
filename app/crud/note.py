@@ -46,6 +46,9 @@ def create_note(
     content_md: str,
     collection_id: Optional[str] = None,
     note_type: str = "manual",
+    tags: Optional[List[str]] = None,
+    document_id: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> UserNote:
     row = UserNote(
         user_id=user_id,
@@ -53,6 +56,9 @@ def create_note(
         content_md=content_md,
         collection_id=collection_id,
         note_type=note_type,
+        tags=tags or None,
+        document_id=document_id,
+        source=source,
     )
     db.add(row)
     db.flush()
@@ -64,6 +70,8 @@ def list_notes(
     user_id: int,
     *,
     note_type: Optional[str] = None,
+    tag: Optional[str] = None,
+    source: Optional[str] = None,
     limit: int = 50,
     include_deleted: bool = False,
 ) -> List[UserNote]:
@@ -72,6 +80,10 @@ def list_notes(
         query = query.filter(UserNote.deleted_at.is_(None))
     if note_type:
         query = query.filter(UserNote.note_type == note_type)
+    if source:
+        query = query.filter(UserNote.source == source)
+    if tag:
+        query = query.filter(UserNote.tags.contains([tag]))
     return query.order_by(UserNote.created_at.desc()).limit(limit).all()
 
 
@@ -120,7 +132,8 @@ def update_note(
     values = {
         key: value
         for key, value in fields.items()
-        if key in {"title", "content_md", "collection_id", "note_type"}
+        if key
+        in {"title", "content_md", "collection_id", "note_type", "tags", "document_id", "source"}
         and value is not None
     }
     if not values:

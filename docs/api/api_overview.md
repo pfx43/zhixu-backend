@@ -2535,6 +2535,7 @@ data: {"agent_session_id":"agent_sess_001","role":"assistant","content":"..."}
 
 ```
 GET /api/v1/notes?page=1&limit=100&note_type=manual
+GET /api/v1/notes?note_type=tip&tag=难词&source=quiz
 ```
 
 **需要鉴权**：是
@@ -2543,11 +2544,13 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| | `page` | int | | 页码（≥1），默认 1 |
-| | `limit` | int | | 每页条数（1-200），默认 100 |
-| | `note_type` | string | | 笔记类型：`manual` / `report` 等（可选过滤） |
+| `page` | int | | 页码（≥1），默认 1 |
+| `limit` | int | | 每页条数（1-200），默认 100 |
+| `note_type` | string | | 笔记类型：`manual` / `report` / `tip` 等（可选过滤） |
+| `tag` | string | | 按用户给 tip 打的类型筛选（#18，可选） |
+| `source` | string | | 按来源筛选：`tina` / `quiz` / `kb`（#18，可选） |
 
-> 默认排除已删除（`deleted_at IS NOT NULL`）的笔记。
+> 默认排除已删除（`deleted_at IS NOT NULL`）的笔记，新的在前。
 
 **成功响应** (200)：
 
@@ -2559,6 +2562,9 @@ GET /api/v1/notes?page=1&limit=100&note_type=manual
     "content_md": "# 监督学习\n\n监督学习是...",
     "note_type": "manual",
     "collection_id": "col_001",
+    "document_id": null,
+    "tags": null,
+    "source": null,
     "revision": 1,
     "created_at": "2025-01-01T10:00:00",
     "updated_at": "2025-01-01T10:30:00"
@@ -2605,12 +2611,23 @@ POST /api/v1/notes
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| | `title` | string | ✓ | 笔记标题 |
-| | `content_md` | string | | Markdown 内容，默认 `""` |
-| | `collection_id` | string | | 所属知识库分区 ID（可选） |
-| | `note_type` | string | | 笔记类型，默认 `"manual"` |
+| `title` | string | ✓ | 笔记标题 |
+| `content_md` | string | | Markdown 内容，默认 `""` |
+| `collection_id` | string | | 所属知识库分区 ID（可选） |
+| `note_type` | string | | 笔记类型，默认 `"manual"`；tip 用 `"tip"`（#18） |
+| `tags` | string[] | | tip 用户分类（难词 / 易错点…），无则可不传（#18） |
+| `document_id` | string | | tip 关联的资料 ID（可空，必须属于当前用户，否则 404）（#18） |
+| `source` | string | | tip 来源：`tina` / `quiz` / `kb`（#18） |
 
-**成功响应** (201)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
+**成功响应** (201)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构（含 `tags` / `document_id` / `source`）。
+
+---
+
+> **tip（Issue #18）**：tip 不另起表，就是 `note_type=tip` 的笔记。
+> 划选原文放 `content_md`，关联资料用 `document_id`（必须属于当前用户），
+> 来源用 `source`；`tags` 是**用户给短卡片打的类型**，与题目/文档的知识点 tag 分命名空间，按用户隔离。
+> 列表 `GET /api/v1/notes?note_type=tip&tag=难词&source=quiz` 可按类型/来源筛选，新的在前。
+> 用户没打 tag 也可以收。删号时随笔记一起删除。
 
 ---
 
@@ -2632,11 +2649,14 @@ PATCH /api/v1/notes/{note_id}
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|:---:|------|
-| | `expected_revision` | int | ✓ | 客户端最后读取到的稳定版本，必须 ≥ 1 |
-| | `title` | string | | 新标题 |
-| | `content_md` | string | | 新 Markdown 内容 |
-| | `collection_id` | string | | 新分区 ID |
-| | `note_type` | string | | 新笔记类型 |
+| `expected_revision` | int | ✓ | 客户端最后读取到的稳定版本，必须 ≥ 1 |
+| `title` | string | | 新标题 |
+| `content_md` | string | | 新 Markdown 内容 |
+| `collection_id` | string | | 新分区 ID |
+| `note_type` | string | | 新笔记类型 |
+| `tags` | string[] | | tip 用户分类（#18，传 `null` 不更新） |
+| `document_id` | string | | 关联资料 ID（#18，必须属于当前用户） |
+| `source` | string | | 来源 `tina` / `quiz` / `kb`（#18） |
 
 **成功响应** (200)：同 [13.1 列出笔记](#131-列出笔记) 中的单条结构。
 
