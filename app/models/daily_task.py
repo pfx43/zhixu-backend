@@ -53,6 +53,9 @@ class DailyTask(Base):
     completion_rule = Column(JSON, nullable=True)
     # 状态：pending | completed（无勾选完成接口，只能由检查器翻转）
     status = Column(String(20), nullable=False, server_default="pending", index=True)
+    # 完成证据（Issue #31/#38：检查器翻转时写入；注意目标详情「证据变化」用
+    # goal_evidence_events，不复用本字段冒充）
+    evidence_json = Column(JSON, nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

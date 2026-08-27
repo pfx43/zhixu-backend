@@ -294,7 +294,13 @@ def test_upload_completes_upload_task(task_client, monkeypatch):
     resp = client.post("/api/v1/kb/upload", files={"file": ("test.pdf", b"%PDF-1.4 fake", "application/pdf")})
     assert resp.status_code == 200
     data = resp.json()
-    assert data["completed_tasks"] == [{"id": task.id, "title": task.title}]
+    receipts = data["completed_tasks"]
+    assert len(receipts) == 1 and receipts[0]["id"] == task.id
+    assert receipts[0]["source_action"] == "document_uploaded"
+    assert receipts[0]["before_status"] == "pending"
+    assert receipts[0]["after_status"] == "completed"
+    assert len(receipts[0]["idempotency_key"]) == 64  # sha256 hex
+    assert receipts[0]["evidence"]["kind"] == "new_parsable_document"
 
     with SessionLocal() as session:
         t = session.query(DailyTask).filter(DailyTask.id == task.id).first()
@@ -313,7 +319,9 @@ def test_upload_wrong_book_still_completes(task_client, monkeypatch):
 
     resp = client.post("/api/v1/kb/upload", files={"file": ("别处的书.pdf", b"other", "application/pdf")})
     assert resp.status_code == 200
-    assert resp.json()["completed_tasks"] == [{"id": task.id, "title": task.title}]
+    receipts = resp.json()["completed_tasks"]
+    assert len(receipts) == 1 and receipts[0]["id"] == task.id
+    assert receipts[0]["source_action"] == "document_uploaded"
 
 
 def test_upload_duplicate_does_not_complete(task_client, monkeypatch):
@@ -390,7 +398,11 @@ def test_generate_completes_when_payload_pages_have_questions(task_client, monke
 
     resp = _post_generate(client)
     assert resp.status_code == 200
-    assert resp.json()["completed_tasks"] == [{"id": task.id, "title": task.title}]
+    receipts = resp.json()["completed_tasks"]
+    assert len(receipts) == 1 and receipts[0]["id"] == task.id
+    assert receipts[0]["source_action"] == "questions_generated"
+    assert receipts[0]["after_status"] == "completed"
+    assert len(receipts[0]["idempotency_key"]) == 64
 
     with SessionLocal() as session:
         t = session.query(DailyTask).filter(DailyTask.id == task.id).first()
@@ -460,7 +472,11 @@ def test_practice_completes_when_count_reached_with_unknown(task_client):
     r2 = client.post(f"/api/v1/quiz/sessions/{session_id}/answers",
                      json={"question_id": "q-doc-1-p2", "status": "unknown"})
     assert r2.status_code == 200
-    assert r2.json()["completed_tasks"] == [{"id": task.id, "title": task.title}]
+    receipts = r2.json()["completed_tasks"]
+    assert len(receipts) == 1 and receipts[0]["id"] == task.id
+    assert receipts[0]["source_action"] == "answer_submitted"
+    assert receipts[0]["evidence"]["answered_count"] >= 2
+    assert len(receipts[0]["idempotency_key"]) == 64
 
     with SessionLocal() as session:
         t = session.query(DailyTask).filter(DailyTask.id == task.id).first()
