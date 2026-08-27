@@ -48,6 +48,9 @@ class GlobalDocument(Base):
     file_size = Column(Integer, nullable=False)
     storage_path = Column(String(512), nullable=False)
     parsed_text_path = Column(String(512), nullable=True)
+    # #40 封面 / 缩略图（PDF 首页渲染，本地落盘路径；无封面时为 NULL）
+    cover_storage_path = Column(String(512), nullable=True)
+    thumbnail_storage_path = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     documents = relationship("Document", back_populates="global_document")
