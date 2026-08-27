@@ -14,6 +14,10 @@ if str(_TEST_DIR) not in sys.path:
 
 load_dotenv(_BACKEND_DIR / ".env")
 
+# 测试专用开关：测试后门 token 与内部健康检查 key（生产环境不得设置）
+os.environ.setdefault("ALLOW_TEST_TOKEN", "1")
+os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
+
 from pgutil import TEST_SCHEMA, ensure_test_schema, with_search_path  # noqa: E402
 
 

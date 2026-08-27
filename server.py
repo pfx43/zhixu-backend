@@ -17,10 +17,11 @@ if str(_BACKEND_ROOT) not in sys.path:
 from app.core import paddle_env  # noqa: F401
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,11 +88,17 @@ async def lifespan(app: FastAPI):
     logger.info("服务关闭")
 
 
-app = FastAPI(title="知序 KT 后端", version="2.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="知序 KT 后端",
+    version="2.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 # ── CORS 配置 ──
-import os as _os
-_cors_origins_env = _os.getenv("CORS_ALLOWED_ORIGINS", "")
+_cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
 if _cors_origins_env:
     _allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
 else:
@@ -107,7 +114,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"service": "知序 KT 后端", "version": "2.1.0", "status": "running"}
+    return {"status": "ok"}
 
 
 @app.exception_handler(Exception)
@@ -162,8 +169,7 @@ def _check_llm_ready() -> bool:
     return False
 
 
-@app.get("/health")
-async def health(request: Request):
+def _collect_health_detail(request: Request) -> dict:
     tcn_healthy = getattr(request.app.state, "tcn_healthy", False)
     tcn_nodes = getattr(request.app.state, "tcn_nodes", 0)
     available_paths = request.app.openapi().get("paths", {})
@@ -199,6 +205,22 @@ async def health(request: Request):
     }
 
 
+@app.get("/health")
+async def health(request: Request):
+    detail = _collect_health_detail(request)
+    return {"status": detail["status"]}
+
+
+@app.get("/health/detailed")
+async def health_detailed(
+    request: Request, x_internal_key: str = Header(None, alias="X-Internal-Key")
+):
+    internal_key = os.getenv("INTERNAL_API_KEY", "")
+    if not internal_key or x_internal_key != internal_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return _collect_health_detail(request)
+
+
 # ─── 业务路由 ───
 
 from app.api.v1.router import api_router
@@ -207,4 +229,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8765)
+    uvicorn.run(app, host="127.0.0.1", port=8765)

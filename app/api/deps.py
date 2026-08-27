@@ -15,12 +15,17 @@ def get_db():
     finally:
         db.close()
 
+def _test_token_enabled() -> bool:
+    """测试后门 token 仅在 ALLOW_TEST_TOKEN=1 时生效，生产环境不得设置。"""
+    return os.getenv("ALLOW_TEST_TOKEN", "") == "1"
+
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
     # Support a test token for local unit tests — return dict for uniform access via ["key"]
-    if token == "TEST_TOKEN_FOR_USER":
+    if _test_token_enabled() and token == "TEST_TOKEN_FOR_USER":
         return {"user_id": 1, "email": "test@example.com", "is_active": True}
 
     user = get_session_user(db, token)
@@ -37,7 +42,7 @@ def get_current_token(token: str = Depends(oauth2_scheme)) -> str:
 
 def load_current_user_snapshot(token: str) -> dict:
     """鉴权并返回用户 payload；Session 在返回前关闭（供 SSE 长请求）。"""
-    if token == "TEST_TOKEN_FOR_USER":
+    if _test_token_enabled() and token == "TEST_TOKEN_FOR_USER":
         return {"user_id": 1, "email": "test@example.com", "is_active": True}
 
     from app.core.database import short_session
