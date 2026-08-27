@@ -22,8 +22,8 @@ from pgutil import empty_test_engine, test_database_url as postgres_url
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 # Alembic HEAD revision：每次新增迁移都要同步更新这个版本号。
-# 新增 20260826_note_tip_fields 后，head = 20260826_note_tip_fields。
-ALEMBIC_HEAD_REVISION = "20260826_note_tip_fields"
+# 新增 20260827_goal_evidence（#38 Evidence Impact）后，head = 20260827_goal_evidence。
+ALEMBIC_HEAD_REVISION = "20260827_goal_evidence"
 
 
 def _create_all_except(engine, excluded: set[str]) -> None:

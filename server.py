@@ -88,13 +88,18 @@ async def lifespan(app: FastAPI):
     logger.info("服务关闭")
 
 
+# 安全加固（16a6461）：生产关闭公开 API 文档。
+# 测试环境通过 ENABLE_OPENAPI=1（test/conftest.py 注入）保留 /openapi.json，
+# 契约测试依赖它；生产不设置该变量，文档仍不可达。
+_enable_openapi = os.getenv("ENABLE_OPENAPI", "") == "1"
+
 app = FastAPI(
     title="知序 KT 后端",
     version="2.1.0",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
-    openapi_url=None,
+    openapi_url="/openapi.json" if _enable_openapi else None,
 )
 
 # ── CORS 配置 ──
