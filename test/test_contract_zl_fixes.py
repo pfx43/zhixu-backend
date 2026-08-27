@@ -84,6 +84,7 @@ def test_learning_path_goal_id_owned_returns_ok(client):
 def test_learning_path_goal_id_not_owned_returns_404(client):
     c, SessionLocal = client
     with SessionLocal() as db:
+        _seed_user(db, 9999, "other@example.com", nickname="Other")
         db.add(Goal(user_id=9999, text="别人的目标", status="active"))
         db.commit()
         other_goal_id = db.query(Goal).filter(Goal.user_id == 9999).first().id
