@@ -13,13 +13,24 @@ REQUIRED_ONBOARDING_PATHS = [
 INTERNAL_KEY_HEADER = {"X-Internal-Key": "test-internal-key"}
 
 
-def test_public_health_returns_status_only():
+def test_public_health_returns_full_contract():
+    # #33：/health 返回完整契约（含 api_contract.missing_paths），顶层保留 status。
     response = TestClient(app).get("/health")
 
     assert response.status_code == 200
     body = response.json()
-    assert body.keys() == {"status"}
     assert body["status"] in {"ok", "degraded"}
+    assert "api_contract" in body
+    assert body["api_contract"]["required_paths"] == REQUIRED_ONBOARDING_PATHS
+    assert body["api_contract"]["missing_paths"] == []
+
+
+def test_openapi_json_available():
+    # #32：openapi.json 恢复可读（docs/redoc 仍关闭）。
+    response = TestClient(app).get("/openapi.json")
+
+    assert response.status_code == 200
+    assert "paths" in response.json()
 
 
 def test_health_detailed_reports_complete_onboarding_api_contract():
