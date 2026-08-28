@@ -197,7 +197,10 @@ def _provenance_page_map(
 def get_learning_path(
     db: Session, user_id: int, goal_id: Optional[int] = None
 ) -> LearningPathOut:
-    # #34：goal_id 传入时仅校验归属，暂不做范围过滤。
+    # #34：按目标过滤学习路径当前未实现。
+    # - 不传 goal_id：返回全部学习区文档（长期行为，保持不变）。
+    # - 传 goal_id 且不属于当前用户：404（归属校验）。
+    # - 传 goal_id 且属于当前用户：501（诚实声明「暂未实现」，绝不返回全书假装过滤成功）。
     if goal_id is not None:
         goal = (
             db.query(Goal)
@@ -206,6 +209,9 @@ def get_learning_path(
         )
         if not goal:
             raise HTTPException(status_code=404, detail="目标不存在或不属于当前用户")
+        raise HTTPException(
+            status_code=501, detail="按目标过滤学习路径暂未实现"
+        )
 
     docs, _ = kb_crud.list_documents(db, user_id, page=1, limit=10000)
     study_docs = [d for d in docs if d.zone == "study"]

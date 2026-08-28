@@ -2,7 +2,7 @@
 
 依赖 PostgreSQL 测试库（conftest 自动切换到 pytest schema）。
 覆盖：
-- #34：GET /learning-path?goal_id= 仅校验归属，不归属/不存在抛 404，通过后返回全部文档。
+- #34：GET /learning-path?goal_id= 归属校验；不存在/不归属 404；归属通过返回 501（过滤未实现）。
 - #29：tip 笔记创建/读取时锚点字段（page_number/char_start/char_end/source_ref_*）落库并透传。
 """
 import sys
@@ -67,18 +67,16 @@ def client(monkeypatch):
 
 # ── #34：learning-path goal_id 归属校验 ──────────────────────
 
-def test_learning_path_goal_id_owned_returns_ok(client):
+def test_learning_path_goal_id_owned_returns_501_not_implemented(client):
     c, SessionLocal = client
     with SessionLocal() as db:
         db.add(Goal(user_id=9001, text="研究生上岸", status="active"))
         db.commit()
         goal_id = db.query(Goal).filter(Goal.user_id == 9001).first().id
 
+    # #34 选 3：目标属于当前用户，但按目标过滤未实现 → 501，不返回全书冒充过滤。
     resp = c.get(f"/api/v1/learning-path?goal_id={goal_id}")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "documents" in data
-    assert "tags" in data
+    assert resp.status_code == 501
 
 
 def test_learning_path_goal_id_not_owned_returns_404(client):
