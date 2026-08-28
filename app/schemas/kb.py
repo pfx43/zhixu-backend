@@ -49,6 +49,9 @@ class DocumentOut(BaseModel):
     ocr_current_page: Optional[int] = None
     ocr_total_pages: Optional[int] = None
     dify_document_id: Optional[str] = None
+    # #40 封面 / 缩略图可访问 URL；无封面时为 None，前端兜底
+    cover_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

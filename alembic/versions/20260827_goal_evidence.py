@@ -1,7 +1,7 @@
 """goal_evidence_events 表（Issue #38 Evidence Impact 独立契约）
 
 Revision ID: 20260827_goal_evidence
-Revises: 20260826_note_tip_fields
+Revises: 20260827_cover_and_note_anchor
 Create Date: 2026-08-27 20:50:00.000000
 
 目标详情「证据变化」页的数据源：不复用 daily_tasks.evidence_json 冒充。
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 
 revision = "20260827_goal_evidence"
-down_revision = "20260826_note_tip_fields"
+down_revision = "20260827_cover_and_note_anchor"
 branch_labels = None
 depends_on = None
 

@@ -314,6 +314,26 @@ def get_document_file(
     return kb_service.serve_document_file(db, current_user["user_id"], doc_id)
 
 
+@router.get("/documents/{doc_id}/cover")
+def get_document_cover(
+    doc_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """封面（PDF 首页渲染图，受鉴权）"""
+    return kb_service.serve_document_cover(db, current_user["user_id"], doc_id, "cover")
+
+
+@router.get("/documents/{doc_id}/thumbnail")
+def get_document_thumbnail(
+    doc_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """缩略图（PDF 首页渲染图，受鉴权）"""
+    return kb_service.serve_document_cover(db, current_user["user_id"], doc_id, "thumbnail")
+
+
 @router.get("/documents/{doc_id}/segments")
 def list_document_segments(
     doc_id: str,

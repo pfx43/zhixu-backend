@@ -97,9 +97,11 @@ app = FastAPI(
     title="知序 KT 后端",
     version="2.1.0",
     lifespan=lifespan,
+    # #32：恢复 openapi.json 供契约校验读取；/docs、/redoc 仍按安全加固关闭。
     docs_url=None,
     redoc_url=None,
-    openapi_url="/openapi.json" if _enable_openapi else None,
+    # #32：生产也提供 /openapi.json；/docs、/redoc 仍关闭。
+    openapi_url="/openapi.json",
 )
 
 # ── CORS 配置 ──
@@ -212,8 +214,9 @@ def _collect_health_detail(request: Request) -> dict:
 
 @app.get("/health")
 async def health(request: Request):
-    detail = _collect_health_detail(request)
-    return {"status": detail["status"]}
+    # #33：/health 返回完整契约（含 api_contract.missing_paths），
+    # 顶层保留 status 字段以向后兼容旧客户端。
+    return _collect_health_detail(request)
 
 
 @app.get("/health/detailed")
