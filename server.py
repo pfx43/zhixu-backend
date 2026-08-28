@@ -139,10 +139,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ─── 健康检查 ───
 
 REQUIRED_DEPLOYMENT_PATHS = (
+    # onboarding（引导，P0 契约）
     "/api/v1/onboarding/complete",
     "/api/v1/onboarding/restart",
     "/api/v1/onboarding/state",
     "/api/v1/onboarding/step",
+    # #33 契约名单：核心闭环入口必须挂载
+    "/api/v1/tasks/today",
+    "/api/v1/tasks/today/ensure",
+    "/api/v1/notes",
+    "/api/v1/search",
+    "/api/v1/notifications",
+    "/api/v1/reminders",
+    "/api/v1/profile/graph",
+    "/api/v1/learning-path",
+    "/api/v1/goals",
 )
 
 
