@@ -36,6 +36,12 @@ class NoteCreate(BaseModel):
     document_id: str | None = None
     # Issue #18 tip：来源（tina / quiz / kb）
     source: str | None = None
+    # Issue #29 tip：划选锚点（跨端回源）
+    page_number: int | None = None
+    char_start: int | None = None
+    char_end: int | None = None
+    source_ref_id: str | None = None
+    source_ref_type: str | None = None
 
 
 class NoteUpdate(BaseModel):
@@ -50,6 +56,11 @@ class NoteUpdate(BaseModel):
     tags: list[str] | None = None
     document_id: str | None = None
     source: str | None = None
+    page_number: int | None = None
+    char_start: int | None = None
+    char_end: int | None = None
+    source_ref_id: str | None = None
+    source_ref_type: str | None = None
 
 
 class NoteDelete(BaseModel):
@@ -75,6 +86,11 @@ class NoteResponse(BaseModel):
     document_id: str | None = None
     tags: list[str] | None = None
     source: str | None = None
+    page_number: int | None = None
+    char_start: int | None = None
+    char_end: int | None = None
+    source_ref_id: str | None = None
+    source_ref_type: str | None = None
     revision: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -139,6 +155,11 @@ def _note_response(r):
         "document_id": r.document_id,
         "tags": r.tags,
         "source": r.source,
+        "page_number": r.page_number,
+        "char_start": r.char_start,
+        "char_end": r.char_end,
+        "source_ref_id": r.source_ref_id,
+        "source_ref_type": r.source_ref_type,
         "revision": r.revision,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
@@ -294,6 +315,11 @@ def create_note(
         tags=payload.tags,
         document_id=payload.document_id,
         source=payload.source,
+        page_number=payload.page_number,
+        char_start=payload.char_start,
+        char_end=payload.char_end,
+        source_ref_id=payload.source_ref_id,
+        source_ref_type=payload.source_ref_type,
     )
     db.commit()
     return _note_response(row)
@@ -367,6 +393,11 @@ def update_note(
         tags=payload.tags,
         document_id=payload.document_id,
         source=payload.source,
+        page_number=payload.page_number,
+        char_start=payload.char_start,
+        char_end=payload.char_end,
+        source_ref_id=payload.source_ref_id,
+        source_ref_type=payload.source_ref_type,
     )
     if result.note is None:
         if result.current_revision is not None:

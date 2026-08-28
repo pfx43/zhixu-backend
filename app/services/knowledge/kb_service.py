@@ -22,7 +22,7 @@ from app.core.config import (
 )
 from app.core.database import SessionLocal
 from app.core.job_runner import run_in_background
-from app.models import Document, KbCollection
+from app.models import Document, GlobalDocument, KbCollection
 from app.schemas.kb import (
     CollectionCreate,
     CollectionListOut,
@@ -737,6 +737,11 @@ def upload_document(
             mime_type=_guess_mime(suffix),
             parsed_text_path=parsed_text_path,
         )
+        # #40 新上传 PDF 渲染首页封面/缩略图（失败不阻断上传）
+        cover_path, thumb_path = _render_pdf_cover(global_doc)
+        if cover_path:
+            global_doc.cover_storage_path = cover_path
+            global_doc.thumbnail_storage_path = thumb_path
 
     if parsed_text_path:
         parsed_cache_key = parsed_text_path
@@ -948,6 +953,7 @@ def list_documents(
         if doc.global_document:
             file_size = doc.global_document.file_size
             file_type = doc.global_document.mime_type
+        cover_url, thumbnail_url = _document_cover_urls(doc)
         out_docs.append(
             DocumentOut(
                 id=doc.dify_document_id or doc.id,
@@ -960,6 +966,8 @@ def list_documents(
                 segment_status=doc.segment_status,
                 question_gen_status=doc.question_gen_status,
                 dify_document_id=doc.dify_document_id,
+                cover_url=cover_url,
+                thumbnail_url=thumbnail_url,
                 created_at=doc.created_at,
                 updated_at=doc.updated_at,
                 **_ocr_fields_for_doc(doc),
@@ -1081,6 +1089,86 @@ def _infer_document_file_type(doc: Document) -> str:
     return _file_type_from_name(doc.display_name)
 
 
+def _render_pdf_cover(
+    global_doc: GlobalDocument,
+) -> tuple[Optional[str], Optional[str]]:
+    """为 PDF 渲染首页封面与缩略图，返回 (cover_path, thumbnail_path)。
+
+    非 PDF 或缺少 fitz 时返回 (None, None)；渲染失败不阻断上传。
+    """
+    storage_path = global_doc.storage_path
+    if not storage_path or not Path(storage_path).suffix.lower() == ".pdf":
+        return None, None
+    try:
+        import fitz
+    except ImportError:
+        return None, None
+
+    try:
+        pdf = fitz.open(storage_path)
+        try:
+            if pdf.page_count < 1:
+                return None, None
+            page = pdf[0]
+            base = Path(storage_path).parent
+            cover_pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5), alpha=False)
+            cover_path = base / f"{global_doc.content_hash}.cover.png"
+            cover_pix.save(str(cover_path))
+            thumb_pix = page.get_pixmap(matrix=fitz.Matrix(0.4, 0.4), alpha=False)
+            thumb_path = base / f"{global_doc.content_hash}.thumb.png"
+            thumb_pix.save(str(thumb_path))
+            return str(cover_path), str(thumb_path)
+        finally:
+            pdf.close()
+    except Exception:
+        logger.warning("封面渲染失败: %s", storage_path)
+        return None, None
+
+
+def _ensure_cover_paths(global_doc: GlobalDocument) -> None:
+    """按需为 PDF 生成封面路径（幂等，已存在则跳过）。"""
+    if global_doc.cover_storage_path and Path(global_doc.cover_storage_path).is_file():
+        return
+    cover_path, thumb_path = _render_pdf_cover(global_doc)
+    if cover_path:
+        global_doc.cover_storage_path = cover_path
+        global_doc.thumbnail_storage_path = thumb_path
+
+
+def _document_cover_urls(doc: Document) -> tuple[Optional[str], Optional[str]]:
+    """返回 (cover_url, thumbnail_url)，无封面时为 (None, None)。"""
+    global_doc = doc.global_document
+    if not global_doc or not global_doc.cover_storage_path:
+        return None, None
+    url_id = doc.dify_document_id or doc.id
+    cover = f"/api/v1/kb/documents/{url_id}/cover"
+    thumb = f"/api/v1/kb/documents/{url_id}/thumbnail"
+    return cover, thumb
+
+
+def serve_document_cover(
+    db: Session, user_id: int, doc_id: str, kind: str = "cover"
+) -> FileResponse:
+    """封面 / 缩略图访问（受鉴权，仅文档 owner 可读）。"""
+    doc = kb_crud.get_document_by_id_or_dify(db, user_id, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+
+    global_doc = doc.global_document
+    if not global_doc:
+        raise HTTPException(status_code=404, detail="封面不存在")
+
+    _ensure_cover_paths(global_doc)
+    if kind == "thumbnail":
+        path = global_doc.thumbnail_storage_path
+    else:
+        path = global_doc.cover_storage_path
+
+    if not path or not Path(path).is_file():
+        raise HTTPException(status_code=404, detail="封面不存在")
+    return FileResponse(path, media_type="image/png")
+
+
 def serve_document_file(db: Session, user_id: int, doc_id: str) -> FileResponse:
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, doc_id)
     if not doc:
@@ -1153,6 +1241,10 @@ def delete_document(
                 storage_service.delete_file_at_path(global_doc.storage_path)
                 if global_doc.parsed_text_path:
                     storage_service.delete_file_at_path(global_doc.parsed_text_path)
+                if global_doc.cover_storage_path:
+                    storage_service.delete_file_at_path(global_doc.cover_storage_path)
+                if global_doc.thumbnail_storage_path:
+                    storage_service.delete_file_at_path(global_doc.thumbnail_storage_path)
                 kb_crud.delete_global_document(db, global_doc)
         elif global_document_id:
             remaining = kb_crud.count_documents_for_global(db, global_document_id)
@@ -1163,6 +1255,10 @@ def delete_document(
                     storage_service.delete_file_at_path(orphan.storage_path)
                     if orphan.parsed_text_path:
                         storage_service.delete_file_at_path(orphan.parsed_text_path)
+                    if orphan.cover_storage_path:
+                        storage_service.delete_file_at_path(orphan.cover_storage_path)
+                    if orphan.thumbnail_storage_path:
+                        storage_service.delete_file_at_path(orphan.thumbnail_storage_path)
                     kb_crud.delete_global_document(db, orphan)
 
         db.commit()

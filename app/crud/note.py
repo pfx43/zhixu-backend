@@ -49,6 +49,11 @@ def create_note(
     tags: Optional[List[str]] = None,
     document_id: Optional[str] = None,
     source: Optional[str] = None,
+    page_number: Optional[int] = None,
+    char_start: Optional[int] = None,
+    char_end: Optional[int] = None,
+    source_ref_id: Optional[str] = None,
+    source_ref_type: Optional[str] = None,
 ) -> UserNote:
     row = UserNote(
         user_id=user_id,
@@ -59,6 +64,11 @@ def create_note(
         tags=tags or None,
         document_id=document_id,
         source=source,
+        page_number=page_number,
+        char_start=char_start,
+        char_end=char_end,
+        source_ref_id=source_ref_id,
+        source_ref_type=source_ref_type,
     )
     db.add(row)
     db.flush()
@@ -133,7 +143,20 @@ def update_note(
         key: value
         for key, value in fields.items()
         if key
-        in {"title", "content_md", "collection_id", "note_type", "tags", "document_id", "source"}
+        in {
+            "title",
+            "content_md",
+            "collection_id",
+            "note_type",
+            "tags",
+            "document_id",
+            "source",
+            "page_number",
+            "char_start",
+            "char_end",
+            "source_ref_id",
+            "source_ref_type",
+        }
         and value is not None
     }
     if not values:

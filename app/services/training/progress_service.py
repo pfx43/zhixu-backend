@@ -11,6 +11,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
+from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -18,7 +19,7 @@ from app.crud import kb as kb_crud
 from app.crud import question as question_crud
 from app.crud import quiz as quiz_crud
 from app.crud import toc as toc_crud
-from app.models import Document, GlobalQuestion, QuestionProvenance, QuizAnswer
+from app.models import Document, GlobalQuestion, Goal, QuestionProvenance, QuizAnswer
 from app.schemas.progress import (
     ChapterProgressOut,
     DocumentLearningPathOut,
@@ -193,7 +194,19 @@ def _provenance_page_map(
     return {qid: page for qid, page in rows}
 
 
-def get_learning_path(db: Session, user_id: int) -> LearningPathOut:
+def get_learning_path(
+    db: Session, user_id: int, goal_id: Optional[int] = None
+) -> LearningPathOut:
+    # #34：goal_id 传入时仅校验归属，暂不做范围过滤。
+    if goal_id is not None:
+        goal = (
+            db.query(Goal)
+            .filter(Goal.id == goal_id, Goal.user_id == user_id)
+            .first()
+        )
+        if not goal:
+            raise HTTPException(status_code=404, detail="目标不存在或不属于当前用户")
+
     docs, _ = kb_crud.list_documents(db, user_id, page=1, limit=10000)
     study_docs = [d for d in docs if d.zone == "study"]
 
