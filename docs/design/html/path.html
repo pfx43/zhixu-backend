@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学习路径 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .task-card { border: 1px solid #EAE8E4; }
+    .task-card.is-active { border-color: rgba(123, 156, 154, 0.55); background: #fff; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+      <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        首页
+      </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+      <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="#">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        设置
+      </a>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-secondary-text">学生</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-foggy-bg">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="text-lg font-semibold">学习路径</div>
+  </header>
+
+  <div class="flex-1 flex overflow-hidden">
+    <section class="flex-1 p-8 overflow-y-auto">
+      <div class="flex justify-between items-start mb-8">
+        <div>
+          <h2 class="text-3xl font-bold mb-1">学习路径</h2>
+          <p class="text-sm text-secondary-text">基于知识库和刷题表现，排出接下来该补什么。</p>
+        </div>
+        <button class="flex items-center gap-2 px-4 py-2 border border-card-border rounded-xl bg-white text-sm text-secondary-text" type="button">刷新</button>
+      </div>
+
+      <div class="bg-white border border-sage-accent/25 rounded-2xl shadow-soft p-8 mb-10 relative overflow-hidden">
+        <div class="absolute -right-8 -top-8 w-32 h-32 bg-sage-accent/5 rounded-full blur-3xl"></div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#F3F6F5] text-sage-dark rounded-full text-xs mb-5 font-semibold">下一步学习建议</div>
+        <div class="flex items-start justify-between gap-6">
+          <div class="max-w-lg">
+            <h3 class="text-xl font-bold mb-2">当前需要补强「State 管理」</h3>
+            <p class="text-sm text-secondary-text mb-2">就绪度高，适合立即开始 · 建议 30 分钟</p>
+            <p class="text-sm leading-relaxed mb-6">已有 Dart 和核心组件基础，State 管理掌握度偏低，会卡住后面的组件练习。</p>
+            <a href="practice.html" class="inline-flex bg-sage-accent hover:bg-sage-dark text-white px-6 py-2 rounded-full text-sm font-medium">开始学习</a>
+          </div>
+          <div class="hidden md:flex w-24 h-24 rounded-full border-4 border-sage-accent/20 items-center justify-center shrink-0">
+            <span class="text-2xl font-bold text-sage-accent">88</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative pl-2 space-y-0">
+        <button type="button" data-task="t1" class="task-card is-active w-full text-left rounded-2xl p-5 mb-4 bg-white">
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-sage-accent text-white text-xs font-bold flex items-center justify-center">1</div>
+              <div class="w-px flex-1 bg-card-border mt-2 min-h-[12px]"></div>
+            </div>
+            <div class="flex-1 pb-1">
+              <div class="flex items-center justify-between gap-3 mb-1">
+                <h4 class="text-sm font-semibold">State 管理</h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">优先 95</span>
+              </div>
+              <p class="text-xs text-secondary-text">约 30 分钟 · 当前掌握 50% · 就绪度高</p>
+            </div>
+          </div>
+        </button>
+        <button type="button" data-task="t2" class="task-card w-full text-left rounded-2xl p-5 mb-4 bg-foggy-bg">
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-white border border-card-border text-secondary-text text-xs font-bold flex items-center justify-center">2</div>
+              <div class="w-px flex-1 bg-card-border mt-2 min-h-[12px]"></div>
+            </div>
+            <div class="flex-1 pb-1">
+              <div class="flex items-center justify-between gap-3 mb-1">
+                <h4 class="text-sm font-semibold">异步编程</h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">优先 80</span>
+              </div>
+              <p class="text-xs text-secondary-text">约 40 分钟 · 当前掌握 30% · 就绪度中</p>
+            </div>
+          </div>
+        </button>
+        <button type="button" data-task="t3" class="task-card w-full text-left rounded-2xl p-5 bg-foggy-bg">
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-white border border-card-border text-secondary-text text-xs font-bold flex items-center justify-center">3</div>
+            </div>
+            <div class="flex-1 pb-1">
+              <div class="flex items-center justify-between gap-3 mb-1">
+                <h4 class="text-sm font-semibold">HTTP 请求</h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">优先 70</span>
+              </div>
+              <p class="text-xs text-secondary-text">约 35 分钟 · 当前掌握 60% · 就绪度中</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <aside class="w-80 border-l border-card-border bg-[#F7F6F4] p-6 overflow-y-auto shrink-0">
+      <h4 class="text-base font-bold mb-1" id="detailTitle">State 管理</h4>
+      <p class="text-xs text-secondary-text mb-6" id="detailMeta">优先 95 · 约 30 分钟</p>
+      <div class="mb-6">
+        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">先修知识点</p>
+        <div id="detailPrereq" class="flex flex-wrap gap-1.5">
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">Dart 基础语法</span>
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">Flutter 核心组件</span>
+        </div>
+      </div>
+      <div class="mb-6">
+        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">为什么现在学</p>
+        <p id="detailReason" class="text-sm leading-relaxed">你已经具备 Dart 基础语法和 Flutter 核心组件基础，但 State 管理掌握度较低，会影响后续组件开发。</p>
+      </div>
+      <div class="mb-8">
+        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">建议步骤</p>
+        <ol id="detailSteps" class="text-sm space-y-1.5 list-decimal pl-4 leading-relaxed">
+          <li>先复习状态提升</li>
+          <li>再练 Provider / Riverpod 基础</li>
+          <li>最后完成一个小组件练习</li>
+        </ol>
+      </div>
+      <a id="detailGo" href="practice.html" class="block text-center bg-sage-accent text-white px-4 py-2.5 rounded-xl text-sm font-medium">去练习</a>
+    </aside>
+  </div>
+</main>
+<script src="sidebar.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+<script>
+  (function () {
+    var TASKS = {
+      t1: {
+        title: "State 管理",
+        meta: "优先 95 · 约 30 分钟",
+        prereq: ["Dart 基础语法", "Flutter 核心组件"],
+        reason: "你已经具备 Dart 基础语法和 Flutter 核心组件基础，但 State 管理掌握度较低，会影响后续组件开发。",
+        steps: ["先复习状态提升", "再练 Provider / Riverpod 基础", "最后完成一个小组件练习"],
+        href: "practice.html"
+      },
+      t2: {
+        title: "异步编程",
+        meta: "优先 80 · 约 40 分钟",
+        prereq: ["Dart 基础语法"],
+        reason: "异步编程是 HTTP 请求和数据库操作的基础，掌握度偏低需要补齐。",
+        steps: ["理解 Future 和 async/await", "学习 Stream", "练习错误处理"],
+        href: "quiz.html"
+      },
+      t3: {
+        title: "HTTP 请求",
+        meta: "优先 70 · 约 35 分钟",
+        prereq: ["异步编程", "Dart 基础语法"],
+        reason: "HTTP 请求是后端通信的核心，需要结合异步编程巩固。",
+        steps: ["使用 dio 封装请求", "处理拦截器", "统一错误处理"],
+        href: "quiz.html"
+      }
+    };
+
+    function render(id) {
+      var t = TASKS[id];
+      document.getElementById("detailTitle").textContent = t.title;
+      document.getElementById("detailMeta").textContent = t.meta;
+      document.getElementById("detailReason").textContent = t.reason;
+      document.getElementById("detailPrereq").innerHTML = t.prereq.map(function (p) {
+        return '<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">' + p + "</span>";
+      }).join("");
+      document.getElementById("detailSteps").innerHTML = t.steps.map(function (s) {
+        return "<li>" + s + "</li>";
+      }).join("");
+      document.getElementById("detailGo").href = t.href;
+      document.querySelectorAll("[data-task]").forEach(function (btn) {
+        btn.classList.toggle("is-active", btn.getAttribute("data-task") === id);
+        btn.classList.toggle("bg-white", btn.getAttribute("data-task") === id);
+        btn.classList.toggle("bg-foggy-bg", btn.getAttribute("data-task") !== id);
+      });
+    }
+
+    document.querySelectorAll("[data-task]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        render(btn.getAttribute("data-task"));
+      });
+    });
+  })();
+</script>
+</body>
+</html>

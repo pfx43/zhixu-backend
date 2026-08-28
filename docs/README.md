@@ -7,6 +7,7 @@
 
 | 目录 | 主题 |
 |---|---|
+| [`design/`](design/) | 这一期认领、功能更新、设计稿（从这里进） |
 | [`api/`](api/) | 接口对接文档 |
 | [`architecture/`](architecture/) | 架构与实现 |
 | [`development/`](development/) | 开发协作规范 |
@@ -17,6 +18,10 @@
 
 ## 📄 文档清单
 
+## 这一期认领（design/）
+
+先打开 [design/index.md](design/index.md)，再按人进罗洁 / 张子麟 / 陈勇搏 / 彭飞翔。TCN 接入见 [design/TCN集成.md](design/TCN集成.md)。
+
 ### 接口对接（api/）
 | 文件 | 说明 |
 |---|---|
@@ -24,6 +29,8 @@
 | [chat_sse_frontend_reference.md](api/chat_sse_frontend_reference.md) | Chat 流式接口（SSE）前端接入参考：type 事件、工具映射、break 打断、历史合同 |
 | [notes_frontend_guide.md](api/notes_frontend_guide.md) | 笔记功能前端对接 |
 | [account_delete_guide.md](api/account_delete_guide.md) | 账号注销接口对接 |
+| [TCN_API_对接文档.md](api/TCN/TCN_API_对接文档.md) | TCN 引擎对接（predict / 画像；Learning OS 不要当知序任务） |
+| [tcn-knowledge-tags.md](api/TCN/tcn-knowledge-tags.md) | 从图谱抽出的知识点 tag（higher_math） |
 
 ### 架构与实现（architecture/）
 | 文件 | 说明 |

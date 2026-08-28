@@ -1,0 +1,82 @@
+#app-sidebar {
+  position: relative;
+  width: 16rem;
+  overflow: visible;
+  transition: width 0.2s ease;
+}
+#app-sidebar.is-collapsed {
+  width: 72px;
+}
+#app-sidebar.is-collapsed .brand-block {
+  justify-content: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+#app-sidebar .brand-logo {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+#app-sidebar.is-collapsed .brand-text,
+#app-sidebar.is-collapsed .nav-group-title,
+#app-sidebar.is-collapsed .user-meta,
+#app-sidebar.is-collapsed .user-extra {
+  display: none;
+}
+#app-sidebar.is-collapsed nav a {
+  font-size: 0;
+  line-height: 0;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+#app-sidebar.is-collapsed nav a svg {
+  margin-right: 0 !important;
+}
+#app-sidebar.is-collapsed nav {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+#app-sidebar.is-collapsed nav > div + div {
+  border-top: 1px solid #EAE8E4;
+  padding-top: 0.5rem;
+}
+#app-sidebar.is-collapsed .user-footer,
+#app-sidebar.is-collapsed .user-footer > div {
+  justify-content: center;
+}
+#app-sidebar.is-collapsed .user-footer {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+#sidebar-toggle {
+  position: absolute;
+  top: 1.75rem;
+  right: -12px;
+  z-index: 30;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #FAF9F8;
+  border: 1px solid #EAE8E4;
+  color: #8A8580;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+}
+#sidebar-toggle:hover {
+  color: #7B9C9A;
+  border-color: rgba(123, 156, 154, 0.45);
+}
+#sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+#app-sidebar.is-collapsed #sidebar-toggle svg {
+  transform: rotate(180deg);
+}

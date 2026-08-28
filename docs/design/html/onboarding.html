@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>和 Tina 开始 - 知序</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+          },
+          boxShadow: { soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)' },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    .msg-user {
+      align-self: flex-end;
+      background: #7B9C9A;
+      color: #fff;
+      border-radius: 16px;
+      padding: 10px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      max-width: 80%;
+    }
+    .msg-tina {
+      font-size: 14px;
+      line-height: 1.75;
+      max-width: 100%;
+      white-space: pre-wrap;
+    }
+    .msg-tina.is-stream::after {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 14px;
+      margin-left: 2px;
+      background: #7B9C9A;
+      animation: blink .9s step-end infinite;
+      vertical-align: -2px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .tool-card {
+      background: #fff;
+      border: 1px solid #EAE8E4;
+      border-left: 3px solid #7B9C9A;
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 20px -2px rgba(0,0,0,.05);
+    }
+    .step-card { border: 1px solid transparent; }
+    .step-card.is-on { border-color: rgba(123, 156, 154, 0.35); background: #F3F6F5; }
+    .drop-zone {
+      border: 1.5px dashed #EAE8E4;
+      border-radius: 14px;
+      background: #FAF9F8;
+      padding: 18px 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .drop-zone:hover, .drop-zone.is-over {
+      border-color: #7B9C9A;
+      background: #F3F6F5;
+    }
+    .drop-zone.is-done {
+      cursor: default;
+      border-style: solid;
+      border-color: rgba(123, 156, 154, 0.45);
+      background: #F3F6F5;
+    }
+    .drop-zone > * { pointer-events: none; }
+  </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col bg-foggy-bg text-primary-text antialiased">
+
+  <header class="h-16 px-6 sm:px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <a href="index.html" class="flex items-center gap-2 min-w-0">
+      <img src="logo.jpg" alt="" class="w-8 h-8 rounded-lg object-cover">
+      <span class="font-bold">知序</span>
+      <span class="text-xs text-secondary-text hidden sm:inline">· 和 Tina 开始</span>
+    </a>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="h-8 px-3 rounded-full border border-card-border bg-white text-xs text-secondary-text hover:text-sage-accent">进入工作台</a>
+    </div>
+  </header>
+
+  <div class="flex-1 flex min-h-0">
+    <aside class="hidden md:flex w-[280px] shrink-0 border-r border-card-border bg-white flex-col p-5 overflow-y-auto">
+      <p class="text-[11px] font-semibold text-sage-accent">新手指引</p>
+      <h1 class="mt-2 text-lg font-bold">第一次使用知序</h1>
+      <p class="mt-2 text-xs leading-6 text-secondary-text">左边会跟着 Tina 调用的工具走。对话本身不占步骤，弹出卡片时才推进。</p>
+      <ol id="step-nav" class="mt-6 space-y-2"></ol>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0">
+      <div id="log" class="flex-1 overflow-y-auto px-6 sm:px-8 py-6">
+        <div id="thread" class="max-w-[720px] mx-auto flex flex-col gap-5"></div>
+      </div>
+
+      <div class="px-6 sm:px-8 pt-2 pb-5 shrink-0">
+        <form id="composer" class="max-w-[720px] mx-auto">
+          <div class="rounded-[24px] border border-card-border bg-white/80 shadow-soft">
+            <div class="flex items-end gap-2 pl-4 pr-2 py-2">
+              <textarea id="input" rows="1" class="flex-1 py-2 bg-transparent border-0 text-sm resize-none focus:ring-0 placeholder:text-secondary-text" placeholder="回复 Tina…"></textarea>
+              <button type="submit" id="send" class="w-9 h-9 rounded-full bg-sage-accent text-white flex items-center justify-center shrink-0 mb-0.5 disabled:opacity-40">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+              </button>
+            </div>
+          </div>
+          <p class="text-center text-[11px] text-secondary-text mt-2">Enter 发送 · Shift + Enter 换行 · 假流式演示</p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <input id="file" type="file" class="hidden" accept=".pdf,.txt,.md,.docx,.pptx">
+  <script src="onboarding.js"></script>
+</body>
+</html>

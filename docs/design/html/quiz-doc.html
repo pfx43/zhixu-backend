@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flutter 核心组件 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          首页
+        </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+        
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="#">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          设置
+        </a>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-secondary-text">学生</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-foggy-bg">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="flex items-center gap-3"><a class="text-secondary-text hover:text-sage-accent text-sm" href="quiz.html">资料</a><span class="text-secondary-text">/</span><div class="text-lg font-semibold">Flutter 核心组件</div></div>
+  </header>
+  <div class="flex-1 overflow-y-auto">
+    <div class="max-w-[1180px] mx-auto p-8">
+
+      <div class="flex items-center gap-2 mb-6">
+        <a href="quiz.html" class="text-sm text-secondary-text hover:text-sage-accent">← 返回资料</a>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-6">
+        <span class="px-3 py-1.5 rounded-full bg-white border border-card-border text-sm text-secondary-text">阅读</span>
+        <span class="px-3 py-1.5 rounded-full bg-white border border-card-border text-sm text-secondary-text">查看题目</span>
+        <a href="generate.html" class="px-3 py-1.5 rounded-full bg-white border border-card-border text-sm text-secondary-text hover:text-sage-accent hover:border-sage-accent">出题</a>
+        <span class="px-3 py-1.5 rounded-full bg-white border border-card-border text-sm text-secondary-text">导出题库</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 mb-8">
+        <div class="space-y-3">
+          <div class="aspect-[3/4] max-h-[340px] rounded-2xl overflow-hidden border border-card-border bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-6">
+            <svg class="w-12 h-12 text-sage-accent mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+            <span class="text-sm text-sage-dark text-center">Flutter 核心组件</span>
+          </div>
+          <h1 class="text-base font-semibold">Flutter 核心组件</h1>
+          <div class="flex gap-2">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">可刷题</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">PDF</span>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl p-4 text-center shadow-soft">
+            <div class="text-2xl font-bold text-sage-accent mb-1">50%</div>
+            <div class="text-xs text-secondary-text">已完成 24/48 题</div>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white border border-card-border rounded-2xl p-4 shadow-soft"><div class="text-xs text-secondary-text mb-1">总题数</div><div class="text-xl font-semibold">48</div></div>
+            <div class="bg-white border border-card-border rounded-2xl p-4 shadow-soft"><div class="text-xs text-secondary-text mb-1">正确</div><div class="text-xl font-semibold text-ok">18</div></div>
+            <div class="bg-white border border-card-border rounded-2xl p-4 shadow-soft"><div class="text-xs text-secondary-text mb-1">错误</div><div class="text-xl font-semibold text-bad">3</div></div>
+            <div class="bg-white border border-card-border rounded-2xl p-4 shadow-soft"><div class="text-xs text-secondary-text mb-1">不会</div><div class="text-xl font-semibold">3</div></div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl px-4 py-3 shadow-soft flex items-center gap-2 text-sm">
+            <span>正确率</span><span class="font-semibold text-sage-accent">75%</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#C17B5A]/10 text-bad">待加强</span>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl p-4 shadow-soft space-y-3">
+            <div class="font-semibold text-sm">开始刷题</div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-3 rounded-xl border border-sage-accent bg-[#F3F6F5]"><div class="text-sm font-medium">从头开始</div><div class="text-[11px] text-secondary-text">全部题目随机顺序</div></div>
+              <div class="p-3 rounded-xl border border-card-border"><div class="text-sm font-medium">只做未做题</div><div class="text-[11px] text-secondary-text">过滤已答过的题目</div></div>
+              <div class="p-3 rounded-xl border border-card-border"><div class="text-sm font-medium">只做错题</div><div class="text-[11px] text-secondary-text">过滤答错的题目</div></div>
+              <div class="p-3 rounded-xl border border-card-border"><div class="text-sm font-medium">只做不会题</div><div class="text-[11px] text-secondary-text">过滤标记为不会的题目</div></div>
+            </div>
+            <a href="practice.html" class="block w-full text-center py-2.5 rounded-full bg-sage-accent text-white text-sm font-medium">开始刷题</a>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div>
+          <h3 class="text-base font-bold mb-1">书本目录</h3>
+          <p class="text-xs text-secondary-text mb-3">点开看要点，可刷这一章</p>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft divide-y divide-card-border overflow-hidden">
+            <div class="px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-6 h-6 rounded-lg bg-[#F3F6F5] text-sage-accent flex items-center justify-center text-[11px] font-semibold">1</div>
+                <div class="flex-1 text-sm font-medium">Widget 与 Element</div>
+                <span class="text-[11px] text-secondary-text">12 题 · 4 点</span>
+                <button type="button" class="js-chapter-quiz text-[11px] px-2 py-0.5 rounded-full bg-white border border-card-border text-sage-accent" data-chapter="Widget 与 Element">刷这一章</button>
+              </div>
+            </div>
+            <div class="px-4 py-3 bg-[#F7F6F4]">
+              <div class="flex items-center gap-2.5 mb-2">
+                <div class="w-6 h-6 rounded-lg bg-sage-accent text-white flex items-center justify-center text-[11px] font-semibold">2</div>
+                <div class="flex-1 text-sm font-medium">生命周期与 build</div>
+                <span class="text-[11px] text-secondary-text">16 题 · 5 点</span>
+                <button type="button" class="js-chapter-quiz text-[11px] px-2 py-0.5 rounded-full bg-sage-accent text-white" data-chapter="生命周期与 build">刷这一章</button>
+              </div>
+              <ul class="pl-9 text-xs text-secondary-text space-y-1">
+                <li>build 应保持纯净，避免副作用</li>
+                <li>initState 适合一次性初始化</li>
+                <li>setState 标记脏节点并调度重建</li>
+              </ul>
+            </div>
+            <div class="px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-6 h-6 rounded-lg bg-[#F3F6F5] text-sage-accent flex items-center justify-center text-[11px] font-semibold">3</div>
+                <div class="flex-1 text-sm font-medium">InheritedWidget 与数据下发</div>
+                <span class="text-[11px] text-secondary-text">20 题 · 6 点</span>
+                <button type="button" class="js-chapter-quiz text-[11px] px-2 py-0.5 rounded-full bg-white border border-card-border text-sage-accent" data-chapter="InheritedWidget 与数据下发">刷这一章</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-base font-bold mb-1">知识点</h3>
+          <p class="text-xs text-secondary-text mb-3">目录要点与题目标签</p>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4 max-h-[420px] overflow-y-auto">
+            <div class="flex flex-wrap gap-1.5 mb-3">
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border">build 应保持纯净</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border">initState 一次性初始化</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border">setState 调度重建</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border">InheritedWidget 向下共享</span>
+            </div>
+            <div class="pt-3 border-t border-card-border">
+              <div class="text-[11px] font-medium text-secondary-text mb-2">题目标签</div>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">Widget</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">build</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">生命周期</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">State</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">InheritedWidget</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-card-border pt-8 mb-4">
+        <h3 class="text-base font-bold mb-1">知识点 Tag 统计</h3>
+        <p class="text-xs text-secondary-text mb-5">按 Tag 和题型聚合的答题统计</p>
+        <h4 class="text-sm font-semibold mb-3">按知识点</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-sm font-medium">Widget</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">80%</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 8</span>
+              <span class="text-bad">✗ 2</span>
+              <span>? 0</span>
+              <span>共 10 次</span>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-sm font-medium">build</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#C17B5A]/10 text-bad">50%</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 4</span>
+              <span class="text-bad">✗ 3</span>
+              <span>? 1</span>
+              <span>共 8 次</span>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-sm font-medium">生命周期</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#C17B5A]/10 text-bad">75%</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 6</span>
+              <span class="text-bad">✗ 2</span>
+              <span>? 0</span>
+              <span>共 8 次</span>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-sm font-medium">InheritedWidget</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border text-secondary-text">未作答</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 0</span>
+              <span class="text-bad">✗ 0</span>
+              <span>? 0</span>
+              <span>共 0 次</span>
+            </div>
+          </div>
+        </div>
+        <h4 class="text-sm font-semibold mb-3">按题型</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-sm font-medium">选择题</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">82%</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 14</span>
+              <span class="text-bad">✗ 3</span>
+              <span>? 0</span>
+              <span>共 17 次</span>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-sm font-medium">填空题</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#C17B5A]/10 text-bad">60%</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 3</span>
+              <span class="text-bad">✗ 2</span>
+              <span>? 0</span>
+              <span>共 5 次</span>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-sm font-medium">简答题</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-foggy-bg border border-card-border text-secondary-text">未作答</span>
+            </div>
+            <div class="flex gap-3 text-xs text-secondary-text">
+              <span class="text-ok">✓ 0</span>
+              <span class="text-bad">✗ 0</span>
+              <span>? 0</span>
+              <span>共 0 次</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<div id="chapter-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-[#2D2A28]/40" data-close="1"></div>
+  <div class="relative w-full max-w-md bg-white rounded-2xl shadow-soft border border-card-border p-6">
+    <h3 class="text-base font-bold mb-1">刷这一章</h3>
+    <p class="text-xs text-secondary-text mb-4">「<span id="chapter-name">生命周期与 build</span>」· 选择要练的题目范围</p>
+    <div class="space-y-2">
+      <a href="practice.html" class="block p-3 rounded-xl border border-card-border hover:border-sage-accent hover:bg-[#F3F6F5]">
+        <div class="text-sm font-medium">未做过的</div>
+        <div class="text-[11px] text-secondary-text">这一章还没答过的题</div>
+      </a>
+      <a href="practice.html" class="block p-3 rounded-xl border border-card-border hover:border-sage-accent hover:bg-[#F3F6F5]">
+        <div class="text-sm font-medium">错误的</div>
+        <div class="text-[11px] text-secondary-text">答错过的题</div>
+      </a>
+      <a href="practice.html" class="block p-3 rounded-xl border border-card-border hover:border-sage-accent hover:bg-[#F3F6F5]">
+        <div class="text-sm font-medium">不会的</div>
+        <div class="text-[11px] text-secondary-text">标记过「我不会」的题</div>
+      </a>
+      <a href="practice.html" class="block p-3 rounded-xl border border-card-border hover:border-sage-accent hover:bg-[#F3F6F5]">
+        <div class="text-sm font-medium">做过的</div>
+        <div class="text-[11px] text-secondary-text">已经练过的题，用来复习</div>
+      </a>
+    </div>
+    <button type="button" class="mt-4 w-full py-2 text-sm text-secondary-text hover:text-primary-text" data-close="1">取消</button>
+  </div>
+</div>
+<script>
+(function () {
+  var modal = document.getElementById("chapter-modal");
+  var nameEl = document.getElementById("chapter-name");
+  function openModal(title) {
+    nameEl.textContent = title;
+    modal.classList.remove("hidden");
+  }
+  function closeModal() { modal.classList.add("hidden"); }
+  document.querySelectorAll(".js-chapter-quiz").forEach(function (btn) {
+    btn.addEventListener("click", function () { openModal(btn.getAttribute("data-chapter") || "本章"); });
+  });
+  modal.addEventListener("click", function (e) {
+    if (e.target.getAttribute("data-close")) closeModal();
+  });
+})();
+</script>
+<script src="sidebar.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+</body>
+</html>

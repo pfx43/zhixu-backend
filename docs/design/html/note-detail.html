@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>笔记详情 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .note-body h3 { font-size: 15px; font-weight: 700; margin: 1.4em 0 0.5em; }
+    .note-body p { font-size: 14px; line-height: 1.85; color: #2D2A28; margin: 0 0 0.9em; }
+    .note-body ul { margin: 0 0 0.9em; padding-left: 1.15em; }
+    .note-body li { font-size: 14px; line-height: 1.8; margin: 0.2em 0; }
+    .note-body blockquote {
+      margin: 0.8em 0 1.1em;
+      padding: 12px 16px;
+      border-left: 3px solid #7B9C9A;
+      background: #F3F6F5;
+      border-radius: 0 12px 12px 0;
+      color: #2D2A28;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+    .note-body code {
+      font-size: 12px;
+      background: #F5F4F2;
+      border: 1px solid #EAE8E4;
+      border-radius: 6px;
+      padding: 1px 6px;
+    }
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          首页
+        </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="#">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          设置
+        </a>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-secondary-text">学生</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-foggy-bg">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="flex items-center gap-3 min-w-0">
+      <a id="crumbNotes" class="text-secondary-text hover:text-sage-accent text-sm shrink-0" href="notes.html">笔记</a>
+      <span class="text-secondary-text">/</span>
+      <div id="crumbTitle" class="text-lg font-semibold truncate">Flutter State 管理笔记</div>
+    </div>
+  </header>
+  <div class="flex-1 overflow-y-auto">
+    <div class="max-w-[760px] mx-auto p-8">
+      <div class="flex items-center gap-2 mb-6">
+        <a id="backNotes" href="notes.html" class="text-sm text-secondary-text hover:text-sage-accent">← 返回笔记</a>
+      </div>
+
+      <article class="bg-white border border-card-border rounded-2xl shadow-soft p-8">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <h2 id="noteTitle" class="text-2xl font-bold leading-snug">Flutter State 管理笔记</h2>
+          <span id="aiBadge" class="inline-flex items-center h-6 px-2 rounded-full bg-[#F3F6F5] text-sage-accent text-[11px] font-medium shrink-0">AI 摘要</span>
+        </div>
+        <p id="noteMeta" class="text-xs text-secondary-text mb-4">6 小时前 · 1280 字 · AI 生成</p>
+        <div id="noteTags" class="flex gap-1.5 mb-8 flex-wrap">
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-foggy-bg border border-card-border text-secondary-text">Flutter</span>
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-foggy-bg border border-card-border text-secondary-text">State</span>
+        </div>
+        <div id="noteBody" class="note-body">
+          <p>状态管理从简到繁：<code>setState</code>、InheritedWidget、Provider、Riverpod。选型先看「状态活在哪一层」，再决定要不要引入库。</p>
+          <h3>什么时候用 setState</h3>
+          <p>只影响当前 Widget、不会跨页面共享的局部交互，用 setState 就够。动画开关、输入框即时校验、折叠面板都属于这一类。不要为了「看起来专业」一上来就上 Riverpod。</p>
+          <h3>InheritedWidget 在中间</h3>
+          <p>它解决的是「向下传递、按需重建」。Provider 本质上是对它的封装。读资料时如果还分不清「谁在 listen、谁只是读一次」，先把这一层补上，后面的对比会顺很多。</p>
+          <h3>刷题时容易错的点</h3>
+          <ul>
+            <li>在 <code>build</code> 里发请求或改全局状态</li>
+            <li>把本该局部的 UI 状态塞进全局 Provider</li>
+            <li>listen 范围过大，导致整棵子树无意义重建</li>
+          </ul>
+          <blockquote>下次开刷前先过一遍：状态该不该共享，以及 rebuild 的边界在哪。</blockquote>
+        </div>
+      </article>
+    </div>
+  </div>
+</main>
+
+<script>
+  const NOTES = {
+    n1: {
+      title: "Flutter State 管理笔记",
+      meta: "6 小时前 · 1280 字 · AI 生成",
+      tags: ["Flutter", "State"],
+      ai: true,
+      body: `<p>状态管理从简到繁：<code>setState</code>、InheritedWidget、Provider、Riverpod。选型先看「状态活在哪一层」，再决定要不要引入库。</p>
+          <h3>什么时候用 setState</h3>
+          <p>只影响当前 Widget、不会跨页面共享的局部交互，用 setState 就够。动画开关、输入框即时校验、折叠面板都属于这一类。不要为了「看起来专业」一上来就上 Riverpod。</p>
+          <h3>InheritedWidget 在中间</h3>
+          <p>它解决的是「向下传递、按需重建」。Provider 本质上是对它的封装。读资料时如果还分不清「谁在 listen、谁只是读一次」，先把这一层补上，后面的对比会顺很多。</p>
+          <h3>刷题时容易错的点</h3>
+          <ul>
+            <li>在 <code>build</code> 里发请求或改全局状态</li>
+            <li>把本该局部的 UI 状态塞进全局 Provider</li>
+            <li>listen 范围过大，导致整棵子树无意义重建</li>
+          </ul>
+          <blockquote>下次开刷前先过一遍：状态该不该共享，以及 rebuild 的边界在哪。</blockquote>`
+    },
+    n2: {
+      title: "Provider 与 Riverpod 对比",
+      meta: "昨天 · 860 字 · AI 生成",
+      tags: ["Riverpod", "Provider"],
+      ai: true,
+      body: `<p>两者都能做依赖注入和状态共享，差别主要在「要不要依赖 BuildContext」以及类型安全出现的时机。</p>
+          <h3>核心差异</h3>
+          <ul>
+            <li>Provider 读写都绑在 widget 树上，离开 context 就不方便测。</li>
+            <li>Riverpod 把 provider 声明成全局对象，不依赖 context，测试时可以直接 override。</li>
+            <li>Riverpod 多数错误能在编译期暴露；Provider 很多要到运行时才发现。</li>
+          </ul>
+          <h3>怎么选</h3>
+          <p>课内作业、小 Demo 继续用 Provider 没问题。一旦状态要跨多页、要写单测，Riverpod 更省事。不要同时在同一模块混用两套，阅读成本会陡增。</p>
+          <blockquote>记住一句：Provider 是树上的 InheritedWidget 封装；Riverpod 是编译期容器。</blockquote>`
+    },
+    n3: {
+      title: "Widget 生命周期",
+      meta: "昨天 · 来自资料阅读",
+      tags: ["tip", "Flutter", "build"],
+      ai: false,
+      body: `<blockquote>build 应当是纯函数。不要在里面发请求或改全局状态。</blockquote>
+          <p>关联资料：《Flutter 核心组件》 · 来源：资料阅读</p>
+          <h3>自己补的一句</h3>
+          <p>副作用放到 <code>initState</code> / <code>didChangeDependencies</code>，或用专门的 controller。build 被调用的次数远比想象中多，写进去就会重复打接口、闪状态。</p>`
+    },
+    "seed-2": {
+      title: "副作用不该放进 build",
+      meta: "昨天 · 来自 Tina 对话",
+      tags: ["tip", "Flutter", "build"],
+      ai: false,
+      body: `<blockquote>A 把副作用写进 build 了。build 可能被反复调用，请求会打很多次，UI 也会不可预期。副作用放到 initState 或状态层。</blockquote>
+          <p>关联资料：《Flutter 核心组件》 · 来源：Tina 对话</p>`
+    },
+    "seed-3": {
+      title: "InheritedWidget 下传数据",
+      meta: "昨天 · 来自 Tina 对话",
+      tags: ["tip", "Widget"],
+      ai: false,
+      body: `<blockquote>若要在 Widget 树中向下共享数据、且不必层层传构造参数，常用的是 InheritedWidget。</blockquote>
+          <p>关联资料：《Flutter 核心组件》 · 来源：Tina 对话</p>`
+    },
+    "seed-4": {
+      title: "build 会被反复执行",
+      meta: "昨天 · 来自刷题辅导",
+      tags: ["tip", "build"],
+      ai: false,
+      body: `<blockquote>build 可因父节点、主题、约束变化反复执行。把请求放进 initState、监听器或状态管理，才能避免重复请求。</blockquote>
+          <p>关联资料：《Flutter 核心组件》 · 来源：刷题辅导</p>`
+    },
+    n4: {
+      title: "Dart 异步编程要点",
+      meta: "2 天前 · 540 字",
+      tags: ["Dart", "异步"],
+      ai: false,
+      body: `<p>Dart 是单线程事件驱动。卡住 UI 的通常不是「没开多线程」，而是把重计算或同步 I/O 放进了事件循环。</p>
+          <h3>三件套</h3>
+          <ul>
+            <li><code>Future</code>：一次性异步结果。</li>
+            <li><code>async / await</code>：Future 的语法糖，让异步读起来像同步。</li>
+            <li><code>Stream</code>：连续事件，适合输入、下载进度、WebSocket。</li>
+          </ul>
+          <h3>容易混的点</h3>
+          <p><code>await</code> 不会新开线程。CPU 密集工作要放到 isolate。UI 层 await 之后记得检查 <code>mounted</code>，避免 setState 打到已销毁的页面。</p>`
+    },
+    n5: {
+      title: "本章学习报告",
+      meta: "3 天前 · 420 字 · AI 生成",
+      tags: ["学习报告"],
+      ai: true,
+      body: `<p>这一章刷下来，概念能复述，真正扣分的是「build 与副作用」和「状态该不该共享」。</p>
+          <h3>薄弱点</h3>
+          <ul>
+            <li>InheritedWidget 的 listen / 一次性读取分不清</li>
+            <li>选择题里容易把 setState 和 Provider 的适用场景对调</li>
+          </ul>
+          <h3>建议下一步</h3>
+          <p>先补 InheritedWidget 的两页原文，再刷 State 管理选择题。错题把 Tina 的解析缩成三条，下次开刷前过一遍即可，不必重读整章。</p>
+          <blockquote>正确率大约六成。再练一轮「不会」和「错误」的题，比继续往下翻新章更值。</blockquote>`
+    },
+    n6: {
+      title: "今日灵感",
+      meta: "1 周前 · 180 字",
+      tags: ["灵感"],
+      ai: false,
+      body: `<p>错题跟进可以写进笔记：把 Tina 给的解析缩成三条，下次开刷前先过一遍。</p>
+          <p>不要整段粘解析。三条就够——错在哪、正确条件是什么、下次怎么认。太长的笔记开刷前不会看。</p>
+          <blockquote>笔记是给「下一次打开」用的，不是把课堂再抄一遍。</blockquote>`
+    }
+  };
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function loadTip(id) {
+    var list = [];
+    try {
+      list = JSON.parse(sessionStorage.getItem("zhixu-tips") || "[]");
+    } catch (e) {
+      list = [];
+    }
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function noteFromTip(tip) {
+    var docLine = tip.doc
+      ? "关联资料：《" + escapeHtml(tip.doc) + "》"
+      : "未关联资料";
+    var tags = (tip.tags || []).slice();
+    if (tip.theme && tags.indexOf(tip.theme) < 0) tags.push(tip.theme);
+    return {
+      title: tip.title,
+      meta: "刚刚 · 来自 " + (tip.source || "划选"),
+      tags: tags,
+      ai: false,
+      body:
+        "<blockquote>" + escapeHtml(tip.content) + "</blockquote>" +
+        "<p>" + docLine + " · 来源：" + escapeHtml(tip.source || "划选") + "</p>" +
+        "<h3>主题</h3>" +
+        "<p>" + escapeHtml(tip.theme || "未选") + "</p>" +
+        "<h3>自己可以接着写</h3>" +
+        "<p>这是刚收进来的 tip。之后可以在这里补一句「为什么留下它」，下次开刷前会更好用。</p>"
+    };
+  }
+
+  function render() {
+    const id = new URLSearchParams(location.search).get("id") || "n1";
+    var note = NOTES[id];
+    if (!note && id.indexOf("tip-") === 0) {
+      var tip = loadTip(id);
+      if (tip) note = noteFromTip(tip);
+    }
+    note = note || NOTES.n1;
+    var isTip = id.indexOf("tip-") === 0 || id.indexOf("seed-") === 0 || id === "n3";
+    var backHref = isTip ? "notes.html#tips" : "notes.html";
+    document.getElementById("crumbNotes").href = backHref;
+    document.getElementById("crumbNotes").textContent = isTip ? "tip" : "笔记";
+    document.getElementById("backNotes").href = backHref;
+    document.getElementById("backNotes").textContent = isTip ? "← 返回 tip" : "← 返回笔记";
+    document.title = note.title + " - 知序 AI 知识工作台";
+    document.getElementById("crumbTitle").textContent = note.title;
+    document.getElementById("noteTitle").textContent = note.title;
+    document.getElementById("noteMeta").textContent = note.meta;
+    document.getElementById("aiBadge").style.display = note.ai ? "" : "none";
+    document.getElementById("noteTags").innerHTML = note.tags.map(function (tag) {
+      return '<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-foggy-bg border border-card-border text-secondary-text">' + tag + "</span>";
+    }).join("");
+    document.getElementById("noteBody").innerHTML = note.body;
+  }
+  render();
+</script>
+<script src="sidebar.js"></script>
+<script src="status-rail.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+</body>
+</html>

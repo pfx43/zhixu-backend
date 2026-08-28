@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>资料 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          首页
+        </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+        
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl " href="#">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          设置
+        </a>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-secondary-text">学生</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-foggy-bg">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="text-lg font-semibold">资料</div><a href="upload.html" class="bg-sage-accent text-white px-4 py-1.5 rounded-full text-sm font-medium">上传</a>
+  </header>
+  <div class="flex-1 overflow-y-auto">
+    <div class="max-w-[1180px] mx-auto p-8">
+
+      <div class="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h2 class="text-3xl font-bold mb-1">资料</h2>
+          <p class="text-sm text-secondary-text">你的书本、题目都在这里</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <a href="quiz-doc.html">
+          <div class="rounded-2xl border border-card-border bg-white shadow-soft overflow-hidden text-left">
+            
+            <div class="relative aspect-[3/4] bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-4">
+              <svg class="w-10 h-10 text-sage-accent mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+              <span class="text-[11px] text-center text-sage-dark line-clamp-3 leading-snug">Flutter 核心组件</span>
+              <div class="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-0.5 text-[10px] font-medium">24/48</div>
+            </div>
+            <div class="p-3 space-y-1.5">
+              <div class="text-sm font-medium truncate">Flutter 核心组件</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">可刷题</span>
+                <span class="text-[10px] text-bad">3 错</span>
+              </div>
+            </div>
+          </div></a>
+        
+          <div class="rounded-2xl border border-card-border bg-white shadow-soft overflow-hidden text-left">
+            
+            <div class="relative aspect-[3/4] bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-4">
+              <svg class="w-10 h-10 text-sage-accent mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+              <span class="text-[11px] text-center text-sage-dark line-clamp-3 leading-snug">Dart 语言导论</span>
+              <div class="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-0.5 text-[10px] font-medium">12/30</div>
+            </div>
+            <div class="p-3 space-y-1.5">
+              <div class="text-sm font-medium truncate">Dart 语言导论</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">可刷题</span>
+                
+              </div>
+            </div>
+          </div>
+        
+          <div class="rounded-2xl border border-card-border bg-white shadow-soft overflow-hidden text-left">
+            
+            <div class="relative aspect-[3/4] bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-4">
+              <svg class="w-10 h-10 text-sage-accent mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+              <span class="text-[11px] text-center text-sage-dark line-clamp-3 leading-snug">操作系统导论</span>
+              
+            </div>
+            <div class="p-3 space-y-1.5">
+              <div class="text-sm font-medium truncate">操作系统导论</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#C17B5A]/15 text-bad">出题中</span>
+                
+              </div>
+            </div>
+          </div>
+        
+          <div class="rounded-2xl border border-card-border bg-white shadow-soft overflow-hidden text-left">
+            
+            <div class="relative aspect-[3/4] bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-4">
+              <svg class="w-10 h-10 text-sage-accent mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+              <span class="text-[11px] text-center text-sage-dark line-clamp-3 leading-snug">线性代数讲义</span>
+              
+            </div>
+            <div class="p-3 space-y-1.5">
+              <div class="text-sm font-medium truncate">线性代数讲义</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">未出题</span>
+                
+              </div>
+            </div>
+          </div>
+        
+          <div class="rounded-2xl border border-card-border bg-white shadow-soft overflow-hidden text-left">
+            
+            <div class="relative aspect-[3/4] bg-gradient-to-br from-[#E8EEE9] to-[#F3F6F5] flex flex-col items-center justify-center p-4">
+              <svg class="w-10 h-10 text-sage-accent mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+              <span class="text-[11px] text-center text-sage-dark line-clamp-3 leading-snug">英语阅读真题</span>
+              <div class="absolute top-2 right-2 bg-white/90 rounded-full px-2 py-0.5 text-[10px] font-medium">8/20</div>
+            </div>
+            <div class="p-3 space-y-1.5">
+              <div class="text-sm font-medium truncate">英语阅读真题</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-ok/15 text-ok">可刷题</span>
+                <span class="text-[10px] text-secondary-text">2 不会</span>
+              </div>
+            </div>
+          </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+<script src="sidebar.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+      <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        首页
+      </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+      <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl transition-colors" href="#">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        设置
+      </a>
+    </div>
+  </nav>
+
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+        <div>
+          <p class="text-xs font-bold">啊噗</p>
+          <p class="text-[10px] text-secondary-text">学生</p>
+        </div>
+      </div>
+      <button class="text-secondary-text hover:text-sage-accent" type="button">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 bg-foggy-bg overflow-hidden">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="text-lg font-semibold">首页</div>
+  </header>
+
+  <div class="flex-1 p-8 space-y-8 overflow-y-auto">
+      <div id="onboard-banner" class="hidden items-center justify-between gap-4 rounded-2xl border border-sage-accent/30 bg-[#F3F6F5] px-5 py-4">
+        <div>
+          <p class="text-sm font-semibold">第一次使用知序？</p>
+          <p class="text-xs text-secondary-text mt-0.5">和 Tina 说几句，确认目标和资料，她才知道今天该给你什么任务。</p>
+        </div>
+        <a href="onboarding.html" class="shrink-0 h-9 px-4 rounded-full bg-sage-accent text-white text-sm font-medium inline-flex items-center">开始引导</a>
+      </div>
+
+      <section>
+        <h2 id="hello" class="text-3xl font-bold mb-2">晚上好，啊噗</h2>
+        <p id="hello-sub" class="text-secondary-text text-sm">当你不知道该做什么的时候，不妨 <a href="tina.html" class="text-sage-accent hover:text-sage-dark">和 Tina 聊聊</a>。</p>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow-soft border border-card-border p-6" style="border-left: 3px solid #7B9C9A;">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-[10px] font-semibold tracking-wide text-sage-accent mb-2">我的目标</p>
+            <p id="goal-text" class="text-lg font-semibold leading-relaxed">两周内能独立写 Flutter 页面，并把 Widget 生命周期讲清楚</p>
+            <p id="goal-meta" class="text-[11px] text-secondary-text mt-2">引导时和 Tina 确认过 · 任务都围着这个走</p>
+          </div>
+          <a href="tina.html" class="shrink-0 h-8 px-3 rounded-full border border-card-border bg-foggy-bg text-xs text-secondary-text hover:text-sage-accent">和 Tina 改</a>
+        </div>
+      </section>
+
+      <section>
+        <div class="flex items-end justify-between mb-3">
+          <div>
+            <h3 class="text-lg font-bold">Tina 给你的任务</h3>
+            <p class="text-xs text-secondary-text mt-0.5">根据上面的目标排的，做完会进今日状态</p>
+          </div>
+          <span id="home-task-count" class="text-[11px] text-secondary-text">今天 3 件</span>
+        </div>
+        <div id="home-tasks" class="space-y-3"></div>
+      </section>
+
+    </div>
+</main>
+<script src="sidebar.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+<script>
+  (function () {
+    if (localStorage.getItem("zhixu-onboarding-done") !== "1") {
+      var bar = document.getElementById("onboard-banner");
+      if (bar) {
+        bar.classList.remove("hidden");
+        bar.classList.add("flex");
+      }
+    }
+    var profile = {};
+    try { profile = JSON.parse(localStorage.getItem("zhixu-profile") || "{}"); } catch (e) {}
+    var name = profile.name || "啊噗";
+    var h = new Date().getHours();
+    var hello = h < 5 ? "夜深了" : h < 12 ? "早上好" : h < 18 ? "下午好" : "晚上好";
+    var elHello = document.getElementById("hello");
+    if (elHello) elHello.textContent = hello + "，" + name;
+    if (profile.goal) {
+      var g = document.getElementById("goal-text");
+      if (g) g.textContent = profile.goal;
+    }
+  })();
+</script>
+</body>
+</html>

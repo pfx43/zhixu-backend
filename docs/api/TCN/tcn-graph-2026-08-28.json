@@ -1,0 +1,4576 @@
+{
+  "schema": "tcn.graph.export.v1",
+  "exported_at": "2026-08-28T11:41:11.789Z",
+  "domains": [
+    {
+      "schema_version": 1,
+      "domain": "higher_math",
+      "version": 3,
+      "description": "",
+      "author": "",
+      "generator": null,
+      "created_at": "",
+      "updated_at": "",
+      "nodes": [
+        {
+          "id": "higher_math:实数与极限",
+          "name": "实数与极限",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:集合论基础",
+          "name": "集合论基础",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:映射与函数",
+          "name": "映射与函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数的基本性质",
+          "name": "函数的基本性质（单调/奇偶/周期/有界）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:初等函数与复合函数",
+          "name": "初等函数与复合函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:数列极限",
+          "name": "数列极限",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:ε-N定义",
+          "name": "数列极限的ε-N精确定义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数极限",
+          "name": "函数极限",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:ε-δ定义",
+          "name": "函数极限的ε-δ精确定义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:极限四则运算法则",
+          "name": "极限的四则运算法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:夹逼准则",
+          "name": "夹逼准则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:单调有界准则",
+          "name": "单调有界准则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:两个重要极限",
+          "name": "两个重要极限（sinx/x与(1+1/n)^n）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:无穷小与无穷大",
+          "name": "无穷小与无穷大",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:无穷小的阶与比较",
+          "name": "无穷小的阶与比较",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:等价无穷小替换",
+          "name": "等价无穷小替换",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:连续函数",
+          "name": "连续函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:间断点分类",
+          "name": "间断点的分类（可去/跳跃/无穷）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:零点定理",
+          "name": "零点定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:介值定理",
+          "name": "介值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:有界性与最值定理",
+          "name": "有界性定理与最值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:一致连续性",
+          "name": "一致连续性",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:导数概念",
+          "name": "导数概念",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:导数的几何意义",
+          "name": "导数的几何意义（切线与法线）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:导数的物理意义",
+          "name": "导数的物理意义（速度/加速度）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:左右导数与可导条件",
+          "name": "左右导数与可导充要条件",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:可导与连续的关系",
+          "name": "可导与连续的关系",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:基本初等函数求导公式",
+          "name": "基本初等函数求导公式表",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:求导法则",
+          "name": "四则运算求导法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:复合函数链式法则",
+          "name": "复合函数链式法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:反函数求导",
+          "name": "反函数求导法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:隐函数求导",
+          "name": "隐函数求导",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:参数方程求导",
+          "name": "参数方程确定函数的求导",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:对数求导法",
+          "name": "对数求导法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:高阶导数",
+          "name": "高阶导数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:莱布尼茨公式",
+          "name": "莱布尼茨公式（高阶导数乘积）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:微分的概念",
+          "name": "微分的概念与运算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:微分近似计算",
+          "name": "微分在近似计算中的应用",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:微分中值定理",
+          "name": "微分中值定理（总述）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:罗尔定理",
+          "name": "罗尔定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:拉格朗日中值定理",
+          "name": "拉格朗日中值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:柯西中值定理",
+          "name": "柯西中值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:洛必达法则",
+          "name": "洛必达法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:0/0型不定式",
+          "name": "0/0型不定式极限（洛必达）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:∞/∞型不定式",
+          "name": "∞/∞型不定式极限（洛必达）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:其他不定式转化",
+          "name": "0·∞与1^∞等不定式转化",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:泰勒公式",
+          "name": "泰勒公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:泰勒公式余项",
+          "name": "泰勒公式的Peano余项与Lagrange余项",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:麦克劳林展开式",
+          "name": "常用函数麦克劳林展开式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数单调性与极值",
+          "name": "函数单调性的判断",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:极值第一充分条件",
+          "name": "极值的第一充分条件（导数变号）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:极值第二充分条件",
+          "name": "极值的第二充分条件（二阶导数）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:最大值最小值问题",
+          "name": "最大值最小值的实际应用",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数凹凸性与拐点",
+          "name": "函数凹凸性与拐点",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲线渐近线",
+          "name": "曲线的渐近线（水平/垂直/斜）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数作图",
+          "name": "函数图形的综合描绘",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲率与曲率半径",
+          "name": "曲率与曲率半径",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:弧微分",
+          "name": "弧微分",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:不定积分概念",
+          "name": "不定积分的概念与性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:基本积分公式表",
+          "name": "基本积分公式表",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:换元积分法",
+          "name": "换元积分法（总述）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第一换元法",
+          "name": "第一换元法（凑微分法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第二换元法三角",
+          "name": "第二换元法（三角代换）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第二换元法根式",
+          "name": "第二换元法（根式换元）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:分部积分法",
+          "name": "分部积分法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:有理函数积分",
+          "name": "有理函数积分（部分分式）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:三角有理式积分",
+          "name": "三角函数有理式积分",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:简单无理式积分",
+          "name": "简单无理式积分",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分概念",
+          "name": "定积分的概念与几何意义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分性质",
+          "name": "定积分的性质与估值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:积分中值定理",
+          "name": "积分中值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:牛顿-莱布尼茨公式",
+          "name": "牛顿-莱布尼茨公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:变上限积分",
+          "name": "变上限积分函数及其求导",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分换元法",
+          "name": "定积分的换元法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分分部积分",
+          "name": "定积分的分部积分",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:反常积分",
+          "name": "反常积分（广义积分）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:Γ函数",
+          "name": "Γ函数及其性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分应用-面积",
+          "name": "定积分应用：平面图形面积",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分应用-体积",
+          "name": "定积分应用：旋转体体积",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分应用-弧长",
+          "name": "定积分应用：曲线弧长",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:旋转体侧面积",
+          "name": "定积分应用：旋转体侧面积",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:定积分物理应用",
+          "name": "定积分的物理应用（功/压力/质心）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:微分方程基本概念",
+          "name": "微分方程的基本概念与分类",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:一阶微分方程",
+          "name": "一阶微分方程（总述）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:可分离变量方程",
+          "name": "可分离变量方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:齐次方程",
+          "name": "齐次微分方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:一阶线性微分方程",
+          "name": "一阶线性微分方程（常数变易法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:伯努利方程",
+          "name": "伯努利方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:高阶线性微分方程",
+          "name": "高阶线性微分方程（结构定理）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常系数齐次方程",
+          "name": "二阶常系数齐次方程（特征根法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常系数非齐次方程",
+          "name": "二阶常系数非齐次方程（特解形式）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:非齐次方程-多项式型",
+          "name": "非齐次方程：多项式·指数型特解",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:非齐次方程-三角型",
+          "name": "非齐次方程：三角函数型特解",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二阶方程降阶法",
+          "name": "可降阶的高阶微分方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:微分方程组",
+          "name": "微分方程组",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:向量代数",
+          "name": "向量代数（数量积/向量积/混合积）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:空间平面与直线",
+          "name": "空间平面与直线方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:空间距离与角度",
+          "name": "点线面之间的距离与角度",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲面与空间曲线",
+          "name": "曲面与空间曲线",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二次曲面",
+          "name": "二次曲面（椭球/抛物面/双曲面）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:多元函数极限与连续",
+          "name": "多元函数的极限与连续",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:偏导数",
+          "name": "偏导数的概念与计算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:偏导数几何意义",
+          "name": "偏导数的几何意义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:高阶偏导数",
+          "name": "高阶偏导数与混合偏导数定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:全微分",
+          "name": "全微分的概念与计算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:全微分存在条件",
+          "name": "全微分存在的充分条件与必要条件",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:多元复合函数求导",
+          "name": "多元复合函数求导（链式法则）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:隐函数组",
+          "name": "隐函数及隐函数组求导",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:方向导数与梯度",
+          "name": "方向导数与梯度",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲线切线与法平面",
+          "name": "空间曲线的切线与法平面",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲面切平面与法线",
+          "name": "曲面的切平面与法线",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:多元函数极值",
+          "name": "多元函数无条件极值",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:极值Hessian判别",
+          "name": "多元函数极值的Hessian行列式判别法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:条件极值-拉格朗日乘数法",
+          "name": "条件极值与拉格朗日乘数法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:多元函数最值应用",
+          "name": "多元函数最值的实际应用",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:场论基础",
+          "name": "向量场的散度与旋度",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二重积分概念",
+          "name": "二重积分的概念与性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二重积分计算",
+          "name": "二重积分的直角坐标计算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二重积分极坐标",
+          "name": "二重积分的极坐标换元",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二重积分对称性",
+          "name": "对称性在二重积分中的应用",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:三重积分",
+          "name": "三重积分（直角坐标）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:三重积分柱坐标",
+          "name": "三重积分的柱坐标换元",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:三重积分球坐标",
+          "name": "三重积分的球坐标换元",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:重积分应用",
+          "name": "重积分的应用（面积/体积/质量）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第一类曲线积分",
+          "name": "第一类曲线积分（对弧长）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第二类曲线积分",
+          "name": "第二类曲线积分（对坐标）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:格林公式",
+          "name": "格林公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:曲线积分与路径无关",
+          "name": "曲线积分与路径无关的条件",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:全微分方程",
+          "name": "全微分方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第一类曲面积分",
+          "name": "第一类曲面积分（对面积）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:第二类曲面积分",
+          "name": "第二类曲面积分（对坐标）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:高斯公式",
+          "name": "高斯公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:斯托克斯公式",
+          "name": "斯托克斯公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常数项级数",
+          "name": "常数项级数的概念与性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:级数收敛必要条件",
+          "name": "级数收敛的必要条件",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:几何级数与p级数",
+          "name": "几何级数（等比级数）与p级数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正项级数审敛法",
+          "name": "正项级数审敛法（总述）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:比较判别法",
+          "name": "正项级数比较判别法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:比值判别法",
+          "name": "比值判别法（达朗贝尔）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:根值判别法",
+          "name": "根值判别法（柯西）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:积分判别法",
+          "name": "积分判别法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:任意项级数",
+          "name": "任意项级数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:莱布尼茨判别法",
+          "name": "交错级数与莱布尼茨判别法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:绝对收敛与条件收敛",
+          "name": "绝对收敛与条件收敛",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:幂级数",
+          "name": "幂级数的概念",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:幂级数收敛半径",
+          "name": "幂级数的收敛半径与收敛域",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:幂级数逐项运算",
+          "name": "幂级数的逐项求导与逐项积分",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:函数展开成幂级数",
+          "name": "函数展开成幂级数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:傅里叶级数",
+          "name": "傅里叶级数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:Dirichlet收敛定理",
+          "name": "傅里叶级数的Dirichlet收敛定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:傅里叶变换初步",
+          "name": "傅里叶变换初步",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:行列式",
+          "name": "行列式的定义与性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:行列式代数余子式展开",
+          "name": "行列式的代数余子式展开定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:克拉默法则",
+          "name": "克拉默法则",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩阵运算",
+          "name": "矩阵的基本运算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩阵初等变换",
+          "name": "矩阵的初等变换",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:初等矩阵",
+          "name": "初等矩阵",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:逆矩阵",
+          "name": "逆矩阵的概念与求法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩阵分块运算",
+          "name": "矩阵的分块运算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩阵的秩",
+          "name": "矩阵的秩",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:线性方程组",
+          "name": "线性方程组的解的结构",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:齐次线性方程组",
+          "name": "齐次线性方程组的解空间",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:非齐次线性方程组",
+          "name": "非齐次线性方程组的解结构",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:向量空间",
+          "name": "向量空间",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:线性相关与无关",
+          "name": "线性相关与线性无关",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:基与维数",
+          "name": "向量组的基与维数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:坐标变换",
+          "name": "坐标变换与过渡矩阵",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:线性变换",
+          "name": "线性变换",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:特征值与特征向量",
+          "name": "特征值与特征向量",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:特征多项式",
+          "name": "特征多项式与特征方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩阵对角化",
+          "name": "矩阵可对角化条件",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:内积空间",
+          "name": "内积空间与内积的定义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:施密特正交化",
+          "name": "施密特正交化（Gram-Schmidt）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正交矩阵",
+          "name": "正交矩阵与正交变换",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正交变换",
+          "name": "正交变换的几何意义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:实对称矩阵",
+          "name": "实对称矩阵的特征值定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二次型与标准形",
+          "name": "二次型的概念与矩阵表示",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二次型标准化配方",
+          "name": "二次型标准化（配方法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二次型标准化正交",
+          "name": "二次型标准化（正交变换法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正定二次型",
+          "name": "正定二次型的判断（各阶主子式）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:随机事件与概率",
+          "name": "随机事件与概率的公理化定义",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:古典概型",
+          "name": "古典概型",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:几何概型",
+          "name": "几何概型",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:条件概率与独立性",
+          "name": "条件概率与事件独立性",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:全概率公式",
+          "name": "全概率公式",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:贝叶斯公式",
+          "name": "贝叶斯公式（逆概率）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:随机变量及其分布",
+          "name": "随机变量的概念与分布函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:分布函数性质",
+          "name": "分布函数的性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常见离散分布",
+          "name": "常见离散分布（0-1/二项/泊松）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常见连续分布",
+          "name": "常见连续分布（均匀/指数）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正态分布",
+          "name": "正态分布与标准化",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:多维随机变量",
+          "name": "多维随机变量的联合分布",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:边缘分布与条件分布",
+          "name": "边缘分布与条件分布",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:随机变量的独立性",
+          "name": "随机变量的独立性",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:二维正态分布",
+          "name": "二维正态分布",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:数字特征-期望",
+          "name": "期望与期望的性质",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:数字特征-方差与协方差",
+          "name": "方差、协方差与相关系数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:相关系数",
+          "name": "相关系数的意义与计算",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:条件期望",
+          "name": "条件期望",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:大数定律",
+          "name": "大数定律（弱大数定律）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:中心极限定理",
+          "name": "中心极限定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:抽样分布",
+          "name": "抽样分布（χ²/t/F分布）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:参数估计-点估计",
+          "name": "点估计（总述）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:矩估计法",
+          "name": "矩估计法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:最大似然估计",
+          "name": "最大似然估计法",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:估计量评价准则",
+          "name": "估计量的评价准则（无偏/有效/相合）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:参数估计-区间估计",
+          "name": "区间估计与置信区间",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:假设检验",
+          "name": "假设检验的基本概念",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:正态总体参数检验",
+          "name": "正态总体均值与方差的假设检验",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:方差分析",
+          "name": "单因素方差分析",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:回归分析",
+          "name": "一元线性回归分析",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:命题逻辑",
+          "name": "命题逻辑",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:谓词逻辑",
+          "name": "谓词逻辑",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:集合论",
+          "name": "集合论",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:关系与函数",
+          "name": "关系与函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:图论基础",
+          "name": "图论基础",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:树与生成树",
+          "name": "树与生成树",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:组合计数",
+          "name": "组合计数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:递推关系",
+          "name": "递推关系",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:误差分析",
+          "name": "误差分析",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:非线性方程求根",
+          "name": "非线性方程求根（二分法/牛顿法）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:线性方程组数值解",
+          "name": "线性方程组数值解（高斯消元）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:插值法",
+          "name": "插值法（Lagrange/Newton）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:数值积分",
+          "name": "数值积分（梯形/辛普森）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:常微分方程数值解",
+          "name": "常微分方程数值解（Euler/Runge-Kutta）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:复数与复变函数",
+          "name": "复数与复变函数",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:解析函数",
+          "name": "解析函数与Cauchy-Riemann方程",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:复积分",
+          "name": "复积分与Cauchy积分定理",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:Laurent展开",
+          "name": "Laurent展开与孤立奇点分类",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:留数定理",
+          "name": "留数定理及其应用",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:实变函数基础",
+          "name": "实变函数基础",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:测度论初步",
+          "name": "测度论初步（Lebesgue测度）",
+          "status": "active"
+        },
+        {
+          "id": "higher_math:泛函分析基础",
+          "name": "泛函分析基础（赋范空间）",
+          "status": "active"
+        }
+      ],
+      "edges": [
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:集合论基础",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:映射与函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:函数的基本性质",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:初等函数与复合函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:数列极限",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:ε-N定义",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:函数极限",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:函数极限",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:ε-δ定义",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:极限四则运算法则",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:夹逼准则",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:单调有界准则",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:两个重要极限",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:无穷小与无穷大",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:无穷小与无穷大",
+          "to": "higher_math:无穷小的阶与比较",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:无穷小的阶与比较",
+          "to": "higher_math:等价无穷小替换",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:连续函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:间断点分类",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:零点定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:零点定理",
+          "to": "higher_math:介值定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:有界性与最值定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:一致连续性",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:导数概念",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:导数概念",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:导数的几何意义",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:导数的物理意义",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:左右导数与可导条件",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:左右导数与可导条件",
+          "to": "higher_math:可导与连续的关系",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:基本初等函数求导公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:基本初等函数求导公式",
+          "to": "higher_math:求导法则",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:求导法则",
+          "to": "higher_math:复合函数链式法则",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:反函数求导",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:隐函数求导",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:参数方程求导",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:对数求导法",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:求导法则",
+          "to": "higher_math:高阶导数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:莱布尼茨公式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分的概念",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:微分的概念",
+          "to": "higher_math:微分近似计算",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:微分中值定理",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分中值定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:微分中值定理",
+          "to": "higher_math:罗尔定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:罗尔定理",
+          "to": "higher_math:拉格朗日中值定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:柯西中值定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:柯西中值定理",
+          "to": "higher_math:洛必达法则",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:洛必达法则",
+          "to": "higher_math:0/0型不定式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:洛必达法则",
+          "to": "higher_math:∞/∞型不定式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:0/0型不定式",
+          "to": "higher_math:其他不定式转化",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:∞/∞型不定式",
+          "to": "higher_math:其他不定式转化",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:泰勒公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:泰勒公式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:泰勒公式",
+          "to": "higher_math:泰勒公式余项",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:泰勒公式",
+          "to": "higher_math:麦克劳林展开式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:函数单调性与极值",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数单调性与极值",
+          "to": "higher_math:极值第一充分条件",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:极值第二充分条件",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极值第一充分条件",
+          "to": "higher_math:最大值最小值问题",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极值第二充分条件",
+          "to": "higher_math:最大值最小值问题",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:函数凹凸性与拐点",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:曲线渐近线",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数单调性与极值",
+          "to": "higher_math:函数作图",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数凹凸性与拐点",
+          "to": "higher_math:函数作图",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:曲线渐近线",
+          "to": "higher_math:函数作图",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数的几何意义",
+          "to": "higher_math:弧微分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:曲率与曲率半径",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:不定积分概念",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:不定积分概念",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:基本积分公式表",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:换元积分法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:换元积分法",
+          "to": "higher_math:第一换元法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第一换元法",
+          "to": "higher_math:第二换元法三角",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第一换元法",
+          "to": "higher_math:第二换元法根式",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:分部积分法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:分部积分法",
+          "to": "higher_math:有理函数积分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:有理函数积分",
+          "to": "higher_math:三角有理式积分",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第二换元法三角",
+          "to": "higher_math:简单无理式积分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:定积分概念",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:定积分概念",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:定积分性质",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分性质",
+          "to": "higher_math:积分中值定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:牛顿-莱布尼茨公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:牛顿-莱布尼茨公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:牛顿-莱布尼茨公式",
+          "to": "higher_math:变上限积分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:换元积分法",
+          "to": "higher_math:定积分换元法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:分部积分法",
+          "to": "higher_math:定积分分部积分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:反常积分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:反常积分",
+          "to": "higher_math:Γ函数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:牛顿-莱布尼茨公式",
+          "to": "higher_math:定积分应用-面积",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分应用-面积",
+          "to": "higher_math:定积分应用-体积",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:定积分应用-弧长",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分应用-弧长",
+          "to": "higher_math:旋转体侧面积",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分应用-体积",
+          "to": "higher_math:定积分物理应用",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分方程基本概念",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:微分方程基本概念",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "higher_math:一阶微分方程",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:一阶微分方程",
+          "to": "higher_math:可分离变量方程",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:可分离变量方程",
+          "to": "higher_math:齐次方程",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:可分离变量方程",
+          "to": "higher_math:一阶线性微分方程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:一阶线性微分方程",
+          "to": "higher_math:伯努利方程",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:一阶微分方程",
+          "to": "higher_math:高阶线性微分方程",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶线性微分方程",
+          "to": "higher_math:常系数齐次方程",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "higher_math:常系数非齐次方程",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:非齐次方程-多项式型",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:非齐次方程-三角型",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶线性微分方程",
+          "to": "higher_math:二阶方程降阶法",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:微分方程组",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:向量代数",
+          "weight": 0.6,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "higher_math:空间平面与直线",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:空间平面与直线",
+          "to": "higher_math:空间距离与角度",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:空间平面与直线",
+          "to": "higher_math:曲面与空间曲线",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:曲面与空间曲线",
+          "to": "higher_math:二次曲面",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:多元函数极限与连续",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:曲面与空间曲线",
+          "to": "higher_math:多元函数极限与连续",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "higher_math:偏导数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:偏导数几何意义",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:高阶偏导数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:全微分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:全微分",
+          "to": "higher_math:全微分存在条件",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:多元复合函数求导",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:全微分",
+          "to": "higher_math:多元复合函数求导",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:隐函数求导",
+          "to": "higher_math:隐函数组",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多元复合函数求导",
+          "to": "higher_math:隐函数组",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:方向导数与梯度",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "higher_math:方向导数与梯度",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数几何意义",
+          "to": "higher_math:曲线切线与法平面",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数几何意义",
+          "to": "higher_math:曲面切平面与法线",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高阶偏导数",
+          "to": "higher_math:多元函数极值",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多元函数极值",
+          "to": "higher_math:极值Hessian判别",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极值Hessian判别",
+          "to": "higher_math:条件极值-拉格朗日乘数法",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:条件极值-拉格朗日乘数法",
+          "to": "higher_math:多元函数最值应用",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:方向导数与梯度",
+          "to": "higher_math:场论基础",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:二重积分概念",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "higher_math:二重积分概念",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分概念",
+          "to": "higher_math:二重积分计算",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:二重积分极坐标",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:二重积分对称性",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分概念",
+          "to": "higher_math:三重积分",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:三重积分柱坐标",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:三重积分球坐标",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:重积分应用",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:重积分应用",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:第一类曲线积分",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:第一类曲线积分",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第一类曲线积分",
+          "to": "higher_math:第二类曲线积分",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第二类曲线积分",
+          "to": "higher_math:格林公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "higher_math:曲线积分与路径无关",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:曲线积分与路径无关",
+          "to": "higher_math:全微分方程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:第一类曲面积分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第一类曲面积分",
+          "to": "higher_math:第二类曲面积分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:第二类曲面积分",
+          "to": "higher_math:高斯公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "higher_math:斯托克斯公式",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高斯公式",
+          "to": "higher_math:斯托克斯公式",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:常数项级数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:级数收敛必要条件",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:几何级数与p级数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:几何级数与p级数",
+          "to": "higher_math:正项级数审敛法",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正项级数审敛法",
+          "to": "higher_math:比较判别法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:比较判别法",
+          "to": "higher_math:比值判别法",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:比较判别法",
+          "to": "higher_math:根值判别法",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:反常积分",
+          "to": "higher_math:积分判别法",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正项级数审敛法",
+          "to": "higher_math:任意项级数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:任意项级数",
+          "to": "higher_math:莱布尼茨判别法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:莱布尼茨判别法",
+          "to": "higher_math:绝对收敛与条件收敛",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:幂级数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:幂级数",
+          "to": "higher_math:幂级数收敛半径",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:幂级数收敛半径",
+          "to": "higher_math:幂级数逐项运算",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:麦克劳林展开式",
+          "to": "higher_math:函数展开成幂级数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:幂级数逐项运算",
+          "to": "higher_math:函数展开成幂级数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数展开成幂级数",
+          "to": "higher_math:傅里叶级数",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "higher_math:Dirichlet收敛定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "higher_math:傅里叶变换初步",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:行列式",
+          "weight": 0.6,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:行列式",
+          "to": "higher_math:行列式代数余子式展开",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:克拉默法则",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:行列式",
+          "to": "higher_math:矩阵运算",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:矩阵初等变换",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:初等矩阵",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:逆矩阵",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:逆矩阵",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:矩阵分块运算",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:矩阵的秩",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵的秩",
+          "to": "higher_math:线性方程组",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:克拉默法则",
+          "to": "higher_math:线性方程组",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:齐次线性方程组",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:非齐次线性方程组",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:齐次线性方程组",
+          "to": "higher_math:向量空间",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:线性相关与无关",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:线性相关与无关",
+          "to": "higher_math:基与维数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:基与维数",
+          "to": "higher_math:坐标变换",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:线性变换",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:特征多项式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:特征多项式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:特征多项式",
+          "to": "higher_math:特征值与特征向量",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:特征值与特征向量",
+          "to": "higher_math:矩阵对角化",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:内积空间",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:内积空间",
+          "to": "higher_math:施密特正交化",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:施密特正交化",
+          "to": "higher_math:正交矩阵",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正交矩阵",
+          "to": "higher_math:正交变换",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵对角化",
+          "to": "higher_math:实对称矩阵",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实对称矩阵",
+          "to": "higher_math:二次型与标准形",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二次型与标准形",
+          "to": "higher_math:二次型标准化配方",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正交变换",
+          "to": "higher_math:二次型标准化正交",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二次型标准化配方",
+          "to": "higher_math:正定二次型",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:二次型标准化正交",
+          "to": "higher_math:正定二次型",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:随机事件与概率",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:古典概型",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:几何概型",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:古典概型",
+          "to": "higher_math:条件概率与独立性",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:条件概率与独立性",
+          "to": "higher_math:全概率公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:全概率公式",
+          "to": "higher_math:贝叶斯公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:随机变量及其分布",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:随机变量及其分布",
+          "to": "higher_math:分布函数性质",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:分布函数性质",
+          "to": "higher_math:常见离散分布",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:分布函数性质",
+          "to": "higher_math:常见连续分布",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常见连续分布",
+          "to": "higher_math:正态分布",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:随机变量及其分布",
+          "to": "higher_math:多维随机变量",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:边缘分布与条件分布",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:随机变量的独立性",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:二维正态分布",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常见离散分布",
+          "to": "higher_math:数字特征-期望",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常见连续分布",
+          "to": "higher_math:数字特征-期望",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数字特征-期望",
+          "to": "higher_math:数字特征-方差与协方差",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数字特征-方差与协方差",
+          "to": "higher_math:相关系数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:边缘分布与条件分布",
+          "to": "higher_math:条件期望",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数字特征-方差与协方差",
+          "to": "higher_math:大数定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:大数定律",
+          "to": "higher_math:中心极限定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正态分布",
+          "to": "higher_math:抽样分布",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:中心极限定理",
+          "to": "higher_math:抽样分布",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:抽样分布",
+          "to": "higher_math:参数估计-点估计",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:参数估计-点估计",
+          "to": "higher_math:矩估计法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:参数估计-点估计",
+          "to": "higher_math:最大似然估计",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩估计法",
+          "to": "higher_math:估计量评价准则",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:最大似然估计",
+          "to": "higher_math:估计量评价准则",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:抽样分布",
+          "to": "higher_math:参数估计-区间估计",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:参数估计-区间估计",
+          "to": "higher_math:假设检验",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:假设检验",
+          "to": "higher_math:正态总体参数检验",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:正态总体参数检验",
+          "to": "higher_math:方差分析",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:相关系数",
+          "to": "higher_math:回归分析",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:方差分析",
+          "to": "higher_math:回归分析",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:命题逻辑",
+          "to": "higher_math:谓词逻辑",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:集合论",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:集合论",
+          "to": "higher_math:关系与函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:关系与函数",
+          "to": "higher_math:图论基础",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:图论基础",
+          "to": "higher_math:树与生成树",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:组合计数",
+          "to": "higher_math:递推关系",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:误差分析",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:误差分析",
+          "to": "higher_math:非线性方程求根",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:线性方程组数值解",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:函数展开成幂级数",
+          "to": "higher_math:插值法",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:数值积分",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "higher_math:常微分方程数值解",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:复数与复变函数",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复数与复变函数",
+          "to": "higher_math:解析函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:解析函数",
+          "to": "higher_math:复积分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:幂级数",
+          "to": "higher_math:Laurent展开",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:复积分",
+          "to": "higher_math:Laurent展开",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:Laurent展开",
+          "to": "higher_math:留数定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:实变函数基础",
+          "weight": 0.6,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实变函数基础",
+          "to": "higher_math:测度论初步",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:泛函分析基础",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:测度论初步",
+          "to": "higher_math:泛函分析基础",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:导数的物理意义",
+          "to": "physics:质点运动学",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:质点运动学",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:磁场与磁感应强度",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "physics:功与能定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:功与能定理",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:动量与冲量",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "physics:机械振动",
+          "weight": 0.88,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.92,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.88,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:电磁感应",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:一阶线性微分方程",
+          "to": "physics:稳恒电流",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "physics:热力学第一定律",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "physics:热力学第一定律",
+          "weight": 0.72,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "physics:机械波",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:傅里叶变换初步",
+          "to": "physics:电磁波",
+          "weight": 0.82,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:高斯定理",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.92,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:高斯公式",
+          "to": "physics:高斯定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:斯托克斯公式",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.88,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "physics:电势与电位移",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:特征值与特征向量",
+          "to": "physics:量子力学基础",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "physics:量子力学基础",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:薛定谔方程",
+          "weight": 0.78,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:方向导数与梯度",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.82,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "discrete_math:集合的基数",
+          "weight": 0.88,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 0.88,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.82,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "discrete_math:关系矩阵与关系图",
+          "weight": 0.78,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:线性变换",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "discrete_math:代数系统",
+          "weight": 0.72,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "discrete_math:特征根法",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:古典概型",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.82,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "discrete_math:生成函数",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        }
+      ],
+      "inner_edges": [
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:集合论基础",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:映射与函数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:函数的基本性质",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:初等函数与复合函数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:数列极限",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:ε-N定义",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "higher_math:函数极限",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:函数极限",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:ε-δ定义",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:极限四则运算法则",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:夹逼准则",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "higher_math:单调有界准则",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:两个重要极限",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:无穷小与无穷大",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:无穷小与无穷大",
+          "to": "higher_math:无穷小的阶与比较",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:无穷小的阶与比较",
+          "to": "higher_math:等价无穷小替换",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:连续函数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:间断点分类",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:零点定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:零点定理",
+          "to": "higher_math:介值定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:有界性与最值定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:一致连续性",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:导数概念",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:导数概念",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:导数的几何意义",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:导数的物理意义",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:左右导数与可导条件",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:左右导数与可导条件",
+          "to": "higher_math:可导与连续的关系",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:基本初等函数求导公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:基本初等函数求导公式",
+          "to": "higher_math:求导法则",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:求导法则",
+          "to": "higher_math:复合函数链式法则",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:反函数求导",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:隐函数求导",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:参数方程求导",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:对数求导法",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:求导法则",
+          "to": "higher_math:高阶导数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:莱布尼茨公式",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分的概念",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:微分的概念",
+          "to": "higher_math:微分近似计算",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:微分中值定理",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分中值定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:微分中值定理",
+          "to": "higher_math:罗尔定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:罗尔定理",
+          "to": "higher_math:拉格朗日中值定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:柯西中值定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:柯西中值定理",
+          "to": "higher_math:洛必达法则",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:洛必达法则",
+          "to": "higher_math:0/0型不定式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:洛必达法则",
+          "to": "higher_math:∞/∞型不定式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:0/0型不定式",
+          "to": "higher_math:其他不定式转化",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:∞/∞型不定式",
+          "to": "higher_math:其他不定式转化",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:泰勒公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:泰勒公式",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:泰勒公式",
+          "to": "higher_math:泰勒公式余项",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:泰勒公式",
+          "to": "higher_math:麦克劳林展开式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:拉格朗日中值定理",
+          "to": "higher_math:函数单调性与极值",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:函数单调性与极值",
+          "to": "higher_math:极值第一充分条件",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:极值第二充分条件",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:极值第一充分条件",
+          "to": "higher_math:最大值最小值问题",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:极值第二充分条件",
+          "to": "higher_math:最大值最小值问题",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:高阶导数",
+          "to": "higher_math:函数凹凸性与拐点",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:曲线渐近线",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:函数单调性与极值",
+          "to": "higher_math:函数作图",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:函数凹凸性与拐点",
+          "to": "higher_math:函数作图",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:曲线渐近线",
+          "to": "higher_math:函数作图",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:导数的几何意义",
+          "to": "higher_math:弧微分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:曲率与曲率半径",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:连续函数",
+          "to": "higher_math:不定积分概念",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:不定积分概念",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:基本积分公式表",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:换元积分法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:换元积分法",
+          "to": "higher_math:第一换元法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:第一换元法",
+          "to": "higher_math:第二换元法三角",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:第一换元法",
+          "to": "higher_math:第二换元法根式",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:分部积分法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:分部积分法",
+          "to": "higher_math:有理函数积分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:有理函数积分",
+          "to": "higher_math:三角有理式积分",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:第二换元法三角",
+          "to": "higher_math:简单无理式积分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:定积分概念",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:定积分概念",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:定积分性质",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:定积分性质",
+          "to": "higher_math:积分中值定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:基本积分公式表",
+          "to": "higher_math:牛顿-莱布尼茨公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:牛顿-莱布尼茨公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:牛顿-莱布尼茨公式",
+          "to": "higher_math:变上限积分",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:换元积分法",
+          "to": "higher_math:定积分换元法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:分部积分法",
+          "to": "higher_math:定积分分部积分",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:反常积分",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:反常积分",
+          "to": "higher_math:Γ函数",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:牛顿-莱布尼茨公式",
+          "to": "higher_math:定积分应用-面积",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:定积分应用-面积",
+          "to": "higher_math:定积分应用-体积",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:定积分应用-弧长",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:定积分应用-弧长",
+          "to": "higher_math:旋转体侧面积",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:定积分应用-体积",
+          "to": "higher_math:定积分物理应用",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:导数概念",
+          "to": "higher_math:微分方程基本概念",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:不定积分概念",
+          "to": "higher_math:微分方程基本概念",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "higher_math:一阶微分方程",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:一阶微分方程",
+          "to": "higher_math:可分离变量方程",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:可分离变量方程",
+          "to": "higher_math:齐次方程",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:可分离变量方程",
+          "to": "higher_math:一阶线性微分方程",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:一阶线性微分方程",
+          "to": "higher_math:伯努利方程",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:一阶微分方程",
+          "to": "higher_math:高阶线性微分方程",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:高阶线性微分方程",
+          "to": "higher_math:常系数齐次方程",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "higher_math:常系数非齐次方程",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:非齐次方程-多项式型",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:非齐次方程-三角型",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:高阶线性微分方程",
+          "to": "higher_math:二阶方程降阶法",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "higher_math:微分方程组",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:向量代数",
+          "weight": 0.6
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "higher_math:空间平面与直线",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:空间平面与直线",
+          "to": "higher_math:空间距离与角度",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:空间平面与直线",
+          "to": "higher_math:曲面与空间曲线",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:曲面与空间曲线",
+          "to": "higher_math:二次曲面",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:函数极限",
+          "to": "higher_math:多元函数极限与连续",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:曲面与空间曲线",
+          "to": "higher_math:多元函数极限与连续",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "higher_math:偏导数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:偏导数几何意义",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:高阶偏导数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:全微分",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:全微分",
+          "to": "higher_math:全微分存在条件",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:复合函数链式法则",
+          "to": "higher_math:多元复合函数求导",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:全微分",
+          "to": "higher_math:多元复合函数求导",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:隐函数求导",
+          "to": "higher_math:隐函数组",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:多元复合函数求导",
+          "to": "higher_math:隐函数组",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "higher_math:方向导数与梯度",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "higher_math:方向导数与梯度",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:偏导数几何意义",
+          "to": "higher_math:曲线切线与法平面",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:偏导数几何意义",
+          "to": "higher_math:曲面切平面与法线",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:高阶偏导数",
+          "to": "higher_math:多元函数极值",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:多元函数极值",
+          "to": "higher_math:极值Hessian判别",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:极值Hessian判别",
+          "to": "higher_math:条件极值-拉格朗日乘数法",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:条件极值-拉格朗日乘数法",
+          "to": "higher_math:多元函数最值应用",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:方向导数与梯度",
+          "to": "higher_math:场论基础",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:二重积分概念",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "higher_math:二重积分概念",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:二重积分概念",
+          "to": "higher_math:二重积分计算",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:二重积分极坐标",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:二重积分对称性",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:二重积分概念",
+          "to": "higher_math:三重积分",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:三重积分柱坐标",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:三重积分球坐标",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:重积分应用",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:三重积分",
+          "to": "higher_math:重积分应用",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:弧微分",
+          "to": "higher_math:第一类曲线积分",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:第一类曲线积分",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:第一类曲线积分",
+          "to": "higher_math:第二类曲线积分",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:第二类曲线积分",
+          "to": "higher_math:格林公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "higher_math:曲线积分与路径无关",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:曲线积分与路径无关",
+          "to": "higher_math:全微分方程",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二重积分计算",
+          "to": "higher_math:第一类曲面积分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:第一类曲面积分",
+          "to": "higher_math:第二类曲面积分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:第二类曲面积分",
+          "to": "higher_math:高斯公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "higher_math:斯托克斯公式",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:高斯公式",
+          "to": "higher_math:斯托克斯公式",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:极限四则运算法则",
+          "to": "higher_math:常数项级数",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:级数收敛必要条件",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:几何级数与p级数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:几何级数与p级数",
+          "to": "higher_math:正项级数审敛法",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:正项级数审敛法",
+          "to": "higher_math:比较判别法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:比较判别法",
+          "to": "higher_math:比值判别法",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:比较判别法",
+          "to": "higher_math:根值判别法",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:反常积分",
+          "to": "higher_math:积分判别法",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:正项级数审敛法",
+          "to": "higher_math:任意项级数",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:任意项级数",
+          "to": "higher_math:莱布尼茨判别法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:莱布尼茨判别法",
+          "to": "higher_math:绝对收敛与条件收敛",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:常数项级数",
+          "to": "higher_math:幂级数",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:幂级数",
+          "to": "higher_math:幂级数收敛半径",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:幂级数收敛半径",
+          "to": "higher_math:幂级数逐项运算",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:麦克劳林展开式",
+          "to": "higher_math:函数展开成幂级数",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:幂级数逐项运算",
+          "to": "higher_math:函数展开成幂级数",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:函数展开成幂级数",
+          "to": "higher_math:傅里叶级数",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "higher_math:Dirichlet收敛定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "higher_math:傅里叶变换初步",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:行列式",
+          "weight": 0.6
+        },
+        {
+          "from": "higher_math:行列式",
+          "to": "higher_math:行列式代数余子式展开",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:克拉默法则",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:行列式",
+          "to": "higher_math:矩阵运算",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:矩阵初等变换",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:初等矩阵",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:逆矩阵",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:逆矩阵",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:矩阵分块运算",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:矩阵初等变换",
+          "to": "higher_math:矩阵的秩",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:矩阵的秩",
+          "to": "higher_math:线性方程组",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:克拉默法则",
+          "to": "higher_math:线性方程组",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:齐次线性方程组",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:非齐次线性方程组",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:齐次线性方程组",
+          "to": "higher_math:向量空间",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:线性相关与无关",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:线性相关与无关",
+          "to": "higher_math:基与维数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:基与维数",
+          "to": "higher_math:坐标变换",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:线性变换",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "higher_math:特征多项式",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:行列式代数余子式展开",
+          "to": "higher_math:特征多项式",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:特征多项式",
+          "to": "higher_math:特征值与特征向量",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:特征值与特征向量",
+          "to": "higher_math:矩阵对角化",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:内积空间",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:内积空间",
+          "to": "higher_math:施密特正交化",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:施密特正交化",
+          "to": "higher_math:正交矩阵",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:正交矩阵",
+          "to": "higher_math:正交变换",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:矩阵对角化",
+          "to": "higher_math:实对称矩阵",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:实对称矩阵",
+          "to": "higher_math:二次型与标准形",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二次型与标准形",
+          "to": "higher_math:二次型标准化配方",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:正交变换",
+          "to": "higher_math:二次型标准化正交",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:二次型标准化配方",
+          "to": "higher_math:正定二次型",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:二次型标准化正交",
+          "to": "higher_math:正定二次型",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:随机事件与概率",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:古典概型",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:几何概型",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:古典概型",
+          "to": "higher_math:条件概率与独立性",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:条件概率与独立性",
+          "to": "higher_math:全概率公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:全概率公式",
+          "to": "higher_math:贝叶斯公式",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:随机事件与概率",
+          "to": "higher_math:随机变量及其分布",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:随机变量及其分布",
+          "to": "higher_math:分布函数性质",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:分布函数性质",
+          "to": "higher_math:常见离散分布",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:分布函数性质",
+          "to": "higher_math:常见连续分布",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常见连续分布",
+          "to": "higher_math:正态分布",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:随机变量及其分布",
+          "to": "higher_math:多维随机变量",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:边缘分布与条件分布",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:随机变量的独立性",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:多维随机变量",
+          "to": "higher_math:二维正态分布",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:常见离散分布",
+          "to": "higher_math:数字特征-期望",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:常见连续分布",
+          "to": "higher_math:数字特征-期望",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:数字特征-期望",
+          "to": "higher_math:数字特征-方差与协方差",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:数字特征-方差与协方差",
+          "to": "higher_math:相关系数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:边缘分布与条件分布",
+          "to": "higher_math:条件期望",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:数字特征-方差与协方差",
+          "to": "higher_math:大数定律",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:大数定律",
+          "to": "higher_math:中心极限定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:正态分布",
+          "to": "higher_math:抽样分布",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:中心极限定理",
+          "to": "higher_math:抽样分布",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:抽样分布",
+          "to": "higher_math:参数估计-点估计",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:参数估计-点估计",
+          "to": "higher_math:矩估计法",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:参数估计-点估计",
+          "to": "higher_math:最大似然估计",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:矩估计法",
+          "to": "higher_math:估计量评价准则",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:最大似然估计",
+          "to": "higher_math:估计量评价准则",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:抽样分布",
+          "to": "higher_math:参数估计-区间估计",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:参数估计-区间估计",
+          "to": "higher_math:假设检验",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:假设检验",
+          "to": "higher_math:正态总体参数检验",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:正态总体参数检验",
+          "to": "higher_math:方差分析",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:相关系数",
+          "to": "higher_math:回归分析",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:方差分析",
+          "to": "higher_math:回归分析",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:命题逻辑",
+          "to": "higher_math:谓词逻辑",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "higher_math:集合论",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:集合论",
+          "to": "higher_math:关系与函数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:关系与函数",
+          "to": "higher_math:图论基础",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:图论基础",
+          "to": "higher_math:树与生成树",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:组合计数",
+          "to": "higher_math:递推关系",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:误差分析",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:误差分析",
+          "to": "higher_math:非线性方程求根",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:线性方程组",
+          "to": "higher_math:线性方程组数值解",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:函数展开成幂级数",
+          "to": "higher_math:插值法",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:数值积分",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "higher_math:常微分方程数值解",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "higher_math:复数与复变函数",
+          "weight": 0.7
+        },
+        {
+          "from": "higher_math:复数与复变函数",
+          "to": "higher_math:解析函数",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:解析函数",
+          "to": "higher_math:复积分",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:幂级数",
+          "to": "higher_math:Laurent展开",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:复积分",
+          "to": "higher_math:Laurent展开",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:Laurent展开",
+          "to": "higher_math:留数定理",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "higher_math:实变函数基础",
+          "weight": 0.6
+        },
+        {
+          "from": "higher_math:实变函数基础",
+          "to": "higher_math:测度论初步",
+          "weight": 1
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "higher_math:泛函分析基础",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:测度论初步",
+          "to": "higher_math:泛函分析基础",
+          "weight": 0.8
+        }
+      ],
+      "cross_edges": [
+        {
+          "from": "higher_math:导数的物理意义",
+          "to": "physics:质点运动学",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:质点运动学",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:磁场与磁感应强度",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "physics:功与能定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:功与能定理",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:动量与冲量",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "physics:机械振动",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.92
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:电磁感应",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:一阶线性微分方程",
+          "to": "physics:稳恒电流",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "physics:热力学第一定律",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "physics:热力学第一定律",
+          "weight": 0.72
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "physics:机械波",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:傅里叶变换初步",
+          "to": "physics:电磁波",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:高斯定理",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.92
+        },
+        {
+          "from": "higher_math:高斯公式",
+          "to": "physics:高斯定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:斯托克斯公式",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "physics:电势与电位移",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:特征值与特征向量",
+          "to": "physics:量子力学基础",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "physics:量子力学基础",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:薛定谔方程",
+          "weight": 0.78
+        },
+        {
+          "from": "higher_math:方向导数与梯度",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:集合论基础",
+          "to": "discrete_math:集合的基数",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "discrete_math:关系矩阵与关系图",
+          "weight": 0.78
+        },
+        {
+          "from": "higher_math:线性变换",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "discrete_math:代数系统",
+          "weight": 0.72
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "discrete_math:特征根法",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:古典概型",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "discrete_math:生成函数",
+          "weight": 0.7
+        }
+      ],
+      "incoming_edges": [
+        {
+          "from": "math:集合与基本运算",
+          "to": "higher_math:集合论基础",
+          "weight": 0.9
+        },
+        {
+          "from": "math:函数的概念与性质",
+          "to": "higher_math:映射与函数",
+          "weight": 0.92
+        },
+        {
+          "from": "math:函数的单调性",
+          "to": "higher_math:函数的基本性质",
+          "weight": 0.88
+        },
+        {
+          "from": "math:函数的奇偶性",
+          "to": "higher_math:函数的基本性质",
+          "weight": 0.85
+        },
+        {
+          "from": "math:复合函数",
+          "to": "higher_math:初等函数与复合函数",
+          "weight": 0.88
+        },
+        {
+          "from": "math:指数与指数函数",
+          "to": "higher_math:初等函数与复合函数",
+          "weight": 0.85
+        },
+        {
+          "from": "math:对数与对数函数",
+          "to": "higher_math:初等函数与复合函数",
+          "weight": 0.85
+        },
+        {
+          "from": "math:数列基础",
+          "to": "higher_math:数列极限",
+          "weight": 0.88
+        },
+        {
+          "from": "math:等比数列",
+          "to": "higher_math:数列极限",
+          "weight": 0.78
+        },
+        {
+          "from": "math:不等式与基本不等式",
+          "to": "higher_math:ε-N定义",
+          "weight": 0.75
+        },
+        {
+          "from": "math:不等式与基本不等式",
+          "to": "higher_math:ε-δ定义",
+          "weight": 0.75
+        },
+        {
+          "from": "math:三角函数基础",
+          "to": "higher_math:两个重要极限",
+          "weight": 0.85
+        },
+        {
+          "from": "math:和角差角公式",
+          "to": "higher_math:三角有理式积分",
+          "weight": 0.8
+        },
+        {
+          "from": "math:导数基础与求导法则",
+          "to": "higher_math:导数概念",
+          "weight": 0.95
+        },
+        {
+          "from": "math:极值与最值",
+          "to": "higher_math:函数单调性与极值",
+          "weight": 0.85
+        },
+        {
+          "from": "math:定积分初步",
+          "to": "higher_math:定积分概念",
+          "weight": 0.85
+        },
+        {
+          "from": "math:平面向量",
+          "to": "higher_math:向量代数",
+          "weight": 0.9
+        },
+        {
+          "from": "math:空间向量与立体几何",
+          "to": "higher_math:向量代数",
+          "weight": 0.88
+        },
+        {
+          "from": "math:复数",
+          "to": "higher_math:实数与极限",
+          "weight": 0.7
+        },
+        {
+          "from": "math:复数的模与辐角",
+          "to": "higher_math:实数与极限",
+          "weight": 0.72
+        },
+        {
+          "from": "math:古典概型与概率",
+          "to": "higher_math:随机事件与概率",
+          "weight": 0.85
+        },
+        {
+          "from": "math:条件概率与独立事件",
+          "to": "higher_math:条件概率与独立性",
+          "weight": 0.88
+        },
+        {
+          "from": "math:随机变量与期望",
+          "to": "higher_math:随机变量及其分布",
+          "weight": 0.82
+        },
+        {
+          "from": "math:正态分布",
+          "to": "higher_math:正态分布",
+          "weight": 0.85
+        },
+        {
+          "from": "math:统计与数据分析",
+          "to": "higher_math:参数估计-点估计",
+          "weight": 0.7
+        },
+        {
+          "from": "math:排列与组合",
+          "to": "higher_math:古典概型",
+          "weight": 0.88
+        },
+        {
+          "from": "math:二项式定理",
+          "to": "higher_math:常见离散分布",
+          "weight": 0.75
+        },
+        {
+          "from": "math:数学归纳法",
+          "to": "higher_math:级数收敛必要条件",
+          "weight": 0.68
+        }
+      ]
+    }
+  ]
+}

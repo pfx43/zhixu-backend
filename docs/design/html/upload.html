@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>上传资料 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage-accent': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'primary-text': '#2D2A28',
+            'secondary-text': '#8A8580',
+            'card-border': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .method-card.is-active { border-color: rgba(123,156,154,0.55); background: #fff; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+    .method-card.is-active .method-icon { background: #7B9C9A; color: #fff; }
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+  <link rel="stylesheet" href="status-rail.css">
+  <link rel="stylesheet" href="task-complete.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-primary-text antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-card-border bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-secondary-text leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+      <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="index.html">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        首页
+      </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">主要</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          Tina
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          笔记
+        </a>
+        <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          资料
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          进度
+        </a>
+        <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-secondary-text uppercase tracking-wider">个人</p>
+      <a class="nav-idle transition-colors flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="#">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+        设置
+      </a>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-card-border bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage-accent/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-secondary-text">学生</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-foggy-bg">
+  <header class="h-16 px-8 flex items-center justify-between border-b border-card-border bg-foggy-bg shrink-0">
+    <div class="flex items-center gap-3">
+      <a class="text-secondary-text hover:text-sage-accent text-sm" href="quiz.html">资料</a>
+      <span class="text-secondary-text">/</span>
+      <div class="text-lg font-semibold">上传</div>
+    </div>
+  </header>
+  <div class="flex-1 overflow-y-auto">
+    <div class="max-w-[760px] mx-auto p-8">
+      <div class="flex items-center gap-2 mb-6">
+        <a href="quiz.html" class="text-sm text-secondary-text hover:text-sage-accent">← 返回资料</a>
+      </div>
+      <h2 class="text-3xl font-bold mb-1">上传资料</h2>
+      <p class="text-sm text-secondary-text mb-8">拖进来或点选文件。解析完成后会出现在资料书架上，就可以出题、刷题。</p>
+
+      <div class="flex items-center justify-between max-w-lg mx-auto mb-8 px-2">
+        <div class="flex flex-col items-center gap-1.5">
+          <div class="w-9 h-9 rounded-full bg-ok text-white text-xs font-bold flex items-center justify-center">1</div>
+          <span class="text-[11px] text-ok">上传</span>
+        </div>
+        <div class="flex-1 h-px bg-sage-accent/40 mx-3 mb-4"></div>
+        <div class="flex flex-col items-center gap-1.5">
+          <div class="w-9 h-9 rounded-full bg-sage-accent text-white text-xs font-bold flex items-center justify-center">2</div>
+          <span class="text-[11px] text-sage-accent">解析</span>
+        </div>
+        <div class="flex-1 h-px bg-card-border mx-3 mb-4"></div>
+        <div class="flex flex-col items-center gap-1.5">
+          <div class="w-9 h-9 rounded-full bg-white border border-card-border text-secondary-text text-xs font-bold flex items-center justify-center">3</div>
+          <span class="text-[11px] text-secondary-text">进资料</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <button type="button" data-method="doc" class="method-card is-active text-left rounded-2xl border border-card-border bg-foggy-bg p-4">
+          <div class="method-icon w-10 h-10 rounded-xl bg-[#F3F6F5] text-sage-accent flex items-center justify-center mb-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+          </div>
+          <p class="text-sm font-semibold mb-0.5">上传文档</p>
+          <p class="text-[11px] text-secondary-text">PDF、TXT、MD、DOCX</p>
+        </button>
+        <button type="button" data-method="image" class="method-card text-left rounded-2xl border border-card-border bg-foggy-bg p-4">
+          <div class="method-icon w-10 h-10 rounded-xl bg-[#F3F6F5] text-sage-accent flex items-center justify-center mb-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+          </div>
+          <p class="text-sm font-semibold mb-0.5">图片</p>
+          <p class="text-[11px] text-secondary-text">PNG、JPG，识别文字</p>
+        </button>
+        <button type="button" data-method="camera" class="method-card text-left rounded-2xl border border-card-border bg-foggy-bg p-4">
+          <div class="method-icon w-10 h-10 rounded-xl bg-[#F3F6F5] text-sage-accent flex items-center justify-center mb-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+          </div>
+          <p class="text-sm font-semibold mb-0.5">拍照</p>
+          <p class="text-[11px] text-secondary-text">拍讲义或书页</p>
+        </button>
+      </div>
+
+      <div id="drop" class="rounded-2xl border-2 border-dashed border-card-border bg-white p-10 text-center mb-8 cursor-pointer">
+        <div class="w-14 h-14 rounded-2xl bg-[#F3F6F5] text-sage-accent mx-auto mb-4 flex items-center justify-center">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+        </div>
+        <p id="dropTitle" class="text-sm font-semibold mb-1">把文件拖到这里，或点选上传</p>
+        <p id="dropHint" class="text-xs text-secondary-text mb-5">支持 PDF、TXT、MD、DOCX</p>
+        <span class="inline-flex bg-sage-accent text-white px-5 py-2 rounded-full text-sm font-medium">选择文件</span>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-semibold mb-3">处理中</h3>
+        <div class="space-y-3">
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4">
+            <div class="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <p class="text-sm font-medium">Flutter 核心组件.pdf</p>
+                <p class="text-xs text-secondary-text mt-0.5">解析中 · 第 18 / 48 页</p>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent shrink-0">解析</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-foggy-bg overflow-hidden">
+              <div class="h-full rounded-full bg-sage-accent" style="width:38%"></div>
+            </div>
+          </div>
+          <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium">Dart 异步编程.md</p>
+              <p class="text-xs text-secondary-text mt-0.5">已完成 · 可在资料里出题</p>
+            </div>
+            <a href="quiz.html" class="text-xs text-sage-accent hover:text-sage-dark shrink-0">去资料</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="sidebar.js"></script>
+<script src="tasks.js"></script>
+<script src="status-rail.js"></script>
+<input id="file" type="file" class="hidden" accept=".pdf,.txt,.md,.docx,.pptx,.png,.jpg,.jpeg">
+<script>
+  (function () {
+    var hints = {
+      doc: ["把文件拖到这里，或点选上传", "支持 PDF、TXT、MD、DOCX"],
+      image: ["把图片拖到这里，或点选上传", "支持 PNG、JPG、WEBP"],
+      camera: ["打开相机拍一页讲义", "拍完会按图片一样识别文字"]
+    };
+    document.querySelectorAll("[data-method]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll("[data-method]").forEach(function (b) { b.classList.remove("is-active"); });
+        btn.classList.add("is-active");
+        var h = hints[btn.getAttribute("data-method")];
+        document.getElementById("dropTitle").textContent = h[0];
+        document.getElementById("dropHint").textContent = h[1];
+      });
+    });
+    var drop = document.getElementById("drop");
+    var file = document.getElementById("file");
+    function take(f) {
+      if (!f) return;
+      document.getElementById("dropTitle").textContent = f.name;
+      document.getElementById("dropHint").textContent = "已选择（演示，未上传到服务器）";
+      if (window.ZhixuTasks) ZhixuTasks.recordUpload(f.name);
+    }
+    drop.addEventListener("click", function () { file.click(); });
+    file.addEventListener("change", function () { take(file.files && file.files[0]); });
+    ["dragenter", "dragover"].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("border-sage-accent"); });
+    });
+    drop.addEventListener("dragleave", function () { drop.classList.remove("border-sage-accent"); });
+    drop.addEventListener("drop", function (e) {
+      e.preventDefault();
+      drop.classList.remove("border-sage-accent");
+      take(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+#task-done-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(45, 42, 40, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#task-done-layer.is-on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.task-done-card {
+  width: min(100%, 360px);
+  background: #fff;
+  border: 1px solid #EAE8E4;
+  border-radius: 24px;
+  padding: 28px 24px 22px;
+  text-align: center;
+  box-shadow: 0 16px 48px -12px rgba(45, 42, 40, 0.18);
+  transform: translateY(8px) scale(0.98);
+  transition: transform 0.22s ease;
+}
+#task-done-layer.is-on .task-done-card {
+  transform: none;
+}
+.task-done-mark {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #F3F6F5;
+  color: #7B9C9A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.task-card.is-done {
+  opacity: 0.72;
+}
+.task-card.is-done .task-action {
+  background: #F3F6F5;
+  color: #8A8580;
+  pointer-events: none;
+}
