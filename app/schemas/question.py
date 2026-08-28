@@ -7,8 +7,31 @@ from app.schemas.task import TaskCompletedOut
 
 
 class QuestionOption(BaseModel):
+    """题目选项（Issue #35 可机读结构）。
+
+    - 选择/判断/填空/排序：key + text
+    - match：每项额外带 side = "left" | "right"（Web 不再按下标切半）
+    """
+
     key: str
     text: str
+    side: Optional[str] = None  # 仅 match 题型使用
+
+    model_config = ConfigDict(extra="allow")
+
+
+class ClassifyOptions(BaseModel):
+    """classify 题型的 options 结构：items[] + categories[] 两段。
+
+    - items: 待分类条目
+    - categories: 类别列表
+    - user_answer 形如 {"itemId": "categoryId"}
+    """
+
+    items: List[dict] = []
+    categories: List[dict] = []
+
+    model_config = ConfigDict(extra="allow")
 
 
 class ProvenanceOut(BaseModel):

@@ -11,6 +11,7 @@ from .auth_session import AuthSession
 from .usage import UsageDaily, UsageToken
 from .goal import Goal
 from .daily_task import DailyTask
+from .evidence import GoalEvidenceEvent
 
 __all__ = [
     "User",
@@ -37,4 +38,5 @@ __all__ = [
     "UsageToken",
     "Goal",
     "DailyTask",
+    "GoalEvidenceEvent",
 ]

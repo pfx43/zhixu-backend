@@ -17,6 +17,8 @@ load_dotenv(_BACKEND_DIR / ".env")
 # 测试专用开关：测试后门 token 与内部健康检查 key（生产环境不得设置）
 os.environ.setdefault("ALLOW_TEST_TOKEN", "1")
 os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
+# 测试环境保留 /openapi.json（契约测试依赖）；生产不设置，文档仍关闭
+os.environ.setdefault("ENABLE_OPENAPI", "1")
 
 from pgutil import TEST_SCHEMA, ensure_test_schema, with_search_path  # noqa: E402
 

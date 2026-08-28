@@ -1,9 +1,12 @@
+from datetime import datetime
+from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.api.deps import get_db, get_current_active_user
-from app.models import User, Goal
+from app.models import User, Goal, GoalEvidenceEvent
 from app.schemas import (
     MeProfileOut,
     MeProfileUpdate,
@@ -13,6 +16,25 @@ from app.schemas import (
 
 
 router = APIRouter(tags=["目标与个人资料"])
+
+
+# ── /api/v1/goals/{goal_id}/evidence（Issue #38 Evidence Impact）──
+
+class EvidenceEventOut(BaseModel):
+    """目标详情「证据变化」条目：独立契约，不复用 task evidence 冒充。"""
+
+    id: str
+    goal_id: int
+    occurred_at: Optional[datetime] = None
+    source: str
+    node_id: Optional[str] = None
+    node_label: Optional[str] = None
+    before: Optional[dict] = None
+    after: Optional[dict] = None
+    scope: str = "goal"
+    confirmation: str = "pending"
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── /api/v1/me/profile ──────────────────────────────────────────
@@ -130,3 +152,71 @@ def upsert_active_goal(
         )
 
     return goal
+
+
+@router.get("/goals/{goal_id}/evidence", response_model=List[EvidenceEventOut])
+def list_goal_evidence(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """按 goal_id 查询「证据变化」列表（时间正序）。
+
+    只返回本人目标的证据；别人的 goal_id 一律 404（不泄露存在性）。
+    每条含前后值：{ id, goal_id, occurred_at, source, node_id, node_label,
+    before, after, scope, confirmation }。
+    """
+    goal = (
+        db.query(Goal)
+        .filter(Goal.id == goal_id, Goal.user_id == current_user["user_id"])
+        .first()
+    )
+    if not goal:
+        raise HTTPException(status_code=404, detail="目标不存在")
+    events = (
+        db.query(GoalEvidenceEvent)
+        .filter(GoalEvidenceEvent.goal_id == goal_id)
+        .order_by(GoalEvidenceEvent.occurred_at.asc())
+        .all()
+    )
+    return events
+
+
+def record_goal_evidence(
+    db: Session,
+    *,
+    user_id: int,
+    goal_id: Optional[int],
+    source: str,
+    before: Optional[dict],
+    after: Optional[dict],
+    node_id: Optional[str] = None,
+    node_label: Optional[str] = None,
+    scope: str = "goal",
+) -> Optional[GoalEvidenceEvent]:
+    """写一条证据变化事件（无 active 目标时静默跳过，不影响主流程）。
+
+    供检查器/上传/出题/交卷成功路径调用；失败只记日志不抛异常。
+    """
+    if not goal_id:
+        return None
+    try:
+        event = GoalEvidenceEvent(
+            user_id=user_id,
+            goal_id=goal_id,
+            source=source,
+            node_id=node_id,
+            node_label=node_label,
+            before=before,
+            after=after,
+            scope=scope,
+            confirmation="pending",
+        )
+        db.add(event)
+        db.flush()
+        return event
+    except Exception as e:  # noqa: BLE001 — 证据记录不能影响主流程
+        import logging
+
+        logging.getLogger(__name__).warning(f"record_goal_evidence 失败: {e}")
+        return None

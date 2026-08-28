@@ -190,7 +190,8 @@ async def upload_document(
         )
 
     # 检查器：上传成功且学习区多了「能解析的」新书 → 今日上传任务自动完成。
-    # 传错书也算完成；空文件 / 解析失败 / hash 去重没有新书则继续挂。
+    # 传错书也算完成；空文件 / 解析失败 / hash 去重没有新书则继续挂（#31：
+    # segment_status failed 或 parse_warning 都不算可解析）。
     result.completed_tasks = task_service.run_completion_checks(
         db,
         current_user["user_id"],
@@ -199,6 +200,8 @@ async def upload_document(
             "status": result.status,
             "segment_status": result.segment_status,
             "parse_warning": result.parse_warning,
+            "document_id": result.document_id or result.id,
+            "file_name": result.file_name,
         },
     )
     return result

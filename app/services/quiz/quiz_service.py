@@ -1,6 +1,8 @@
 """
 刷题会话服务 — 创建会话、答题判分、错题溯源
 """
+import json
+import logging
 import random
 from typing import List, Optional, Tuple
 
@@ -21,6 +23,8 @@ from app.schemas.quiz import (
     QuizSessionOut,
     QuizSessionQuestionOut,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _build_citation(
@@ -94,9 +98,127 @@ def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) ->
     return "wrong"
 
 
+def _parse_json_answer(raw: Optional[str]):
+    """解析 JSON 答案；解析失败返回 _UNPARSEABLE 哨兵（不抛异常）。"""
+    if raw is None:
+        return _UNPARSEABLE
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return _UNPARSEABLE
+
+
+_UNPARSEABLE = object()
+
+_TRUTHY = {"true", "t", "1", "yes", "y", "对", "正确"}
+_FALSY = {"false", "f", "0", "no", "n", "错", "错误"}
+
+
+def _grade_true_false(question: GlobalQuestion, user_answer: str) -> str:
+    """#35：true_false 只接受可解释为 bool 的值；垃圾值抛 400，不当 false 折叠。
+
+    标准答案同样归一化为 bool 后比较。
+    """
+    normalized = user_answer.strip().lower()
+    if normalized not in (_TRUTHY | _FALSY):
+        raise HTTPException(
+            status_code=400,
+            detail=f"判断题答案必须是 true/false，收到: {user_answer!r}",
+        )
+    user_bool = normalized in _TRUTHY
+    correct_normalized = (question.answer or "").strip().lower()
+    if correct_normalized not in (_TRUTHY | _FALSY):
+        # 题库答案本身不是合法 bool：无法判定，按 wrong 处理（数据问题记日志）
+        logger.warning(f"true_false 题目答案非法: qid={question.id} answer={question.answer!r}")
+        return "wrong"
+    correct_bool = correct_normalized in _TRUTHY
+    return "correct" if user_bool == correct_bool else "wrong"
+
+
+def _grade_match(question: GlobalQuestion, user_answer: Optional[str]) -> str:
+    """match：user_answer 为 {leftKey: rightKey} JSON 对象，键值全对才算 correct。"""
+    user_map = _parse_json_answer(user_answer)
+    if user_map is _UNPARSEABLE or not isinstance(user_map, dict):
+        return "wrong"
+    correct_map = _parse_json_answer(question.answer)
+    if correct_map is _UNPARSEABLE or not isinstance(correct_map, dict):
+        return "wrong"
+    return "correct" if user_map == correct_map else "wrong"
+
+
+def _grade_classify(
+    question: GlobalQuestion, user_answer: Optional[str]
+) -> str:
+    """classify：user_answer 为 {itemId: categoryId} 映射；
+    标准答案同为映射或 items+categories 结构；逐条比对全部命中才算 correct。
+    """
+    user_map = _parse_json_answer(user_answer)
+    if user_map is _UNPARSEABLE or not isinstance(user_map, dict):
+        return "wrong"
+    answer_obj = _parse_json_answer(question.answer)
+    if answer_obj is _UNPARSEABLE:
+        return "wrong"
+    correct_map = None
+    if isinstance(answer_obj, dict):
+        # 兼容 {"items": [...], "categories": [...]} 之外的三种存储：
+        # 1) 直接 {itemId: categoryId}；2) {"assignments": {...}}；
+        # 3) {"items": [{"id","category"}...], ...}
+        if "assignments" in answer_obj and isinstance(answer_obj["assignments"], dict):
+            correct_map = answer_obj["assignments"]
+        elif all(isinstance(v, str) for v in answer_obj.values()):
+            correct_map = answer_obj
+        elif isinstance(answer_obj.get("items"), list):
+            correct_map = {
+                it.get("id"): it.get("category")
+                for it in answer_obj["items"]
+                if isinstance(it, dict) and it.get("id") is not None
+            }
+    elif isinstance(answer_obj, list):
+        # [{id, category}] 列表形式
+        if all(isinstance(it, dict) and it.get("id") is not None for it in answer_obj):
+            correct_map = {it.get("id"): it.get("category") for it in answer_obj}
+    if not correct_map:
+        return "wrong"
+    if set(user_map.keys()) != set(correct_map.keys()):
+        return "wrong"
+    return (
+        "correct"
+        if all(user_map[k] == correct_map[k] for k in correct_map)
+        else "wrong"
+    )
+
+
+def _grade_sorted_list(
+    question: GlobalQuestion, user_answer: Optional[str], *, set_compare: bool
+) -> str:
+    """sort：数组顺序相等；multi_choice（JSON 数组）：集合相等。"""
+    user_list = _parse_json_answer(user_answer)
+    correct_list = _parse_json_answer(question.answer)
+    if not isinstance(user_list, list) or not isinstance(correct_list, list):
+        return "wrong"
+    if set_compare:
+        return "correct" if sorted(map(str, user_list)) == sorted(map(str, correct_list)) else "wrong"
+    return "correct" if list(map(str, user_list)) == list(map(str, correct_list)) else "wrong"
+
+
+def _grade_fill_blank(question: GlobalQuestion, user_answer: str) -> str:
+    return "correct" if user_answer.strip() == question.answer.strip() else "wrong"
+
+
 def _grade_answer(
     question: GlobalQuestion, user_answer: Optional[str], status_hint: Optional[str]
 ) -> str:
+    """按题型判分（Issue #35）：
+
+    - single_choice / unknown 题型：字符串（大小写归一）相等 — 兼容旧数据
+    - multi_choice：key 数组集合相等
+    - true_false：仅接受 bool 可解析值，否则 400
+    - fill_blank：去空格后字符串相等
+    - sort：JSON 数组顺序相等
+    - match：{leftKey: rightKey} 对象键值相等
+    - classify：{itemId: categoryId} 映射逐条相等
+    - short_answer / application：LLM/关键词兜底
+    """
     if status_hint == "unknown":
         return "unknown"
     qtype = (question.question_type or "single_choice").lower()
@@ -105,9 +227,41 @@ def _grade_answer(
     if not user_answer or not user_answer.strip():
         return "wrong"
 
-    correct = question.answer.strip().upper()
-    user = user_answer.strip().upper()
-    return "correct" if user == correct else "wrong"
+    if qtype == "true_false":
+        return _grade_true_false(question, user_answer)
+    if qtype == "fill_blank":
+        return _grade_fill_blank(question, user_answer)
+    if qtype == "sort":
+        return _grade_sorted_list(question, user_answer, set_compare=False)
+    if qtype == "match":
+        return _grade_match(question, user_answer)
+    if qtype == "classify":
+        return _grade_classify(question, user_answer)
+
+    upper = user_answer.strip().upper()
+    correct_upper = question.answer.strip().upper()
+    if qtype == "multi_choice":
+        return _grade_multi_choice(upper, correct_upper)
+    # single_choice 与未知题型沿用旧行为（不回归）
+    return "correct" if upper == correct_upper else "wrong"
+
+
+def _grade_multi_choice(user: str, correct: str) -> str:
+    """多选兼容两种形态：逗号分隔字母（AB == BA）与 JSON 数组（集合相等）。"""
+    import json as _json
+
+    u_parsed = c_parsed = None
+    try:
+        u_parsed = _json.loads(user)
+    except (ValueError, TypeError):
+        pass
+    try:
+        c_parsed = _json.loads(correct)
+    except (ValueError, TypeError):
+        pass
+    if isinstance(u_parsed, list) and isinstance(c_parsed, list):
+        return "correct" if sorted(u_parsed) == sorted(c_parsed) else "wrong"
+    return "correct" if "".join(sorted(user)) == "".join(sorted(correct)) else "wrong"
 
 
 def _resolve_question_ids(
@@ -167,6 +321,24 @@ def _to_session_question_out(
     sq, question: GlobalQuestion
 ) -> QuizSessionQuestionOut:
     options_raw = question_crud.parse_options_json(question.options)
+    qtype = (question.question_type or "").lower()
+
+    # classify 的 options 是 {"items": [...], "categories": [...]} 对象，
+    # 不是扁平 [{key,text}] 列表（Issue #35）
+    if qtype == "classify" and isinstance(options_raw, dict):
+        return QuizSessionQuestionOut(
+            question_id=question.id,
+            order_index=sq.order_index,
+            stem=question.stem,
+            question_type=question.question_type,
+            options=[QuestionOption(
+                key="classify_schema",
+                text="",
+                items=options_raw.get("items") or [],
+                categories=options_raw.get("categories") or [],
+            )],
+        )
+
     options = (
         [QuestionOption(**o) for o in options_raw] if options_raw else None
     )
