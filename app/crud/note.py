@@ -54,6 +54,8 @@ def create_note(
     char_end: Optional[int] = None,
     source_ref_id: Optional[str] = None,
     source_ref_type: Optional[str] = None,
+    # Issue #39：父会话 id（tina 来源必填；quiz/tutor 可填）
+    source_session_id: Optional[str] = None,
 ) -> UserNote:
     row = UserNote(
         user_id=user_id,
@@ -69,6 +71,7 @@ def create_note(
         char_end=char_end,
         source_ref_id=source_ref_id,
         source_ref_type=source_ref_type,
+        source_session_id=source_session_id,
     )
     db.add(row)
     db.flush()
@@ -156,6 +159,7 @@ def update_note(
             "char_end",
             "source_ref_id",
             "source_ref_type",
+            "source_session_id",
         }
         and value is not None
     }

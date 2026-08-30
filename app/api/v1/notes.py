@@ -42,6 +42,8 @@ class NoteCreate(BaseModel):
     char_end: int | None = None
     source_ref_id: str | None = None
     source_ref_type: str | None = None
+    # Issue #39：父会话 id（tina 来源必填；quiz/tutor 可填）
+    source_session_id: str | None = None
 
 
 class NoteUpdate(BaseModel):
@@ -61,6 +63,7 @@ class NoteUpdate(BaseModel):
     char_end: int | None = None
     source_ref_id: str | None = None
     source_ref_type: str | None = None
+    source_session_id: str | None = None
 
 
 class NoteDelete(BaseModel):
@@ -91,6 +94,8 @@ class NoteResponse(BaseModel):
     char_end: int | None = None
     source_ref_id: str | None = None
     source_ref_type: str | None = None
+    # Issue #39：父会话 id（tina 来源必填；quiz/tutor 可填）
+    source_session_id: str | None = None
     revision: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -145,6 +150,75 @@ def _ensure_document_owned(
         raise HTTPException(status_code=404, detail="文档不存在")
 
 
+# Issue #39 tip 回源契约。source_ref_type 沿用 #29 落库的取值（tina/quiz/kb），
+# 并兼容 #39 的等价别名：
+#   tina / tina_message   → source_ref_id=消息锚点 + source_session_id=父会话（必填）
+#   quiz / quiz_session   → source_ref_id=刷题会话 id（必须属于当前用户）
+#   tutor                 → source_ref_id=Tutor 会话 id（必须属于当前用户）
+#   kb / document         → document_id + page_number（已有归属校验）
+_SOURCE_REF_GROUPS = {
+    "tina": "tina_message",
+    "tina_message": "tina_message",
+    "quiz": "quiz_session",
+    "quiz_session": "quiz_session",
+    "tutor": "tutor",
+    "kb": "document",
+    "document": "document",
+}
+
+
+def _validate_source_ref(
+    db: Session,
+    user_id: int,
+    *,
+    source_ref_type: str | None,
+    source_ref_id: str | None,
+    source_session_id: str | None,
+) -> None:
+    """校验回源契约，违反时 422（不返回 404，避免泄露他人资源存在性）。"""
+    if source_ref_type is None:
+        if source_ref_id or source_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="传了 source_ref_id/source_session_id 但缺 source_ref_type",
+            )
+        return
+    group = _SOURCE_REF_GROUPS.get(source_ref_type)
+    if group is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"source_ref_type 不支持: {source_ref_type}",
+        )
+    if group == "tina_message":
+        if not source_session_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="tina 来源的 tip 回源必须带 source_session_id（父会话）",
+            )
+        return
+    if group in ("quiz_session", "tutor"):
+        if not source_ref_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{group} 回源必须带 source_ref_id",
+            )
+        from app.models import QuizSession, TutorSession
+
+        model = QuizSession if group == "quiz_session" else TutorSession
+        owned = (
+            db.query(model.id)
+            .filter(model.id == source_ref_id, model.user_id == user_id)
+            .first()
+        )
+        if not owned:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{group} 会话不存在或不属于当前用户",
+            )
+        return
+    # kb / document：由 _ensure_document_owned + page_number 回源，无需额外校验
+
+
 def _note_response(r):
     return {
         "id": r.id,
@@ -160,6 +234,7 @@ def _note_response(r):
         "char_end": r.char_end,
         "source_ref_id": r.source_ref_id,
         "source_ref_type": r.source_ref_type,
+        "source_session_id": r.source_session_id,
         "revision": r.revision,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
@@ -303,8 +378,15 @@ def create_note(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """创建笔记（tip 走同一接口：note_type=tip + 可选 tags/document_id/source）"""
+    """创建笔记（tip 走同一接口：note_type=tip + 可选 tags/document_id/source/anchor）"""
     _ensure_document_owned(db, current_user["user_id"], payload.document_id)
+    _validate_source_ref(
+        db,
+        current_user["user_id"],
+        source_ref_type=payload.source_ref_type,
+        source_ref_id=payload.source_ref_id,
+        source_session_id=payload.source_session_id,
+    )
     row = note_crud.create_note(
         db,
         user_id=current_user["user_id"],
@@ -320,6 +402,7 @@ def create_note(
         char_end=payload.char_end,
         source_ref_id=payload.source_ref_id,
         source_ref_type=payload.source_ref_type,
+        source_session_id=payload.source_session_id,
     )
     db.commit()
     return _note_response(row)
@@ -381,6 +464,13 @@ def update_note(
 ):
     """更新笔记"""
     _ensure_document_owned(db, current_user["user_id"], payload.document_id)
+    _validate_source_ref(
+        db,
+        current_user["user_id"],
+        source_ref_type=payload.source_ref_type,
+        source_ref_id=payload.source_ref_id,
+        source_session_id=payload.source_session_id,
+    )
     result = note_crud.update_note(
         db,
         current_user["user_id"],
@@ -398,6 +488,7 @@ def update_note(
         char_end=payload.char_end,
         source_ref_id=payload.source_ref_id,
         source_ref_type=payload.source_ref_type,
+        source_session_id=payload.source_session_id,
     )
     if result.note is None:
         if result.current_revision is not None:

@@ -29,6 +29,9 @@ class UserNote(Base):
     char_end = Column(Integer, nullable=True)
     source_ref_id = Column(String(64), nullable=True)
     source_ref_type = Column(String(20), nullable=True)  # tina / quiz / kb
+    # Issue #39 tip 回源契约：父会话 id（tina 来源必填——Tina 消息无稳定消息 id，
+    # 前端用 session_id 打开会话再滚动到锚点；quiz/tutor 可复用同一字段）
+    source_session_id = Column(String(64), nullable=True)
     # 稳定的乐观锁令牌，刻意独立于展示时间，避免受数据库精度和时区表示影响。
     revision = Column(Integer, nullable=False, default=1, server_default="1")
     created_at = Column(DateTime, default=datetime.utcnow)
