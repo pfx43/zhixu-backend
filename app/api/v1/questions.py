@@ -26,7 +26,7 @@ from app.schemas.question import (
     QuestionGenerateResponse,
     QuestionListOut,
 )
-from app.services.quiz import question_gen_service
+from app.services.quiz import question_gen_service, qgen_job_service
 from app.services.tasks import task_service
 
 logger = logging.getLogger(__name__)
@@ -142,7 +142,15 @@ async def generate_from_pages(
     token: str = Depends(get_current_token),
 ):
     """模式 B：对选中页批量 AI 出题。"""
-    if question_gen_service.is_question_gen_async():
+    if question_gen_service.is_question_gen_worker():
+        result = qgen_job_service.enqueue_generate_from_pages(
+            db=db,
+            user_id=current_user["user_id"],
+            document_id=payload.document_id,
+            page_numbers=payload.page_numbers,
+            questions_per_page=payload.questions_per_page,
+        )
+    elif question_gen_service.is_question_gen_async():
         result = await question_gen_service.schedule_generate_from_pages(
             db=db,
             user_id=current_user["user_id"],
@@ -167,6 +175,16 @@ async def generate_from_pages(
         db, current_user["user_id"], "questions_generated"
     )
     return result
+
+
+@router.get("/jobs/{job_id}")
+def get_qgen_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """查询按页出题 job 进度（出题服务不面向用户）。"""
+    return qgen_job_service.get_job_for_user(db, current_user["user_id"], job_id)
 
 
 @router.post("/generate-stream")

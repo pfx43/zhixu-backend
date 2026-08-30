@@ -818,7 +818,7 @@ POST /api/v1/chat
 | `session_id` | string | | 会话 ID，不传则自动创建新会话 |
 | `stream` | bool | | 是否 SSE 流式返回，默认 `false` |
 | `collection_id` | string | | 知识库分区 ID（可选） |
-| `mode` | string | | 对话模式：`"qa"`（默认）、`"learning"`、`"classroom_note"`、`"verify"`。无效值 → 400 |
+| `mode` | string | | 对话模式：`"qa"`（默认）、`"learning"`、`"classroom_note"`、`"verify"`、`"onboarding"`（注册登录后的引导对话，带目标确认卡 / 上传卡）。无效值 → 400 |
 | `tc_node_id` | string | | TCN 知识节点 ID（可选） |
 | `tc_user_action` | string | | TCN 用户动作：`correct` / `incorrect`（可选） |
 | `tc_domain_id` | string | | TCN 领域 ID（可选） |

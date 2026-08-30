@@ -16,6 +16,8 @@ from app.core.config import (
     MAX_PAGES_PER_GEN,
     MAX_QUESTIONS_PER_DOCUMENT,
     QUESTION_GEN_ASYNC,
+    QUESTION_GEN_MAX_AGENTS,
+    QUESTION_GEN_WORKER,
 )
 from app.core.database import SessionLocal, short_session
 
@@ -41,6 +43,7 @@ from app.services.knowledge.page_service import (
 )
 from app.services.llm.llm_pool import llm_pool
 from app.services.quiz.question_hash import compute_content_hash
+from app.services.quiz.question_normalize import normalize_question as _normalize_question
 from app.services.usage_service import record_usage_for_token
 from app.utils.prompt_loader import load_prompt
 
@@ -117,52 +120,6 @@ def _extract_json_array(text: str) -> Optional[list]:
     if isinstance(data, list):
         return data
     return None
-
-
-def _normalize_question(raw: dict) -> Optional[dict]:
-    stem = (raw.get("stem") or raw.get("question") or "").strip()
-    answer = (raw.get("answer") or "").strip()
-    qtype = (raw.get("question_type") or "single_choice").strip().lower()
-    options = raw.get("options") or []
-    if not stem or not answer:
-        return None
-
-    norm_options = []
-    for opt in options:
-        if isinstance(opt, dict):
-            key = str(opt.get("key", "")).strip().upper()
-            text = str(opt.get("text", "")).strip()
-        else:
-            continue
-        if key and text:
-            norm_options.append({"key": key, "text": text})
-
-    if qtype == "single_choice":
-        answer = answer.upper()
-        if len(norm_options) < 2 or answer not in {o["key"] for o in norm_options}:
-            return None
-    elif qtype in ("short_answer", "application"):
-        if not norm_options:
-            norm_options = []
-    else:
-        qtype = "single_choice"
-        answer = answer.upper()
-        if len(norm_options) < 2:
-            return None
-
-    tags = raw.get("tags") or []
-    if isinstance(tags, str):
-        tags = [tags]
-    ref_text = (raw.get("reference_text") or "").strip() or None
-    return {
-        "stem": stem,
-        "options": norm_options,
-        "answer": answer,
-        "explanation": (raw.get("explanation") or "").strip() or None,
-        "tags": tags,
-        "question_type": qtype,
-        "reference_text": ref_text,
-    }
 
 
 def _existing_tag_names(db: Session, user_id: int, document_id: Optional[str] = None) -> List[str]:
@@ -577,7 +534,7 @@ def _validate_document_for_page_ops(doc: Optional[Document]) -> Document:
 
 
 def cap_page_numbers(page_numbers: List[int]) -> List[int]:
-    """单次按页出题/提取的页数上限（服务层强制，与前端 max_pages_per_gen 同数字）。"""
+    """提取题目仍按出题页勾选上限截断。AI 出题走队列，不再用这个截页。"""
     if len(page_numbers) <= MAX_PAGES_PER_GEN:
         return page_numbers
     logger.warning(
@@ -765,6 +722,10 @@ async def schedule_generate_questions(
     document.question_gen_status = "processing"
     db.flush()
 
+    from app.services.quiz import qgen_job_service
+
+    qgen_job_service.mark_document_generating(target_doc_id)
+
     async def _task() -> None:
         wdb = SessionLocal()
         try:
@@ -790,6 +751,7 @@ async def schedule_generate_questions(
                 wdb.rollback()
         finally:
             wdb.close()
+            qgen_job_service.unmark_document_generating(target_doc_id)
 
     asyncio.create_task(_task())
     return QuestionGenerateResponse(
@@ -810,7 +772,6 @@ async def schedule_generate_from_pages(
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
-    page_numbers = cap_page_numbers(page_numbers)
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
     get_pages_by_numbers(db, doc, page_numbers)
@@ -820,13 +781,18 @@ async def schedule_generate_from_pages(
     doc.question_gen_status = "processing"
     db.flush()
 
+    from app.services.quiz import qgen_job_service
+
+    target_doc_id = doc.id
+    qgen_job_service.mark_document_generating(target_doc_id)
+
     async def _task() -> None:
         wdb = SessionLocal()
         try:
             await generate_from_pages(
                 wdb,
                 user_id=user_id,
-                document_id=doc.id,
+                document_id=target_doc_id,
                 page_numbers=page_numbers,
                 questions_per_page=questions_per_page,
                 provider=provider,
@@ -836,10 +802,10 @@ async def schedule_generate_from_pages(
         except Exception:
             wdb.rollback()
             logger.exception(
-                "async generate_from_pages failed: document_id=%s", doc.id
+                "async generate_from_pages failed: document_id=%s", target_doc_id
             )
             try:
-                failed = kb_crud.get_document_by_id_internal(wdb, doc.id)
+                failed = kb_crud.get_document_by_id_internal(wdb, target_doc_id)
                 if failed:
                     failed.question_gen_status = "failed"
                     wdb.commit()
@@ -847,10 +813,11 @@ async def schedule_generate_from_pages(
                 wdb.rollback()
         finally:
             wdb.close()
+            qgen_job_service.unmark_document_generating(target_doc_id)
 
     asyncio.create_task(_task())
     return PageQuestionResponse(
-        document_id=doc.id,
+        document_id=target_doc_id,
         page_numbers=page_numbers,
         mode="generate",
         question_gen_status="processing",
@@ -877,13 +844,18 @@ async def schedule_extract_from_pages(
     doc.question_gen_status = "processing"
     db.flush()
 
+    from app.services.quiz import qgen_job_service
+
+    target_doc_id = doc.id
+    qgen_job_service.mark_document_generating(target_doc_id)
+
     async def _task() -> None:
         wdb = SessionLocal()
         try:
             await extract_from_pages(
                 wdb,
                 user_id=user_id,
-                document_id=doc.id,
+                document_id=target_doc_id,
                 page_numbers=page_numbers,
                 provider=provider,
             )
@@ -891,10 +863,10 @@ async def schedule_extract_from_pages(
         except Exception:
             wdb.rollback()
             logger.exception(
-                "async extract_from_pages failed: document_id=%s", doc.id
+                "async extract_from_pages failed: document_id=%s", target_doc_id
             )
             try:
-                failed = kb_crud.get_document_by_id_internal(wdb, doc.id)
+                failed = kb_crud.get_document_by_id_internal(wdb, target_doc_id)
                 if failed:
                     failed.question_gen_status = "failed"
                     wdb.commit()
@@ -902,10 +874,11 @@ async def schedule_extract_from_pages(
                 wdb.rollback()
         finally:
             wdb.close()
+            qgen_job_service.unmark_document_generating(target_doc_id)
 
     asyncio.create_task(_task())
     return PageQuestionResponse(
-        document_id=doc.id,
+        document_id=target_doc_id,
         page_numbers=page_numbers,
         mode="extract",
         question_gen_status="processing",
@@ -917,6 +890,11 @@ async def schedule_extract_from_pages(
 
 def is_question_gen_async() -> bool:
     return QUESTION_GEN_ASYNC
+
+
+def is_question_gen_worker() -> bool:
+    """True：按页出题入队给出题 FastAPI，主进程不再 create_task 跑 Agent。"""
+    return QUESTION_GEN_WORKER
 
 
 def _to_question_out(
@@ -1048,8 +1026,7 @@ async def generate_from_pages(
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
-    """模式 B：对选中页批量 AI 出题。"""
-    page_numbers = cap_page_numbers(page_numbers)
+    """模式 B：对选中页批量 AI 出题。页数不截断；并发由 QUESTION_GEN_MAX_AGENTS 限。"""
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
 
@@ -1189,7 +1166,7 @@ async def extract_from_pages(
         raise
 
 
-_PAGE_CONCURRENCY = 3
+_PAGE_CONCURRENCY = QUESTION_GEN_MAX_AGENTS
 
 
 async def _generate_one_page(
@@ -1242,7 +1219,7 @@ async def stream_generate_from_pages(
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ):
-    """SSE 出题：每页独立 Agent、约 3 路并行，逐页推送进度事件。
+    """SSE 出题：每页独立 Agent，并发上限 `QUESTION_GEN_MAX_AGENTS`，逐页推送进度事件。
 
     用于 `POST /api/v1/questions/generate-stream`，由路由包成 StreamingResponse。
     yield (event_name, payload_dict)；调用方负责序列化。
@@ -1254,8 +1231,6 @@ async def stream_generate_from_pages(
       done          — {type, document_id, document_name, status, page_numbers,
                        total_pages, questions_created, questions_reused, total_questions}
     """
-    page_numbers = cap_page_numbers(page_numbers)
-
     with short_session() as db:
         doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
         doc = _validate_document_for_page_ops(doc)
@@ -1266,82 +1241,88 @@ async def stream_generate_from_pages(
     if provider is None:
         _require_question_generation_ready()
 
-    for page_number in page_numbers:
-        yield ("message", {"type": "page_start", "page_number": page_number})
+    from app.services.quiz import qgen_job_service
 
-    sem = asyncio.Semaphore(_PAGE_CONCURRENCY)
+    qgen_job_service.mark_document_generating(document_id)
+    try:
+        for page_number in page_numbers:
+            yield ("message", {"type": "page_start", "page_number": page_number})
 
-    async def _worker(page_number: int) -> dict:
-        async with sem:
-            return await _generate_one_page(
-                user_id=user_id,
-                document_id=document_id,
-                page_number=page_number,
-                questions_per_page=questions_per_page,
-                provider=provider,
-                token=token,
+        sem = asyncio.Semaphore(_PAGE_CONCURRENCY)
+
+        async def _worker(page_number: int) -> dict:
+            async with sem:
+                return await _generate_one_page(
+                    user_id=user_id,
+                    document_id=document_id,
+                    page_number=page_number,
+                    questions_per_page=questions_per_page,
+                    provider=provider,
+                    token=token,
+                )
+
+        tasks = {asyncio.create_task(_worker(n)): n for n in page_numbers}
+        per_page: dict[int, dict] = {}
+        while tasks:
+            done, _pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED
             )
+            for task in done:
+                page_number = tasks.pop(task)
+                try:
+                    res = task.result()
+                except Exception:
+                    logger.exception("SSE 按页任务异常: page=%s", page_number)
+                    res = {
+                        "page_number": page_number,
+                        "status": "failed",
+                        "questions_created": 0,
+                        "questions_reused": 0,
+                        "total_questions": 0,
+                    }
+                per_page[page_number] = res
+                if res["status"] == "completed":
+                    yield (
+                        "message",
+                        {
+                            "type": "page_complete",
+                            "page_number": page_number,
+                            "status": res["status"],
+                            "questions_created": res["questions_created"],
+                            "questions_reused": res["questions_reused"],
+                            "total_questions": res["total_questions"],
+                        },
+                    )
+                else:
+                    yield (
+                        "message",
+                        {
+                            "type": "page_failed",
+                            "page_number": page_number,
+                            "status": res["status"],
+                        },
+                    )
 
-    tasks = {asyncio.create_task(_worker(n)): n for n in page_numbers}
-    per_page: dict[int, dict] = {}
-    while tasks:
-        done, _pending = await asyncio.wait(
-            tasks, return_when=asyncio.FIRST_COMPLETED
+        total_created = sum(r["questions_created"] for r in per_page.values())
+        total_reused = sum(r["questions_reused"] for r in per_page.values())
+        total_questions = sum(r["total_questions"] for r in per_page.values())
+        final_status = "completed" if total_questions > 0 else "failed"
+        yield (
+            "message",
+            {
+                "type": "done",
+                "document_id": document_id,
+                "document_name": document_name,
+                "status": final_status,
+                "page_numbers": page_numbers,
+                "total_pages": len(page_numbers),
+                "questions_created": total_created,
+                "questions_reused": total_reused,
+                "total_questions": total_questions,
+            },
         )
-        for task in done:
-            page_number = tasks.pop(task)
-            try:
-                res = task.result()
-            except Exception:
-                logger.exception("SSE 按页任务异常: page=%s", page_number)
-                res = {
-                    "page_number": page_number,
-                    "status": "failed",
-                    "questions_created": 0,
-                    "questions_reused": 0,
-                    "total_questions": 0,
-                }
-            per_page[page_number] = res
-            if res["status"] == "completed":
-                yield (
-                    "message",
-                    {
-                        "type": "page_complete",
-                        "page_number": page_number,
-                        "status": res["status"],
-                        "questions_created": res["questions_created"],
-                        "questions_reused": res["questions_reused"],
-                        "total_questions": res["total_questions"],
-                    },
-                )
-            else:
-                yield (
-                    "message",
-                    {
-                        "type": "page_failed",
-                        "page_number": page_number,
-                        "status": res["status"],
-                    },
-                )
-
-    total_created = sum(r["questions_created"] for r in per_page.values())
-    total_reused = sum(r["questions_reused"] for r in per_page.values())
-    total_questions = sum(r["total_questions"] for r in per_page.values())
-    final_status = "completed" if total_questions > 0 else "failed"
-    yield (
-        "message",
-        {
-            "type": "done",
-            "document_id": document_id,
-            "document_name": document_name,
-            "status": final_status,
-            "page_numbers": page_numbers,
-            "total_pages": len(page_numbers),
-            "questions_created": total_created,
-            "questions_reused": total_reused,
-            "total_questions": total_questions,
-        },
-    )
+    finally:
+        qgen_job_service.unmark_document_generating(document_id)
 
 
 def get_question_detail(

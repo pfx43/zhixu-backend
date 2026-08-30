@@ -132,10 +132,19 @@ def parse_pdf_with_ocr_fallback(
     """
     扫描型 PDF OCR：渲染每页 → OCR → Markdown 影子文档。
 
+    MinerU 不走这条同步路径，由 kb_service 后台异步 pipeline 处理。
+
     Returns:
         ParseOutcome（延迟导入避免与 file_parser 循环依赖）
     """
     from app.services.knowledge.file_parser import ParseOutcome
+
+    if OCR_BACKEND == "mineru":
+        return ParseOutcome(
+            text=None,
+            error="MinerU 只在后台异步处理扫描件，不要同步调用",
+            ocr_used=True,
+        )
     try:
         import fitz
     except ImportError:

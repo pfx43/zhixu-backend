@@ -40,6 +40,12 @@ def _build_href(task_type: str, payload: dict) -> Optional[str]:
         if pages_param:
             query += f"&pages={pages_param}"
         return f"{base}?{query}"
+    if task_type == "practice" and doc_id:
+        qids = (payload or {}).get("question_ids") or []
+        query = f"doc_id={doc_id}"
+        if qids:
+            query += "&question_ids=" + ",".join(str(q) for q in qids)
+        return f"{base}?{query}"
     return base
 
 

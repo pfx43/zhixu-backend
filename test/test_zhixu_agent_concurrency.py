@@ -33,9 +33,13 @@ def test_concurrent_generate_isolated():
     class FakeTinaAgent:
         def __init__(self, *args, **kwargs):
             self.llm = kwargs["llm"]
+            self.system_prompt = kwargs.get("system_prompt")
 
         def clear_messages(self):
-            pass
+            self.system_prompt = None
+
+        def set_system_prompt(self, prompt):
+            self.system_prompt = prompt
 
         def add_message(self, **kwargs):
             pass
@@ -53,6 +57,7 @@ def test_concurrent_generate_isolated():
     with (
         patch("app.services.agents.zhixu_agent.llm_pool.acquire", side_effect=fake_acquire),
         patch("app.services.agents.zhixu_agent.Agent", FakeTinaAgent),
+        patch("app.services.agents.zhixu_agent.attach_reasoning_roundtrip"),
     ):
         async def run(instruction):
             events = [e async for e in agent.generate(instruction, token="")]
@@ -69,6 +74,55 @@ def test_concurrent_generate_isolated():
     assert acquired == ["A", "B"]
     assert r1 == "A:q-one"
     assert r2 == "B:q-two"
+
+
+def test_generate_restores_system_prompt_after_clear():
+    """clear_messages 清空 system 后，灌历史前把人设写回。"""
+    agent = ZhixuAgent(user_id=1, dataset_id="ds")
+    agent._llm_ready = True
+    seen = []
+
+    class FakeLLM:
+        pass
+
+    class FakeTinaAgent:
+        def __init__(self, *args, **kwargs):
+            self.system_prompt = kwargs.get("system_prompt")
+            seen.append(self)
+
+        def clear_messages(self):
+            self.system_prompt = None
+
+        def set_system_prompt(self, prompt):
+            self.system_prompt = prompt
+
+        def add_message(self, **kwargs):
+            pass
+
+        def apredict(self, instruction, **kwargs):
+            async def gen():
+                yield {"role": "assistant", "content": instruction}
+            return gen()
+
+    with (
+        patch("app.services.agents.zhixu_agent.llm_pool.acquire", return_value=FakeLLM()),
+        patch("app.services.agents.zhixu_agent.Agent", FakeTinaAgent),
+        patch("app.services.agents.zhixu_agent.build_user_context", return_value="资料列表：无"),
+        patch("app.services.agents.zhixu_agent.attach_reasoning_roundtrip"),
+    ):
+        async def run():
+            return [e async for e in agent.generate("你是谁", token="")]
+
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(run())
+        finally:
+            loop.close()
+
+    assert seen, "应创建 Tina Agent"
+    prompt = seen[-1].system_prompt or ""
+    assert "Tina" in prompt
+    assert "资料列表：无" in prompt
 
 
 def test_release_base_api_key_releases_lease_only():

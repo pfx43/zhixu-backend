@@ -17,6 +17,7 @@ from app.services.llm.llm_runner import (
     agent_predict_no_stream,
     iter_agent_continue_stream,
 )
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.tools.training_tools import TrainingTools
 from app.utils.prompt_loader import load_prompt
 
@@ -63,6 +64,7 @@ class TrainingCoachAgent:
                 max_tool_result_length=6000,
                 name=f"training_coach_{user_id}_{agent_session_id[:8]}",
             )
+            attach_reasoning_roundtrip(self.agent)
         except Exception as e:
             logger.error("TrainingCoachAgent 初始化失败: user_id=%s error=%s", user_id, e)
 

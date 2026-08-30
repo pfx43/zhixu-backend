@@ -24,6 +24,7 @@ from app.schemas.tutor import (
 )
 from app.services.llm.llm_config import create_base_api
 from app.services.llm.llm_runner import agent_predict_no_stream, iter_agent_predict_stream
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +246,7 @@ class SocraticTutorAgent:
                 max_tool_result_length=4000,
                 name=self._name,
             )
+            attach_reasoning_roundtrip(self._agent)
         except Exception as e:
             logger.error(f"SocraticTutorAgent 初始化失败: {e}")
             self._agent = None

@@ -26,6 +26,10 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.core.logging_setup import configure_tina_logging
+
+configure_tina_logging()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -149,6 +153,14 @@ REQUIRED_DEPLOYMENT_PATHS = (
 def _question_generation_readiness() -> dict:
     """独立探测 Question Agent/LLM，不复用 TCN 的 model_loaded。"""
     try:
+        from app.core.config import QUESTION_GEN_WORKER
+
+        if QUESTION_GEN_WORKER:
+            return {
+                "ready": True,
+                "status": "delegated",
+                "reason": "qgen_worker",
+            }
         from app.services.agents.question_gen_agent import (
             get_question_agent_readiness,
         )

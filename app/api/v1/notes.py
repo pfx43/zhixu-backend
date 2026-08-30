@@ -17,6 +17,7 @@ from app.crud.note import (
     adopt_attachments,
     cleanup_orphans,
 )
+from app.services.storage_usage import refresh_user_storage
 from fastapi import UploadFile, File, Response
 from fastapi.responses import FileResponse
 import os as _os
@@ -273,6 +274,7 @@ def delete_attachment_route(
     ok = crud_delete_attachment(db, current_user["user_id"], attachment_id)
     if not ok:
         raise HTTPException(status_code=404, detail="附件不存在")
+    refresh_user_storage(db, current_user["user_id"])
     db.commit()
     return {"message": "附件已删除"}
 
@@ -510,6 +512,7 @@ def upload_attachment(
             file_path=tmp_path,
             original_filename=file.filename or "unknown",
         )
+        refresh_user_storage(db, user_id)
         db.commit()
         return _attachment_response(attachment)
     except ValueError as e:

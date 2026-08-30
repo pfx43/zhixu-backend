@@ -533,6 +533,101 @@ class QuestionGenerationFailureTests(unittest.TestCase):
         self.assertEqual(response.total_questions, 0)
         self.assertEqual(document.question_gen_status, "failed")
 
+    def test_async_page_schedules_keep_document_id_after_request_session_closes(self):
+        from sqlalchemy.orm.exc import DetachedInstanceError
+
+        class _DetachableDoc:
+            def __init__(self, doc_id: str):
+                self._id = doc_id
+                self.zone = "study"
+                self.question_gen_status = "not_started"
+                self.detached = False
+
+            @property
+            def id(self):
+                if self.detached:
+                    raise DetachedInstanceError(
+                        "Instance is not bound to a Session; "
+                        "attribute refresh operation cannot proceed"
+                    )
+                return self._id
+
+        class _WorkerDb:
+            def commit(self):
+                return None
+
+            def rollback(self):
+                return None
+
+            def close(self):
+                return None
+
+        for schedule, worker_name in (
+            (question_gen_service.schedule_generate_from_pages, "generate_from_pages"),
+            (question_gen_service.schedule_extract_from_pages, "extract_from_pages"),
+        ):
+            with self.subTest(schedule=schedule.__name__):
+                document = _DetachableDoc("document-1")
+                db = _FlushOnlyDb()
+                worker = AsyncMock()
+                created = []
+                orig_create_task = asyncio.create_task
+
+                def capture(coro, *args, **kwargs):
+                    task = orig_create_task(coro, *args, **kwargs)
+                    created.append(task)
+                    return task
+
+                async def _run():
+                    with (
+                        patch.object(
+                            question_gen_service.kb_crud,
+                            "get_document_by_id_or_dify",
+                            return_value=document,
+                        ),
+                        patch.object(
+                            question_gen_service,
+                            "get_pages_by_numbers",
+                            return_value=[{"page_number": 1, "content": "资料内容"}],
+                        ),
+                        patch.object(question_gen_service, worker_name, worker),
+                        patch.object(
+                            question_gen_service,
+                            "SessionLocal",
+                            return_value=_WorkerDb(),
+                        ),
+                        patch.object(
+                            question_gen_service.asyncio,
+                            "create_task",
+                            side_effect=capture,
+                        ),
+                        patch(
+                            "app.services.quiz.qgen_job_service.mark_document_generating"
+                        ),
+                        patch(
+                            "app.services.quiz.qgen_job_service.unmark_document_generating"
+                        ) as unmark,
+                    ):
+                        result = await schedule(
+                            db,
+                            user_id=1,
+                            document_id="document-1",
+                            page_numbers=[1],
+                            provider=lambda _page: [],
+                        )
+                        document.detached = True
+                        self.assertEqual(len(created), 1)
+                        await created[0]
+                    return result, unmark
+
+                result, unmark = asyncio.run(_run())
+                self.assertEqual(result.document_id, "document-1")
+                worker.assert_awaited_once()
+                self.assertEqual(
+                    worker.await_args.kwargs["document_id"], "document-1"
+                )
+                unmark.assert_called_once_with("document-1")
+
     def test_page_batch_discards_failure_marker(self):
         pages = [
             {

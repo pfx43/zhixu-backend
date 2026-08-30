@@ -29,6 +29,20 @@ from app.core.config import OCR_PAGES_DIR_NAME, USE_OSS, LOCAL_STORAGE_DIR
 logger = logging.getLogger(__name__)
 
 PAGE_FILE_PATTERN = re.compile(r"^page_(\d+)\.md$", re.IGNORECASE)
+PARSED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+_UNSAFE_IMAGE_STEM = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def safe_parsed_image_name(name: str) -> Optional[str]:
+    """影子文档图片文件名：只留 basename，去掉路径穿越。"""
+    raw = Path(str(name).replace("\\", "/")).name.strip()
+    if not raw or raw in {".", ".."}:
+        return None
+    suffix = Path(raw).suffix.lower()
+    if suffix not in PARSED_IMAGE_SUFFIXES:
+        return None
+    stem = _UNSAFE_IMAGE_STEM.sub("_", Path(raw).stem).strip("._") or "image"
+    return f"{stem}{suffix}"
 
 
 def build_page_markdown(page_number: int, text: str) -> str:
@@ -163,6 +177,7 @@ class LocalStorage:
         *,
         original_filename: str = "",
         ocr_used: bool = True,
+        images: Optional[dict[str, bytes]] = None,
     ) -> str:
         """OCR 按页写入影子文件夹，返回文件夹路径（作为 parsed_text_path）。"""
         base = self._global_parsed_pages_dir(content_hash)
@@ -175,23 +190,61 @@ class LocalStorage:
             page_path = pages_dir / f"page_{i:03d}.md"
             page_path.write_text(build_page_markdown(i, text), encoding="utf-8")
 
+        image_count = self._write_parsed_images(base, images)
+
         manifest = {
             "version": 1,
             "original_filename": original_filename or "",
             "total_pages": len(page_texts),
             "ocr_used": ocr_used,
             "pages_dir": OCR_PAGES_DIR_NAME,
+            "image_count": image_count,
         }
         (base / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         logger.info(
-            "LocalStorage.save_global_parsed_pages: %s (%d pages)",
+            "LocalStorage.save_global_parsed_pages: %s (%d pages, %d images)",
             base,
             len(page_texts),
+            image_count,
         )
         return str(base)
+
+    def _write_parsed_images(
+        self, base: Path, images: Optional[dict[str, bytes]]
+    ) -> int:
+        if not images:
+            return 0
+        img_dir = base / "images"
+        img_dir.mkdir(parents=True, exist_ok=True)
+        written = 0
+        for name, data in images.items():
+            safe = safe_parsed_image_name(name)
+            if not safe or not data:
+                continue
+            (img_dir / safe).write_bytes(data)
+            written += 1
+        return written
+
+    def parsed_image_path(self, parsed_path: str, filename: str) -> Optional[Path]:
+        """影子文档 images/ 下的图片路径；拒绝路径穿越。"""
+        safe = safe_parsed_image_name(filename)
+        if not safe or not parsed_path:
+            return None
+        base = Path(parsed_path)
+        if not base.is_dir():
+            return None
+        image_dir = (base / "images").resolve()
+        path = (image_dir / safe).resolve()
+        try:
+            path.relative_to(image_dir)
+        except ValueError:
+            return None
+        if path.is_file():
+            return path
+        return None
 
     def save_global_parsed_content(
         self,
@@ -201,6 +254,7 @@ class LocalStorage:
         page_texts: Optional[list[str]] = None,
         original_filename: str = "",
         ocr_used: bool = False,
+        images: Optional[dict[str, bytes]] = None,
     ) -> str:
         """优先按页文件夹保存；无 page_texts 时写单文件。"""
         if page_texts is not None and len(page_texts) > 0:
@@ -209,6 +263,7 @@ class LocalStorage:
                 page_texts,
                 original_filename=original_filename,
                 ocr_used=ocr_used,
+                images=images,
             )
         return self.save_global_parsed(content_hash, content)
 
@@ -450,12 +505,14 @@ class FileStorageService:
         *,
         original_filename: str = "",
         ocr_used: bool = True,
+        images: Optional[dict[str, bytes]] = None,
     ) -> str:
         return self._backend.save_global_parsed_pages(
             content_hash,
             page_texts,
             original_filename=original_filename,
             ocr_used=ocr_used,
+            images=images,
         )
 
     def save_global_parsed_content(
@@ -466,6 +523,7 @@ class FileStorageService:
         page_texts: Optional[list[str]] = None,
         original_filename: str = "",
         ocr_used: bool = False,
+        images: Optional[dict[str, bytes]] = None,
     ) -> str:
         return self._backend.save_global_parsed_content(
             content_hash,
@@ -473,7 +531,11 @@ class FileStorageService:
             page_texts=page_texts,
             original_filename=original_filename,
             ocr_used=ocr_used,
+            images=images,
         )
+
+    def parsed_image_path(self, parsed_path: str, filename: str) -> Optional[Path]:
+        return self._backend.parsed_image_path(parsed_path, filename)
 
     def is_parsed_pages_dir(self, path: str) -> bool:
         return self._backend.is_parsed_pages_dir(path)

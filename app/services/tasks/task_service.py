@@ -18,21 +18,18 @@ import logging
 from datetime import date, datetime
 from typing import List, Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.config import MAX_PAGES_PER_GEN
+from sqlalchemy import func
+
 from app.crud import task as task_crud
-from app.crud import toc as toc_crud
 from app.crud import question as question_crud
 from app.crud import quiz as quiz_crud
-from app.crud import kb as kb_crud
-from app.models import (
-    DailyTask,
-    Document,
-    DocumentSegment,
-    Goal,
-    UserQuestionRef,
+from app.models import DailyTask, Document, Goal, UserQuestionRef
+from app.services.tasks.candidates import (
+    fallback_assign,
+    pages_from_segments,
+    pages_from_toc,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,12 +38,6 @@ logger = logging.getLogger(__name__)
 TYPE_UPLOAD = "upload"
 TYPE_GENERATE = "generate_questions"
 TYPE_PRACTICE = "practice"
-
-# 当天任务上限（1~3 件）
-_MAX_TASKS_PER_DAY = 3
-# 刷题约定道数上限
-_PRACTICE_COUNT_DEFAULT = 5
-
 
 def today_local() -> date:
     """任务日期：服务器本地日期。"""
@@ -117,7 +108,15 @@ _SOURCE_BY_ACTION = {
 }
 
 
-# ── ensure：当天没有则按缺口生成，有未完成的先展示，不重复派 ──────
+# ── ensure：有未完成先展示；否则任务 Agent 看目标和学情再派 ──
+
+def _pages_from_toc(db: Session, doc: Document) -> List[int]:
+    return pages_from_toc(db, doc.id)
+
+
+def _pages_from_segments(db: Session, document_id: str) -> List[int]:
+    return pages_from_segments(db, document_id)
+
 
 def ensure_today_tasks(db: Session, user_id: int) -> List[DailyTask]:
     task_date = today_local()
@@ -125,176 +124,28 @@ def ensure_today_tasks(db: Session, user_id: int) -> List[DailyTask]:
     if pending:
         return pending
 
-    generated = _generate_gap_tasks(db, user_id, task_date)
-    if generated:
+    today_rows = task_crud.list_tasks(db, user_id, task_date)
+    is_refill = bool(today_rows)
+
+    from app.services.agents.task_agent import run_task_agent_sync, task_agent_enabled
+
+    if task_agent_enabled():
+        try:
+            run_task_agent_sync(db, user_id, is_refill=is_refill)
+            db.commit()
+            return task_crud.list_tasks(db, user_id, task_date)
+        except Exception:
+            logger.warning("任务 Agent 失败 user=%s refill=%s", user_id, is_refill, exc_info=True)
+            if is_refill:
+                return task_crud.list_tasks(db, user_id, task_date)
+
+    if is_refill:
+        return today_rows
+
+    created = fallback_assign(db, user_id)
+    if created:
         db.commit()
-    return generated
-
-
-def _generate_gap_tasks(
-    db: Session, user_id: int, task_date: date
-) -> List[DailyTask]:
-    goal_id = _active_goal_id(db, user_id)
-    created: List[DailyTask] = []
-
-    docs = _list_own_documents(db, user_id)
-    doc_ids = [d.id for d in docs]
-    doc_ids_with_questions = _document_ids_with_questions(db, user_id, doc_ids)
-
-    # 1) 没书 → 上传
-    if not doc_ids:
-        task = task_crud.create_task(
-            db,
-            user_id=user_id,
-            goal_id=goal_id,
-            task_date=task_date,
-            title="上传一本学习资料",
-            reason="学习区还没有可用的书，先上传一本能解析的资料（PDF / Word / 图片等），之后出题和刷题都从它来。",
-            task_type=TYPE_UPLOAD,
-            payload={},
-            completion_rule={"kind": "new_parsable_document"},
-        )
-        created.append(task)
-        return created
-
-    # 2) 有书没题 → 按章出题（页来自目录或入库分段页码）
-    no_question_docs = [d for d in docs if d.id not in doc_ids_with_questions]
-    target = _pick_document_with_pages(db, no_question_docs or docs)
-    if target is not None:
-        doc, pages = target
-        if pages:
-            task = task_crud.create_task(
-                db,
-                user_id=user_id,
-                goal_id=goal_id,
-                task_date=task_date,
-                title=f"给《{doc.display_name}》的这几页出题",
-                reason="有书还没题，先按页出题（每页独立进度），出完才能刷题。",
-                task_type=TYPE_GENERATE,
-                payload={
-                    "document_id": doc.id,
-                    "document_name": doc.display_name,
-                    "page_numbers": pages,
-                },
-                completion_rule={
-                    "kind": "pages_have_questions",
-                    "document_id": doc.id,
-                    "page_numbers": pages,
-                },
-            )
-            created.append(task)
-
-    # 3) 有题 → 刷题（任务范围内交够约定道数）
-    if len(created) < _MAX_TASKS_PER_DAY and doc_ids_with_questions:
-        practice_doc = _pick_document_for_practice(
-            db, user_id, docs, doc_ids_with_questions
-        )
-        if practice_doc is not None:
-            doc, count = practice_doc
-            task = task_crud.create_task(
-                db,
-                user_id=user_id,
-                goal_id=goal_id,
-                task_date=task_date,
-                title=f"刷《{doc.display_name}》的题",
-                reason=f"有题了，交够 {count} 道就算完成（选「不会」也算，不用全对）。",
-                task_type=TYPE_PRACTICE,
-                payload={"document_id": doc.id, "document_name": doc.display_name, "count": count},
-                completion_rule={
-                    "kind": "practice_count",
-                    "document_id": doc.id,
-                    "count": count,
-                },
-            )
-            created.append(task)
-
-    return created
-
-
-def _list_own_documents(db: Session, user_id: int) -> List[Document]:
-    return db.query(Document).filter(Document.user_id == user_id).order_by(Document.created_at.desc()).all()
-
-
-def _document_ids_with_questions(
-    db: Session, user_id: int, doc_ids: List[str]
-) -> set:
-    if not doc_ids:
-        return set()
-    rows = (
-        db.query(UserQuestionRef.document_id)
-        .filter(
-            UserQuestionRef.user_id == user_id,
-            UserQuestionRef.document_id.in_(doc_ids),
-        )
-        .distinct()
-        .all()
-    )
-    return {row[0] for row in rows}
-
-
-def _pick_document_with_pages(
-    db: Session, docs: List[Document]
-) -> Optional[tuple]:
-    """选一本「有可出页」的文档，返回 (doc, pages)。
-
-    页优先来自目录（章 → 页范围），目录缺失时用入库分段页码
-    （document_segments.page_start，程序提取，禁止模型手填）。
-    """
-    for doc in docs:
-        pages = _pages_from_toc(db, doc)
-        if not pages:
-            pages = _pages_from_segments(db, doc.id)
-        if pages:
-            return doc, pages
-    return None
-
-
-def _pages_from_toc(db: Session, doc: Document) -> List[int]:
-    entries = toc_crud.list_toc_for_document(db, doc.id)
-    if not entries:
-        return []
-    pages: List[int] = []
-    for entry in entries:
-        for p in range(entry.page_start, entry.page_end + 1):
-            if p not in pages:
-                pages.append(p)
-        if len(pages) >= MAX_PAGES_PER_GEN:
-            break
-    return pages[:MAX_PAGES_PER_GEN]
-
-
-def _pages_from_segments(db: Session, document_id: str) -> List[int]:
-    """入库分段页码（page_start~page_end 展开，一段可以跨页）。"""
-    rows = (
-        db.query(DocumentSegment.page_start, DocumentSegment.page_end)
-        .filter(
-            DocumentSegment.document_id == document_id,
-            DocumentSegment.page_start.isnot(None),
-        )
-        .all()
-    )
-    pages: List[int] = []
-    for ps, pe in rows:
-        start = max(1, ps or 1)
-        end = max(start, pe or start)
-        for p in range(start, end + 1):
-            if p not in pages:
-                pages.append(p)
-    return sorted(pages)[:MAX_PAGES_PER_GEN]
-
-
-def _pick_document_for_practice(
-    db: Session, user_id: int, docs: List[Document], doc_ids_with_questions: set
-) -> Optional[tuple]:
-    for doc in docs:
-        if doc.id not in doc_ids_with_questions:
-            continue
-        total = _count_user_questions_for_document(db, user_id, doc.id)
-        if total <= 0:
-            continue
-        count = min(total, _PRACTICE_COUNT_DEFAULT)
-        return doc, count
-    return None
+    return task_crud.list_tasks(db, user_id, task_date) or created
 
 
 def _count_user_questions_for_document(

@@ -113,7 +113,7 @@ class QuestionGenTools:
                 options.append({"key": key, "text": text.strip()})
 
         tag_list = [t.strip() for t in tags.split(",") if t.strip()]
-        from app.services.quiz.question_gen_service import _normalize_question
+        from app.services.quiz.question_normalize import normalize_question
 
         raw = {
             "stem": stem.strip(),
@@ -124,7 +124,7 @@ class QuestionGenTools:
             "tags": tag_list,
             "reference_text": reference_text.strip() or None,
         }
-        normalized = _normalize_question(raw)
+        normalized = normalize_question(raw)
         if normalized:
             self.submitted_questions.append(normalized)
             return json.dumps({"status": "ok"}, ensure_ascii=False)

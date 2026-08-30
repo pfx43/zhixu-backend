@@ -45,6 +45,7 @@ class DocumentOut(BaseModel):
     indexing_status: str = "pending"
     segment_status: str = "not_started"
     question_gen_status: str = "not_started"
+    question_count: int = 0
     ocr_status: Optional[str] = None
     ocr_current_page: Optional[int] = None
     ocr_total_pages: Optional[int] = None

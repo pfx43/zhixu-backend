@@ -26,6 +26,8 @@ class AppConfig:
     pdf_ocr_render_dpi: int = 150
     max_questions_per_document: int = 20
     max_pages_per_gen: int = 10
+    # 出题队列同时跑几个 Agent（一页一个）。与勾选上限无关。
+    question_gen_max_agents: int = 10,
     document_pipeline_async: bool = True
     question_gen_async: bool = True
     llm_async: bool = True

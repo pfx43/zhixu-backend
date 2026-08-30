@@ -25,12 +25,17 @@ from app.schemas.common import (
 from app.services.tutor.citation_service import resolve_chat_collection
 from app.services.knowledge.storage_service import storage_service
 from app.services.tcn.tcn_client import tcn_client
+from app.services.onboarding.chat_cards import is_skip_or_uploaded, persistable_cards
+from app.services.onboarding.onboarding_service import (
+    complete_onboarding_for_user,
+    mark_onboarding_in_progress,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
-VALID_MODES = {"qa", "learning", "classroom_note", "verify"}
+VALID_MODES = {"qa", "learning", "classroom_note", "verify", "onboarding"}
 
 # 用户打断：前端 POST /api/v1/chat/break 设置标记，流式生成器检查到后停止，
 # 已产出的内容保存并在消息末尾追加打断提示。
@@ -38,11 +43,47 @@ INTERRUPT_NOTICE = "\n\n> ⏹️ 对话已被用户打断"
 _INTERRUPT_TTL = 300  # 打断标记有效期（秒）
 
 # 公开 SSE 合同允许的事件类型（白名单）；其余 type 与 role=tool 一律丢弃
-ALLOWED_EVENT_TYPES = {"reasoning", "tool_call", "answer", "metadata"}
+ALLOWED_EVENT_TYPES = {
+    "reasoning",
+    "tool_call",
+    "answer",
+    "metadata",
+    "onboarding_ui",
+    "show_question",
+    "show_tip",
+}
 
 
 def _interrupt_key(user_id: int, session_id: str) -> str:
     return f"chat:interrupt:{user_id}:{session_id}"
+
+
+_QUESTION_PUBLIC_KEYS = (
+    "question_id",
+    "stem",
+    "question_type",
+    "options",
+    "document_id",
+    "document_name",
+    "tags",
+)
+_TIP_PUBLIC_KEYS = (
+    "id",
+    "title",
+    "content_md",
+    "tags",
+    "document_id",
+    "source",
+)
+
+
+def _public_embed_question(question: dict) -> dict:
+    """SSE / 历史里的题目卡：只留公开字段，丢掉 answer / explanation。"""
+    return {key: question[key] for key in _QUESTION_PUBLIC_KEYS if key in question}
+
+
+def _public_embed_tip(tip: dict) -> dict:
+    return {key: tip[key] for key in _TIP_PUBLIC_KEYS if key in tip}
 
 
 def _mark_interrupt(user_id: int, session_id: str) -> None:
@@ -161,6 +202,7 @@ async def _save_message(
     content: str,
     reasoning_content: Optional[str] = None,
     tool_names: Optional[List[str]] = None,
+    payload: Optional[dict] = None,
 ) -> dict:
     now = _now_iso()
     message = {
@@ -172,6 +214,8 @@ async def _save_message(
         message["reasoning_content"] = reasoning_content
     if tool_names:
         message["tool_names"] = list(tool_names)
+    if payload:
+        message["payload"] = payload
 
     history_key = _session_history_key(user_id, session_id)
     await async_cache.rpush(history_key, json.dumps(message))
@@ -266,7 +310,7 @@ async def _stream_agent_response(
     - 用户 break：保存部分内容后正常结束；
     - 客户端断开（GeneratorExit/连接重置）：不再 yield，清理与保存走 finally。
     """
-    if not dataset_id and not is_local_rag():
+    if not dataset_id and not is_local_rag() and mode != "onboarding":
         logger.warning(f"_stream_agent_response: user_id={user_id} 没有 dataset_id，使用 echo 回退")
         content = _generate_assistant_response(message)
         data = json.dumps({
@@ -300,6 +344,9 @@ async def _stream_agent_response(
     full_content = ""
     reasoning_parts: List[str] = []
     tool_names: List[str] = []
+    onboarding_items: List[dict] = []
+    question_widgets: List[dict] = []
+    tip_widgets: List[dict] = []
     tcn_result = None
     interrupted = False
     disconnected = False
@@ -336,17 +383,32 @@ async def _stream_agent_response(
                 tn = chunk.get("tool_name")
                 if tn and tn not in tool_names:
                     tool_names.append(tn)
+            elif event_type == "onboarding_ui" and chunk.get("item"):
+                onboarding_items.append(chunk["item"])
+            elif event_type == "show_question" and isinstance(chunk.get("question"), dict):
+                question_widgets.append(_public_embed_question(chunk["question"]))
+            elif event_type == "show_tip" and isinstance(chunk.get("tip"), dict):
+                tip_widgets.append(_public_embed_tip(chunk["tip"]))
 
             payload: dict = {
                 "session_id": session_id,
                 "type": event_type,
                 "role": role,
-                "content": content,
             }
+            if content:
+                payload["content"] = content
+            elif event_type in ("answer", "reasoning", "tool_call", "metadata", "onboarding_ui"):
+                payload["content"] = content
             if event_type == "reasoning" and chunk.get("reasoning_content"):
                 payload["reasoning_content"] = chunk["reasoning_content"]
             elif event_type == "tool_call" and chunk.get("tool_name"):
                 payload["tool_name"] = chunk["tool_name"]
+            elif event_type == "onboarding_ui" and chunk.get("item"):
+                payload["item"] = chunk["item"]
+            elif event_type == "show_question":
+                payload["question"] = question_widgets[-1] if question_widgets else chunk.get("question")
+            elif event_type == "show_tip":
+                payload["tip"] = tip_widgets[-1] if tip_widgets else chunk.get("tip")
             elif event_type == "metadata":
                 if chunk.get("citations"):
                     payload["citations"] = chunk["citations"]
@@ -369,7 +431,15 @@ async def _stream_agent_response(
         yield f"event: message\ndata: {data}\n\n"
 
     # ── 保存前置：先持久化，再产出 [DONE]（客户端收到 [DONE] 即认为完成） ──
-    if full_content or interrupted:
+    onboarding_cards = persistable_cards(onboarding_items)
+    history_payload: dict = {}
+    if onboarding_cards:
+        history_payload["onboarding"] = onboarding_cards
+    if question_widgets:
+        history_payload["questions"] = question_widgets
+    if tip_widgets:
+        history_payload["tips"] = tip_widgets
+    if full_content or interrupted or history_payload:
         content = full_content + (INTERRUPT_NOTICE if interrupted else "")
         try:
             await _save_message(
@@ -379,6 +449,7 @@ async def _stream_agent_response(
                 content,
                 reasoning_content="".join(reasoning_parts) or None,
                 tool_names=tool_names or None,
+                payload=history_payload or None,
             )
         except Exception as e:
             logger.error(f"保存助理消息失败: {e}")
@@ -478,6 +549,21 @@ async def send_chat(
         )
 
     await _save_message(user_id, session_id, "user", request.content)
+
+    if mode == "onboarding":
+        def _touch_onboarding():
+            with short_session() as db:
+                if is_skip_or_uploaded(request.content):
+                    complete_onboarding_for_user(db, user_id)
+                else:
+                    mark_onboarding_in_progress(db, user_id)
+                db.commit()
+
+        await asyncio.to_thread(_touch_onboarding)
+        meta = await _aload_session_meta(user_id, session_id)
+        if meta:
+            meta["kind"] = "onboarding"
+            await _asave_session_meta(user_id, session_id, meta)
 
     history = await asyncio.to_thread(_load_history, user_id, session_id)
     if history:

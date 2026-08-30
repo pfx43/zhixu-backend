@@ -1,6 +1,7 @@
 """
 知识库业务编排 — 分区、上传、global_documents 去重
 """
+import asyncio
 import hashlib
 import json
 import logging
@@ -13,15 +14,18 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.crud import kb as kb_crud
+from app.crud import question as question_crud
+from app.services.quiz import qgen_job_service
 from app.core.config import (
     DIFY_MAX_UPLOAD_SIZE,
     DOCUMENT_PIPELINE_ASYNC,
     IMAGE_OCR_ASYNC,
+    OCR_BACKEND,
     is_local_rag,
     is_keyword_rag,
 )
-from app.core.database import SessionLocal
-from app.core.job_runner import run_in_background
+from app.core.database import SessionLocal, async_short_session
+from app.core.job_runner import run_in_background, schedule_coro
 from app.models import Document, GlobalDocument, KbCollection
 from app.schemas.kb import (
     CollectionCreate,
@@ -42,6 +46,7 @@ from app.services.knowledge.file_parser import (
 from app.services.ocr.ocr_progress import get_ocr_progress, set_ocr_progress
 from app.services.ocr.ocr_service import extract_text_from_image
 from app.services.knowledge.storage_service import storage_service
+from app.services.storage_usage import refresh_user_storage
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +178,7 @@ def _ensure_document_parsed(db: Session, doc: Document) -> bool:
             page_texts=parse_outcome.page_texts,
             original_filename=global_doc.original_filename or doc.display_name,
             ocr_used=parse_outcome.ocr_used,
+            images=parse_outcome.images,
         )
         global_doc.parsed_text_path = parsed_text_path
         doc.parsed_cache_key = parsed_text_path
@@ -292,6 +298,7 @@ def _run_document_pipeline(
                 page_texts=outcome.page_texts,
                 original_filename=original_filename or doc.display_name,
                 ocr_used=True,
+                images=outcome.images,
             )
             global_doc = doc.global_document
             if global_doc:
@@ -345,6 +352,22 @@ def _start_document_pipeline(
     original_filename: Optional[str] = None,
     total_pages: int = 0,
 ) -> None:
+    if (
+        OCR_BACKEND == "mineru"
+        and storage_path
+        and (ocr_mode or image_ocr_mode)
+    ):
+        schedule_coro(
+            _run_mineru_pipeline(
+                document.id,
+                document.content_hash,
+                storage_path=storage_path,
+                original_filename=original_filename or document.display_name,
+                total_pages=total_pages,
+            ),
+            name="doc-pipeline-mineru",
+        )
+        return
     run_in_background(
         lambda: _run_document_pipeline(
             document.id,
@@ -357,6 +380,168 @@ def _start_document_pipeline(
         ),
         name="doc-pipeline",
     )
+
+
+async def _run_mineru_pipeline(
+    document_id: str,
+    content_hash: str,
+    *,
+    storage_path: str,
+    original_filename: Optional[str],
+    total_pages: int,
+) -> None:
+    """MinerU 轮询挂在事件循环上；写库用 AsyncSession。"""
+    from app.services.ocr.mineru_service import parse_with_mineru
+
+    set_ocr_progress(
+        document_id,
+        content_hash,
+        "processing",
+        current_page=0,
+        total_pages=total_pages or 1,
+    )
+
+    def on_page_progress(current: int, total: int) -> None:
+        set_ocr_progress(
+            document_id,
+            content_hash,
+            "processing",
+            current_page=current,
+            total_pages=total,
+        )
+
+    try:
+        outcome = await parse_with_mineru(
+            storage_path,
+            original_filename=original_filename,
+            on_page_progress=on_page_progress,
+        )
+        await _apply_mineru_outcome(
+            document_id,
+            content_hash,
+            outcome,
+            original_filename,
+            total_pages,
+        )
+    except Exception:
+        logger.exception("mineru pipeline failed: document_id=%s", document_id)
+        await _mark_ocr_pipeline_failed(
+            document_id,
+            content_hash,
+            total_pages,
+            "MinerU 处理异常",
+        )
+
+
+async def _apply_mineru_outcome(
+    document_id: str,
+    content_hash: str,
+    outcome,
+    original_filename: Optional[str],
+    total_pages: int,
+) -> None:
+    try:
+        async with async_short_session() as db:
+            doc = await kb_crud.aget_document_by_id_internal(db, document_id)
+            if not doc:
+                return
+            if not outcome.text:
+                err = outcome.error or "MinerU 未识别到文字"
+                set_ocr_progress(
+                    document_id,
+                    content_hash,
+                    "failed",
+                    current_page=0,
+                    total_pages=total_pages or 1,
+                    error=err,
+                )
+                doc.indexing_status = "failed"
+                if doc.zone == "study":
+                    doc.segment_status = "failed"
+                await db.commit()
+                return
+            parsed_text_path = await asyncio.to_thread(
+                storage_service.save_global_parsed_content,
+                content_hash,
+                outcome.text,
+                page_texts=outcome.page_texts,
+                original_filename=original_filename or doc.display_name,
+                ocr_used=True,
+                images=outcome.images,
+            )
+            global_doc = doc.global_document
+            if global_doc:
+                global_doc.parsed_text_path = parsed_text_path
+            doc.parsed_cache_key = parsed_text_path
+            await db.commit()
+            pages_n = len(outcome.page_texts or [outcome.text])
+            set_ocr_progress(
+                document_id,
+                content_hash,
+                "completed",
+                current_page=pages_n,
+                total_pages=pages_n,
+            )
+            await _maybe_trigger_segment_async(db, doc)
+            await db.refresh(doc)
+            await _finish_indexing_status_async(db, doc)
+    except Exception:
+        logger.exception("mineru apply failed: document_id=%s", document_id)
+        await _mark_ocr_pipeline_failed(
+            document_id, content_hash, total_pages, "MinerU 写入失败"
+        )
+
+
+async def _maybe_trigger_segment_async(db, document: Document) -> None:
+    if document.zone != "study":
+        return
+    from app.services.knowledge.segment_service import segment_document_async
+
+    try:
+        await segment_document_async(document.id, db)
+        await db.commit()
+    except Exception:
+        logger.exception("segment hook failed: document_id=%s", document.id)
+        await db.rollback()
+
+
+async def _finish_indexing_status_async(db, doc: Document) -> None:
+    if (
+        is_local_rag()
+        and doc.zone != "study"
+        and doc.indexing_status == "processing"
+    ):
+        doc.indexing_status = "completed"
+        await db.commit()
+    elif doc.segment_status == "failed":
+        doc.indexing_status = "failed"
+        await db.commit()
+
+
+async def _mark_ocr_pipeline_failed(
+    document_id: str,
+    content_hash: str,
+    total_pages: int,
+    error: str,
+) -> None:
+    set_ocr_progress(
+        document_id,
+        content_hash,
+        "failed",
+        current_page=0,
+        total_pages=total_pages or 0,
+        error=error,
+    )
+    try:
+        async with async_short_session() as db:
+            doc = await kb_crud.aget_document_by_id_internal(db, document_id)
+            if doc:
+                doc.indexing_status = "failed"
+                if doc.zone == "study":
+                    doc.segment_status = "failed"
+                await db.commit()
+    except Exception:
+        logger.exception("mineru mark failed: document_id=%s", document_id)
 
 
 def _run_async_pdf_ocr(
@@ -658,7 +843,7 @@ def upload_document(
             safe_filename = global_doc.original_filename
         logger.info("命中全局去重: hash=%s, path=%s", file_hash[:16], upload_path)
         if not parsed_text_path and raw_storage_path:
-            if is_image and IMAGE_OCR_ASYNC:
+            if is_image and (IMAGE_OCR_ASYNC or OCR_BACKEND == "mineru"):
                 defer_image_ocr = True
             else:
                 defer_pdf_ocr, ocr_total_pages = _should_defer_pdf_ocr(
@@ -671,7 +856,7 @@ def upload_document(
         upload_path = raw_storage_path
 
         if is_image:
-            if IMAGE_OCR_ASYNC:
+            if IMAGE_OCR_ASYNC or OCR_BACKEND == "mineru":
                 defer_image_ocr = True
                 logger.info("图片异步 OCR: hash=%s", file_hash[:16])
             else:
@@ -719,6 +904,7 @@ def upload_document(
                         page_texts=parse_outcome.page_texts,
                         original_filename=safe_filename,
                         ocr_used=parse_outcome.ocr_used,
+                        images=parse_outcome.images,
                     )
                 elif parse_outcome.error:
                     last_parse_error = parse_outcome.error
@@ -787,6 +973,7 @@ def upload_document(
         parsed_cache_key=parsed_cache_key,
         indexing_status=indexing_status,
     )
+    refresh_user_storage(db, user_id)
     db.commit()
     db.refresh(document)
 
@@ -947,6 +1134,12 @@ def list_documents(
         )
 
     out_docs = []
+    doc_ids = [doc.id for doc in docs]
+    question_counts = question_crud.count_user_questions_for_documents(
+        db, user_id, doc_ids
+    )
+    active_job_docs = qgen_job_service.active_job_document_ids(db, user_id, doc_ids)
+    status_dirty = False
     for doc in docs:
         file_size = None
         file_type = None
@@ -954,6 +1147,19 @@ def list_documents(
             file_size = doc.global_document.file_size
             file_type = doc.global_document.mime_type
         cover_url, thumbnail_url = _document_cover_urls(doc)
+        question_count = question_counts.get(doc.id, 0)
+        question_gen_status = qgen_job_service.resolve_question_gen_status(
+            doc.id,
+            doc.question_gen_status,
+            question_count,
+            active_job_docs=active_job_docs,
+        )
+        if (
+            doc.question_gen_status == "processing"
+            and question_gen_status != "processing"
+        ):
+            doc.question_gen_status = question_gen_status
+            status_dirty = True
         out_docs.append(
             DocumentOut(
                 id=doc.dify_document_id or doc.id,
@@ -964,7 +1170,8 @@ def list_documents(
                 file_size=file_size,
                 indexing_status=doc.indexing_status,
                 segment_status=doc.segment_status,
-                question_gen_status=doc.question_gen_status,
+                question_gen_status=question_gen_status,
+                question_count=question_count,
                 dify_document_id=doc.dify_document_id,
                 cover_url=cover_url,
                 thumbnail_url=thumbnail_url,
@@ -973,6 +1180,8 @@ def list_documents(
                 **_ocr_fields_for_doc(doc),
             )
         )
+    if status_dirty:
+        db.commit()
 
     return DocumentListOut(
         documents=out_docs,
@@ -1138,7 +1347,9 @@ def _ensure_cover_paths(global_doc: GlobalDocument) -> None:
 def _document_cover_urls(doc: Document) -> tuple[Optional[str], Optional[str]]:
     """返回 (cover_url, thumbnail_url)，无封面时为 (None, None)。"""
     global_doc = doc.global_document
-    if not global_doc or not global_doc.cover_storage_path:
+    if not global_doc or not (
+        global_doc.cover_storage_path or global_doc.thumbnail_storage_path
+    ):
         return None, None
     url_id = doc.dify_document_id or doc.id
     cover = f"/api/v1/kb/documents/{url_id}/cover"
@@ -1167,6 +1378,28 @@ def serve_document_cover(
     if not path or not Path(path).is_file():
         raise HTTPException(status_code=404, detail="封面不存在")
     return FileResponse(path, media_type="image/png")
+
+
+def serve_document_parsed_image(
+    db: Session, user_id: int, doc_id: str, filename: str
+) -> FileResponse:
+    """影子文档 images/ 读图。只给当前用户自己的书，文件名必须是 basename。"""
+    doc = kb_crud.get_document_by_id_or_dify(db, user_id, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+
+    parsed_path = doc.parsed_cache_key
+    if not parsed_path and doc.global_document:
+        parsed_path = doc.global_document.parsed_text_path
+    if not parsed_path:
+        raise HTTPException(status_code=404, detail="图片不存在")
+
+    path = storage_service.parsed_image_path(parsed_path, filename)
+    if not path:
+        raise HTTPException(status_code=404, detail="图片不存在")
+
+    media_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    return FileResponse(path, media_type=media_type)
 
 
 def serve_document_file(db: Session, user_id: int, doc_id: str) -> FileResponse:
@@ -1261,6 +1494,7 @@ def delete_document(
                         storage_service.delete_file_at_path(orphan.thumbnail_storage_path)
                     kb_crud.delete_global_document(db, orphan)
 
+        refresh_user_storage(db, user_id)
         db.commit()
         return {"message": "文档已删除", "doc_id": doc_id}
     except HTTPException:

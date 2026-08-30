@@ -134,6 +134,7 @@ OCR 后端通过 `.env` 文件中的 `OCR_BACKEND` 配置：
 | `local` | PaddleOCR 本地识别（默认，需安装 paddleocr） |
 | `baidu` | 百度云 OCR API（需配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY`） |
 | `auto` | 优先 PaddleOCR，不可用时回退百度 OCR |
+| `mineru` | 扫描件走 [MinerU](https://mineru.net/apiManage/docs) 云端解析，按页生成影子文档（需 `MINERU_API_TOKEN`） |
 
 详见 `.env.example` 模板文件。
 

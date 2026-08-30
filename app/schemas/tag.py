@@ -17,3 +17,17 @@ class TagOut(BaseModel):
 class TagListOut(BaseModel):
     tags: List[TagOut]
     total: int
+
+
+class DocumentKnowledgeTagOut(BaseModel):
+    name: str
+    question_count: int = 0
+    correct_count: int = 0
+    wrong_count: int = 0
+    unknown_count: int = 0
+
+
+class DocumentKnowledgeTagListOut(BaseModel):
+    document_id: str
+    tags: List[DocumentKnowledgeTagOut] = []
+    total: int = 0

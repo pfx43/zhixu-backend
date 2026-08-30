@@ -55,3 +55,23 @@ def run_db_worker_safe(
 def run_async_coro(coro: Coroutine[object, object, T]) -> T:
     """在线程中运行 async 协程（每次新建事件循环）。"""
     return asyncio.run(coro)
+
+
+def schedule_coro(coro: Coroutine[object, object, object], *, name: str = "zhishi-bg") -> None:
+    """有正在跑的事件循环就挂 task（await sleep/HTTP 不占线程）；否则后台线程 asyncio.run。"""
+
+    def _on_done(task: asyncio.Task) -> None:
+        try:
+            exc = task.exception()
+        except asyncio.CancelledError:
+            return
+        if exc is not None:
+            logger.exception("background coro failed: %s", name, exc_info=exc)
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        run_in_background(lambda: asyncio.run(coro), name=name)
+        return
+    task = loop.create_task(coro, name=name)
+    task.add_done_callback(_on_done)

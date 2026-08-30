@@ -1,7 +1,8 @@
 from typing import List, Optional, Tuple
 
-from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import Document, GlobalDocument, KbCollection
 
@@ -222,7 +223,8 @@ def list_documents(
         query = query.filter(Document.collection_id == collection_id)
     total = query.count()
     docs = (
-        query.order_by(Document.created_at.desc())
+        query.options(joinedload(Document.global_document))
+        .order_by(Document.created_at.desc())
         .offset((page - 1) * limit)
         .limit(limit)
         .all()
@@ -245,6 +247,17 @@ def get_document_by_id_or_dify(
 
 def get_document_by_id_internal(db: Session, document_id: str) -> Optional[Document]:
     return db.query(Document).filter(Document.id == document_id).first()
+
+
+async def aget_document_by_id_internal(
+    db: AsyncSession, document_id: str
+) -> Optional[Document]:
+    result = await db.execute(
+        select(Document)
+        .options(selectinload(Document.global_document))
+        .where(Document.id == document_id)
+    )
+    return result.scalar_one_or_none()
 
 
 def get_document_by_batch_id(

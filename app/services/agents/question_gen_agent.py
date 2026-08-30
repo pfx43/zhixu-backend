@@ -15,8 +15,9 @@ from typing import List, Optional
 from tina import Agent
 
 from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.tools.question_gen_tools import QuestionGenTools
-from app.services.usage_service import record_usage_for_token
+from app.services.usage_service import record_usage_for_token, record_usage_for_user_id
 from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,7 @@ class QuestionGenAgent:
                 max_tool_result_length=4000,
                 name=f"question_gen_{mode}",
             )
+            attach_reasoning_roundtrip(self.agent)
             _last_readiness.update(
                 ready=True,
                 status="ok",
@@ -167,7 +169,10 @@ class QuestionGenAgent:
             # 流式驱动完整工具循环（submit_question），流中发现 usage 即统一记账
             async for chunk in self.agent.apredict(instruction=instruction):
                 if isinstance(chunk, dict) and chunk.get("usage"):
-                    await record_usage_for_token(token or "", chunk["usage"])
+                    if user_id:
+                        await record_usage_for_user_id(user_id, chunk["usage"])
+                    else:
+                        await record_usage_for_token(token or "", chunk["usage"])
         except Exception as exc:
             self.failure_reason = _classify_failure(exc)
             _last_readiness.update(
@@ -232,6 +237,7 @@ async def agent_generate_for_page(
     token: Optional[str] = None,
     near_pages=None,
     allowed_page_numbers=None,
+    user_id: int = 0,
 ) -> List[dict]:
     """Agent 路径：按页出题；失败时返回内部失败标记。
 
@@ -251,6 +257,7 @@ async def agent_generate_for_page(
         content=page["content"],
         tag_hint=tag_hint,
         count=count,
+        user_id=user_id,
         token=token,
     )
     if questions:

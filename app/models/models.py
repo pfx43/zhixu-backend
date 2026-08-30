@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, DECIMAL
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, DECIMAL, BigInteger
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.core.database import Base
@@ -39,6 +39,9 @@ class User(Base):
 
     # TCN 知识追踪用户哈希（注册时自动生成）
     user_hash = Column(String(64), nullable=True, unique=True)
+
+    # 资料原文件 + 笔记附件的逻辑占用（字节）。同一文件两人各有一份资料时各记一次。
+    storage_used_bytes = Column(BigInteger, nullable=False, default=0)
 
     kb_collections = relationship("KbCollection", back_populates="user")
     documents = relationship("Document", back_populates="user")
