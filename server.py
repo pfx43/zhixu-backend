@@ -77,6 +77,28 @@ async def lifespan(app: FastAPI):
         logger.error(f"AgentManager 初始化失败: {e}")
         app.state.agent_manager = None
 
+    # 5. 提醒到期 worker（#36）+ 画像推断遗留任务恢复（#37）
+    try:
+        from app.core.job_runner import run_in_background, run_db_worker_safe
+
+        def _startup_tasks():
+            # 进程重启后重跑遗留的 pending/running 画像推断
+            try:
+                from app.services.profile.inference_service import requeue_stale_inferences
+
+                run_db_worker_safe(lambda db: requeue_stale_inferences(db))
+            except Exception as e:
+                logger.warning(f"画像推断遗留任务恢复失败: {e}")
+
+        run_in_background(_startup_tasks, name="profile-inference-recovery")
+
+        from app.services.notifications.reminder_worker import start_reminder_worker
+
+        app.state.reminder_worker = start_reminder_worker()
+    except Exception as e:
+        logger.warning(f"提醒 worker / 画像恢复启动失败: {e}")
+        app.state.reminder_worker = None
+
     yield
 
     # 退出时清理资源
