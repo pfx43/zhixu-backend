@@ -42,12 +42,12 @@ def get_tag_stats(
 
 
 @router.post("/learning-report", response_model=LearningReportGenerateOut)
-def generate_learning_report(
+async def generate_learning_report(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
     """生成 LLM 学习报告并保存到笔记（别名路由）。"""
-    result = report_service.generate_learning_report(db, current_user["user_id"])
+    result = await report_service.generate_learning_report(db, current_user["user_id"])
     db.commit()
     return result
 

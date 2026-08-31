@@ -16,6 +16,7 @@ from app.services.knowledge.page_service import (
     build_near_page_context,
     get_pages_by_numbers,
 )
+from app.services.quiz.qgen_count import persist_questions_per_page
 from app.services.quiz.question_normalize import normalize_question
 
 logger = logging.getLogger(__name__)
@@ -159,7 +160,7 @@ def enqueue_generate_from_pages(
     user_id: int,
     document_id: str,
     page_numbers: list[int],
-    questions_per_page: int = 1,
+    questions_per_page: Optional[int] = None,
 ) -> PageQuestionResponse:
     from app.services.quiz import question_gen_service
 
@@ -168,7 +169,8 @@ def enqueue_generate_from_pages(
     pages = get_pages_by_numbers(db, doc, page_numbers)
     near_pages, allowed_range = build_near_page_context(db, doc, page_numbers)
     tag_hint = question_gen_service._format_tag_hint(
-        question_gen_service._existing_tag_names(db, user_id, document_id=doc.id)
+        question_gen_service._existing_tag_names(db, user_id, document_id=doc.id),
+        _document_tcn_domain(doc),
     )
 
     job = QgenJob(
@@ -179,7 +181,7 @@ def enqueue_generate_from_pages(
         goal_text=_active_goal_text(db, user_id),
         tag_hint=tag_hint,
         tcn_domain=_document_tcn_domain(doc),
-        questions_per_page=max(1, min(questions_per_page, 3)),
+        questions_per_page=persist_questions_per_page(questions_per_page),
     )
     db.add(job)
     db.flush()
@@ -310,10 +312,14 @@ def complete_page(
         raise HTTPException(status_code=404, detail="文档不存在")
 
     normalized: list[dict] = []
+    domain = getattr(doc, "tcn_domain", None)
     for raw in questions:
         item = normalize_question(raw) if isinstance(raw, dict) else None
         if item:
             normalized.append(item)
+    from app.qgen.tcn_tags import keep_questions_with_legal_tags
+
+    normalized = keep_questions_with_legal_tags(normalized, domain)
     if not normalized:
         return fail_page(db, job_id, page_number, "无有效结构化题目")
 

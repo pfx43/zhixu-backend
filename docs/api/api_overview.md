@@ -1581,7 +1581,7 @@ POST /api/v1/questions/generate-from-pages
 |------|------|:---:|------|
 | `document_id` | string | ✓ | 文档 ID |
 | `page_numbers` | int[] | ✓ | 页码列表；单次最多 `max_pages_per_gen`（默认 10）页，超出由服务层截断 |
-| `questions_per_page` | int | | 每页出题数，默认 1 |
+| `questions_per_page` | int | | 每页出题数。**省略**则 Agent 按内容自定 1～3 道；传入 1–3 则固定道数 |
 
 **成功响应** (200)：
 

@@ -262,7 +262,9 @@ def test_tools_do_not_expose_submit_question():
 
 def test_ensure_today_tasks_writes_daily_tasks(task_tools_env):
     """B 有书没题 → ensure 布置按页出题任务；任务落在 daily_tasks（与 tasks/today 同一张表）。"""
-    resp = json.loads(_tools_b().ensure_today_tasks())
+    import asyncio
+
+    resp = json.loads(asyncio.run(_tools_b().ensure_today_tasks()))
     assert resp["status"] == "ok"
     assert len(resp["tasks"]) >= 1
     gen_tasks = [t for t in resp["tasks"] if t["task_type"] == "generate_questions"]
@@ -276,13 +278,15 @@ def test_ensure_today_tasks_writes_daily_tasks(task_tools_env):
         assert {t.id for t in db_tasks} == {t["id"] for t in resp["tasks"]}
 
     # 再 ensure 不重复派
-    resp2 = json.loads(_tools_b().ensure_today_tasks())
+    resp2 = json.loads(asyncio.run(_tools_b().ensure_today_tasks()))
     assert [t["id"] for t in resp2["tasks"]] == [t["id"] for t in resp["tasks"]]
 
 
 def test_ensure_today_tasks_generates_practice_when_questions_exist(task_tools_env):
     """A 有书有题 → 派刷题任务。"""
-    resp = json.loads(_tools_a().ensure_today_tasks())
+    import asyncio
+
+    resp = json.loads(asyncio.run(_tools_a().ensure_today_tasks()))
     practice_tasks = [t for t in resp["tasks"] if t["task_type"] == "practice"]
     assert practice_tasks
 

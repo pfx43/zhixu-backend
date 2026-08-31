@@ -22,7 +22,11 @@ from app.crud import toc as toc_crud
 from app.models import Document, GlobalQuestion, Goal, QuestionProvenance, QuizAnswer
 from app.schemas.progress import (
     ChapterProgressOut,
+    CurrentChapterOut,
     DocumentLearningPathOut,
+    DocumentNextOut,
+    DomainLearningPathOut,
+    DomainMaterialOut,
     HeatmapDayOut,
     LearningPathOut,
     ProgressHeatmapOut,
@@ -31,6 +35,7 @@ from app.schemas.progress import (
     TagProgressOut,
     TimelineItemOut,
 )
+from app.services.tcn.domains import DEFAULT_TCN_DOMAINS, label_for_domain
 
 
 def _accuracy(correct: int, wrong: int) -> Optional[int]:
@@ -194,6 +199,64 @@ def _provenance_page_map(
     return {qid: page for qid, page in rows}
 
 
+def _pick_current_chapter(
+    chapters: List[ChapterProgressOut],
+) -> Optional[CurrentChapterOut]:
+    if not chapters:
+        return None
+    practiced = [c for c in chapters if c.answered_count > 0]
+    pick = (
+        practiced[-1]
+        if practiced
+        else next((c for c in chapters if c.question_count > 0), chapters[0])
+    )
+    return CurrentChapterOut(
+        order_index=pick.order_index,
+        title=pick.title,
+        page_start=pick.page_start,
+        page_end=pick.page_end,
+    )
+
+
+def _pick_document_next(
+    chapters: List[ChapterProgressOut],
+) -> Optional[DocumentNextOut]:
+    """路径页下一步：有题去刷、没题去出。不对前端回记分。"""
+    if not chapters:
+        return None
+
+    def _as_next(chapter: ChapterProgressOut, reason: str, action: str) -> DocumentNextOut:
+        return DocumentNextOut(
+            kind="chapter",
+            title=chapter.title,
+            reason=reason,
+            action=action,
+            order_index=chapter.order_index,
+            page_start=chapter.page_start,
+            page_end=chapter.page_end,
+        )
+
+    empty = next((c for c in chapters if c.question_count == 0), None)
+    if empty:
+        return _as_next(empty, "这一章还没有题", "generate")
+    weak = [
+        c
+        for c in chapters
+        if c.answered_count > 0
+        and c.accuracy_rate is not None
+        and c.accuracy_rate < 70
+    ]
+    if weak:
+        pick = min(weak, key=lambda c: (c.accuracy_rate or 0, c.order_index))
+        return _as_next(pick, "这一章还需要巩固", "quiz")
+    unfinished = next(
+        (c for c in chapters if c.answered_count < c.question_count), None
+    )
+    if unfinished:
+        return _as_next(unfinished, "这一章还有没做过的题", "quiz")
+    return _as_next(chapters[-1], "按目录继续", "quiz")
+
+
 def get_learning_path(
     db: Session, user_id: int, goal_id: Optional[int] = None
 ) -> LearningPathOut:
@@ -260,11 +323,16 @@ def get_learning_path(
             )
 
         uc = _counts_from_stats(uncategorized, stats_map)
+        domain_id = getattr(doc, "tcn_domain", None)
         document_paths.append(
             DocumentLearningPathOut(
                 document_id=doc.id,
                 document_name=doc.display_name,
                 has_toc=len(toc) > 0,
+                tcn_domain=domain_id,
+                tcn_domain_label=label_for_domain(db, domain_id) if domain_id else None,
+                current_chapter=_pick_current_chapter(chapters),
+                next=_pick_document_next(chapters),
                 chapters=chapters,
                 uncategorized_question_count=len(uncategorized),
                 uncategorized_answered_count=uc["answered"],
@@ -307,4 +375,57 @@ def get_learning_path(
         )
     tag_paths.sort(key=lambda x: (-x.wrong_count, -(x.accuracy_rate or 0), x.tag))
 
-    return LearningPathOut(documents=document_paths, tags=tag_paths)
+    domains, untracked = _group_path_by_domain(db, document_paths)
+    return LearningPathOut(
+        documents=document_paths,
+        domains=domains,
+        untracked=untracked,
+        tags=tag_paths,
+    )
+
+
+def _material_from_document(item: DocumentLearningPathOut) -> DomainMaterialOut:
+    question_count = (
+        sum(chapter.question_count for chapter in item.chapters)
+        + item.uncategorized_question_count
+    )
+    answered_count = (
+        sum(chapter.answered_count for chapter in item.chapters)
+        + item.uncategorized_answered_count
+    )
+    return DomainMaterialOut(
+        document_id=item.document_id,
+        document_name=item.document_name,
+        has_toc=item.has_toc,
+        question_count=question_count,
+        answered_count=answered_count,
+    )
+
+
+def _group_path_by_domain(
+    db, document_paths: List[DocumentLearningPathOut]
+) -> tuple[List[DomainLearningPathOut], List[DomainMaterialOut]]:
+    by_domain: Dict[str, List[DocumentLearningPathOut]] = defaultdict(list)
+    untracked: List[DomainMaterialOut] = []
+    for item in document_paths:
+        if item.tcn_domain:
+            by_domain[item.tcn_domain].append(item)
+        else:
+            untracked.append(_material_from_document(item))
+
+    ordered_ids = [row["id"] for row in DEFAULT_TCN_DOMAINS]
+    domains: List[DomainLearningPathOut] = []
+    seen = set()
+    for domain_id in ordered_ids + [key for key in by_domain if key not in ordered_ids]:
+        if domain_id in seen or domain_id not in by_domain:
+            continue
+        seen.add(domain_id)
+        docs = by_domain[domain_id]
+        domains.append(
+            DomainLearningPathOut(
+                domain=domain_id,
+                domain_label=label_for_domain(db, domain_id) or domain_id,
+                documents=[_material_from_document(item) for item in docs],
+            )
+        )
+    return domains, untracked

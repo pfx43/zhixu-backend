@@ -34,7 +34,18 @@ from app.schemas.kb import (
     CollectionUpdate,
     DocumentListOut,
     DocumentOut,
+    DocumentTcnDomainOut,
+    DocumentTcnGraphOut,
+    DomainTcnGraphOut,
+    TcnGraphEdgeOut,
+    TcnGraphNextOut,
+    TcnGraphNodeOut,
     UploadResponse,
+)
+from app.services.tcn.domains import (
+    label_for_domain,
+    list_domain_ids,
+    parse_user_domain,
 )
 from app.services.knowledge.dify_kb import DifyKB
 from app.services.knowledge.file_parser import (
@@ -1086,6 +1097,117 @@ def document_status_payload(doc: Document, batch_id: str) -> dict:
     }
 
 
+def _document_domain_fields(db: Session, document: Optional[Document]) -> dict:
+    domain_id = getattr(document, "tcn_domain", None) if document else None
+    return {
+        "tcn_domain": domain_id,
+        "tcn_domain_label": label_for_domain(db, domain_id) if domain_id else None,
+    }
+
+
+def update_document_tcn_domain(
+    db: Session, user_id: int, doc_id: str, raw: Optional[str]
+) -> DocumentTcnDomainOut:
+    doc = kb_crud.get_document_by_id_or_dify(db, user_id, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    allowed = list_domain_ids(db)
+    try:
+        doc.tcn_domain = parse_user_domain(raw, allowed)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"tcn_domain 必须是封闭名单之一或 None：{allowed}",
+        )
+    db.commit()
+    db.refresh(doc)
+    return DocumentTcnDomainOut(
+        document_id=doc.id,
+        **_document_domain_fields(db, doc),
+    )
+
+
+async def _paint_domain_graph(
+    db: Session,
+    domain: str,
+    user_hash: Optional[str] = None,
+) -> DomainTcnGraphOut:
+    from app.services.tcn.graph_export import (
+        frontier_nodes,
+        load_domain_graph,
+        mastery_from_report,
+    )
+    from app.services.tcn.tcn_client import tcn_client
+
+    graph = load_domain_graph(domain)
+    nodes_data = {}
+    if user_hash:
+        try:
+            report = await tcn_client.get_report(user_hash)
+            nodes_data = report.get("nodes") or {}
+        except Exception:
+            logger.warning("读取 TCN report 失败，图谱不涂掌握度", exc_info=True)
+    nodes_out = [
+        TcnGraphNodeOut(
+            id=n["id"],
+            name=n["name"],
+            mastery=mastery_from_report(nodes_data, n["id"]),
+        )
+        for n in graph["nodes"]
+    ]
+    mastery_map = {n.id: n.mastery for n in nodes_out}
+    next_raw = frontier_nodes(graph["nodes"], graph["edges"], mastery_map)
+    return DomainTcnGraphOut(
+        domain=domain,
+        domain_label=label_for_domain(db, domain),
+        nodes=nodes_out,
+        edges=[TcnGraphEdgeOut(**e) for e in graph["edges"]],
+        next_nodes=[TcnGraphNextOut(**item) for item in next_raw],
+    )
+
+
+async def get_domain_tcn_graph(
+    db: Session,
+    domain_id: str,
+    user_hash: Optional[str] = None,
+) -> DomainTcnGraphOut:
+    allowed = list_domain_ids(db)
+    if domain_id not in allowed:
+        raise HTTPException(status_code=404, detail="学科不存在")
+    return await _paint_domain_graph(db, domain_id, user_hash)
+
+
+async def get_document_tcn_graph(
+    db: Session,
+    user_id: int,
+    doc_id: str,
+    user_hash: Optional[str] = None,
+) -> DocumentTcnGraphOut:
+    doc = kb_crud.get_document_by_id_or_dify(db, user_id, doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    fields = _document_domain_fields(db, doc)
+    domain = fields["tcn_domain"]
+    if not domain:
+        return DocumentTcnGraphOut(
+            document_id=doc.id,
+            domain=None,
+            domain_label=None,
+            nodes=[],
+            edges=[],
+            next_nodes=[],
+        )
+    painted = await _paint_domain_graph(db, domain, user_hash)
+    return DocumentTcnGraphOut(
+        document_id=doc.id,
+        domain=painted.domain,
+        domain_label=painted.domain_label,
+        nodes=painted.nodes,
+        edges=painted.edges,
+        next_nodes=painted.next_nodes,
+    )
+
+
 def list_documents(
     db: Session,
     user_id: int,
@@ -1177,6 +1299,7 @@ def list_documents(
                 thumbnail_url=thumbnail_url,
                 created_at=doc.created_at,
                 updated_at=doc.updated_at,
+                **_document_domain_fields(db, doc),
                 **_ocr_fields_for_doc(doc),
             )
         )

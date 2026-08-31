@@ -135,3 +135,11 @@ def init_db():
     import app.models  # noqa: F401 — 注册全部 model 到 Base.metadata
 
     Base.metadata.create_all(bind=engine)
+    from app.services.tcn.domains import ensure_tcn_domains
+
+    db = SessionLocal()
+    try:
+        ensure_tcn_domains(db)
+        db.commit()
+    finally:
+        db.close()

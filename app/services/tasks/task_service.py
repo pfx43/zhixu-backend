@@ -118,7 +118,29 @@ def _pages_from_segments(db: Session, document_id: str) -> List[int]:
     return pages_from_segments(db, document_id)
 
 
+def _fallback_or_existing(
+    db: Session, user_id: int, today_rows: List[DailyTask], is_refill: bool
+) -> List[DailyTask]:
+    if is_refill:
+        return today_rows
+    created = fallback_assign(db, user_id)
+    if created:
+        db.commit()
+    return task_crud.list_tasks(db, user_id, today_local()) or created
+
+
 def ensure_today_tasks(db: Session, user_id: int) -> List[DailyTask]:
+    """同步入口：有未完成直接返回，否则规则兜底。不跑 LLM。"""
+    task_date = today_local()
+    pending = task_crud.list_pending_tasks(db, user_id, task_date)
+    if pending:
+        return pending
+    today_rows = task_crud.list_tasks(db, user_id, task_date)
+    return _fallback_or_existing(db, user_id, today_rows, is_refill=bool(today_rows))
+
+
+async def ensure_today_tasks_async(db: Session, user_id: int) -> List[DailyTask]:
+    """首页 / 对话工具入口：在当前事件循环上跑任务 Agent，不开新 loop。"""
     task_date = today_local()
     pending = task_crud.list_pending_tasks(db, user_id, task_date)
     if pending:
@@ -127,11 +149,11 @@ def ensure_today_tasks(db: Session, user_id: int) -> List[DailyTask]:
     today_rows = task_crud.list_tasks(db, user_id, task_date)
     is_refill = bool(today_rows)
 
-    from app.services.agents.task_agent import run_task_agent_sync, task_agent_enabled
+    from app.services.agents.task_agent import run_task_agent, task_agent_enabled
 
     if task_agent_enabled():
         try:
-            run_task_agent_sync(db, user_id, is_refill=is_refill)
+            await run_task_agent(db, user_id, is_refill=is_refill)
             db.commit()
             return task_crud.list_tasks(db, user_id, task_date)
         except Exception:
@@ -139,13 +161,7 @@ def ensure_today_tasks(db: Session, user_id: int) -> List[DailyTask]:
             if is_refill:
                 return task_crud.list_tasks(db, user_id, task_date)
 
-    if is_refill:
-        return today_rows
-
-    created = fallback_assign(db, user_id)
-    if created:
-        db.commit()
-    return task_crud.list_tasks(db, user_id, task_date) or created
+    return _fallback_or_existing(db, user_id, today_rows, is_refill)
 
 
 def _count_user_questions_for_document(

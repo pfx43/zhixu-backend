@@ -22,8 +22,8 @@ from pgutil import empty_test_engine, test_database_url as postgres_url
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 # Alembic HEAD revision：每次新增迁移都要同步更新这个版本号。
-# 链：… → cover_and_note_anchor（#40/#29）→ goal_evidence（#38）。
-ALEMBIC_HEAD_REVISION = "20260827_goal_evidence"
+# 链：… → goal_evidence → qgen_jobs → user_storage → tcn_domains。
+ALEMBIC_HEAD_REVISION = "20260831_tcn_domains"
 
 
 def _create_all_except(engine, excluded: set[str]) -> None:
@@ -171,6 +171,27 @@ def test_alembic_upgrade_adds_non_null_initial_revision_to_legacy_notes():
     try:
         legacy_metadata = MetaData()
         users = Table("users", legacy_metadata, Column("id", Integer, primary_key=True))
+        Table(
+            "global_documents",
+            legacy_metadata,
+            Column("id", String(36), primary_key=True),
+            Column("file_size", Integer),
+        )
+        Table(
+            "documents",
+            legacy_metadata,
+            Column("id", String(36), primary_key=True),
+            Column("user_id", Integer),
+            Column("global_document_id", String(36)),
+        )
+        Table(
+            "note_attachments",
+            legacy_metadata,
+            Column("id", String(36), primary_key=True),
+            Column("user_id", Integer),
+            Column("file_size", Integer),
+            Column("storage_path", String(512)),
+        )
         notes = Table(
             "user_notes",
             legacy_metadata,

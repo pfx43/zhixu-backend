@@ -23,6 +23,8 @@ from app.core.database import SessionLocal, short_session
 
 from app.crud import kb as kb_crud
 from app.crud import question as question_crud
+from app.qgen.tcn_tags import build_tag_hint, tags_allowed_for_domain
+from app.services.quiz.qgen_count import count_instruction, questions_per_page_cap
 from app.crud import quiz as quiz_crud
 from app.crud import segment as segment_crud
 from app.crud import tag as tag_crud
@@ -127,10 +129,13 @@ def _existing_tag_names(db: Session, user_id: int, document_id: Optional[str] = 
     return [r.name for r in rows]
 
 
-def _format_tag_hint(tag_names: List[str]) -> str:
-    if not tag_names:
-        return "（暂无已有 tag，请创建简洁、可复用的知识点标签）"
-    return "已有 tag（请优先复用）：" + "、".join(tag_names[:40])
+def _format_tag_hint(tag_names: List[str], tcn_domain: Optional[str] = None) -> str:
+    existing = (
+        "（暂无已有 tag，请创建简洁、可复用的知识点标签）"
+        if not tag_names
+        else "已有 tag（请优先复用）：" + "、".join(tag_names[:40])
+    )
+    return build_tag_hint(existing, tcn_domain)
 
 
 def _template_questions_for_page(page: dict) -> List[dict]:
@@ -155,14 +160,16 @@ def _template_questions_for_page(page: dict) -> List[dict]:
 async def _llm_generate_for_page(
     page: dict,
     *,
-    count: int = 1,
+    count: Optional[int] = None,
     tag_hint: str = "",
     token: Optional[str] = None,
     near_pages=None,
     allowed_page_numbers=None,
+    tcn_domain: Optional[str] = None,
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_page
 
+    cap = questions_per_page_cap(count)
     result = await agent_generate_for_page(
         page,
         count=count,
@@ -170,19 +177,22 @@ async def _llm_generate_for_page(
         token=token,
         near_pages=near_pages,
         allowed_page_numbers=allowed_page_numbers,
+        tcn_domain=tcn_domain,
     )
     if result:
-        return result[:count]
+        return result[:cap]
 
     llm = _get_llm()
     if not llm:
+        if tcn_domain:
+            return []
         return _template_questions_for_page(page)
 
     title = page.get("title") or f"第 {page.get('page_number', '?')} 页"
     user_input = (
         f"页面：{title}\n\n页面内容：\n{page['content'][:3000]}\n\n"
         f"{tag_hint}\n\n"
-        f"请生成 {count} 道练习题，覆盖本页核心知识点。"
+        f"{count_instruction(count)}"
     )
     try:
         content, _ = await _llm_complete(
@@ -194,7 +204,7 @@ async def _llm_generate_for_page(
         )
         items = _extract_json_array(content) or []
         normalized = [_normalize_question(item) for item in items]
-        result = [q for q in normalized if q][:count]
+        result = [q for q in normalized if q][:cap]
         if result:
             return result
     except Exception:
@@ -203,6 +213,8 @@ async def _llm_generate_for_page(
             page.get("page_number"),
             exc_info=True,
         )
+    if tcn_domain:
+        return []
     return _template_questions_for_page(page)
 
 
@@ -253,18 +265,20 @@ async def _call_provider(provider, *args):
 async def batch_generate_questions(
     pages: List[dict],
     *,
-    questions_per_page: int = 1,
+    questions_per_page: Optional[int] = None,
     provider: Optional[PageProvider] = None,
 ) -> List[tuple[dict, dict]]:
     """
     批量按页出题 — 可供 Tina Agent 工具注册。
     返回 [(page_dict, question_dict), ...]
+    questions_per_page 省略则 Agent 自定，最多 3 道。
     """
+    cap = questions_per_page_cap(questions_per_page)
     gen = provider or (lambda p: _llm_generate_for_page(p, count=questions_per_page))
     results: List[tuple[dict, dict]] = []
     for page in pages:
         raw = await _call_provider(gen, page)
-        for qdata in raw[:questions_per_page]:
+        for qdata in raw[:cap]:
             normalized = _normalize_question(qdata) if isinstance(qdata, dict) else None
             if normalized:
                 results.append((page, normalized))
@@ -291,16 +305,24 @@ def _template_questions(segment: DocumentSegment) -> List[dict]:
 
 
 async def _llm_generate(
-    segment: DocumentSegment, *, tag_hint: str = "", token: Optional[str] = None
+    segment: DocumentSegment,
+    *,
+    tag_hint: str = "",
+    token: Optional[str] = None,
+    tcn_domain: Optional[str] = None,
 ) -> List[dict]:
     from app.services.agents.question_gen_agent import agent_generate_for_segment
 
-    result = await agent_generate_for_segment(segment, tag_hint=tag_hint, token=token)
+    result = await agent_generate_for_segment(
+        segment, tag_hint=tag_hint, token=token, tcn_domain=tcn_domain
+    )
     if result:
         return result[:QUESTIONS_PER_SEGMENT]
 
     llm = _get_llm()
     if not llm:
+        if tcn_domain:
+            return []
         return _template_questions(segment)
 
     title = segment.title or "（无标题）"
@@ -326,6 +348,8 @@ async def _llm_generate(
         logger.warning(
             "LLM 出题失败，回退模板: segment_id=%s", segment.id, exc_info=True
         )
+    if tcn_domain:
+        return []
     return _template_questions(segment)
 
 
@@ -394,7 +418,17 @@ def _persist_question_core(
     excerpt: str,
     page_number: Optional[int] = None,
 ) -> Tuple[bool, bool]:
-    """返回 (created, reused)。"""
+    """返回 (created, reused)。非法 TCN tag 时 (False, False) 且不入库。"""
+    domain = getattr(document, "tcn_domain", None)
+    if not tags_allowed_for_domain(qdata.get("tags") or [], domain):
+        logger.warning(
+            "拒绝入库非法 TCN tag: document=%s domain=%s tags=%s",
+            document.id,
+            domain,
+            qdata.get("tags"),
+        )
+        return False, False
+
     tag_crud.ensure_tags(
         db,
         user_id=user_id,
@@ -600,7 +634,8 @@ async def generate_questions(
     if provider is None:
         _require_question_generation_ready()
     tag_hint_global = _format_tag_hint(
-        _existing_tag_names(db, user_id, document_id=target_doc_id)
+        _existing_tag_names(db, user_id, document_id=target_doc_id),
+        getattr(document, "tcn_domain", None),
     )
     document.question_gen_status = "processing"
     db.flush()
@@ -616,7 +651,10 @@ async def generate_questions(
                     raw_questions = await _call_provider(gen_provider, segment)
                 else:
                     raw_questions = await _llm_generate(
-                        segment, tag_hint=tag_hint_global, token=token
+                        segment,
+                        tag_hint=tag_hint_global,
+                        token=token,
+                        tcn_domain=getattr(document, "tcn_domain", None),
                     )
             except Exception:
                 logger.warning(
@@ -641,7 +679,8 @@ async def generate_questions(
                     created_count += 1
                 if reused:
                     reused_count += 1
-                total_questions += 1
+                if created or reused:
+                    total_questions += 1
 
         if total_questions > 0:
             document.question_gen_status = "completed"
@@ -768,7 +807,7 @@ async def schedule_generate_from_pages(
     user_id: int,
     document_id: str,
     page_numbers: List[int],
-    questions_per_page: int = 1,
+    questions_per_page: Optional[int] = None,
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
@@ -1022,11 +1061,12 @@ async def generate_from_pages(
     user_id: int,
     document_id: str,
     page_numbers: List[int],
-    questions_per_page: int = 1,
+    questions_per_page: Optional[int] = None,
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> PageQuestionResponse:
-    """模式 B：对选中页批量 AI 出题。页数不截断；并发由 QUESTION_GEN_MAX_AGENTS 限。"""
+    """模式 B：对选中页批量 AI 出题。页数不截断；并发由 QUESTION_GEN_MAX_AGENTS 限。
+    questions_per_page 省略则 Agent 自定 1～3 道。"""
     doc = kb_crud.get_document_by_id_or_dify(db, user_id, document_id)
     doc = _validate_document_for_page_ops(doc)
 
@@ -1036,7 +1076,10 @@ async def generate_from_pages(
     created_count = 0
     reused_count = 0
     total_questions = 0
-    tag_hint = _format_tag_hint(_existing_tag_names(db, user_id, document_id=doc.id))
+    tag_hint = _format_tag_hint(
+        _existing_tag_names(db, user_id, document_id=doc.id),
+        getattr(doc, "tcn_domain", None),
+    )
 
     doc.question_gen_status = "processing"
     db.flush()
@@ -1059,6 +1102,7 @@ async def generate_from_pages(
                 token=token,
                 near_pages=near_pages,
                 allowed_page_numbers=allowed_range,
+                tcn_domain=getattr(doc, "tcn_domain", None),
             )
             pairs = await batch_generate_questions(
                 pages,
@@ -1080,7 +1124,8 @@ async def generate_from_pages(
                 created_count += 1
             if reused:
                 reused_count += 1
-            total_questions += 1
+            if created or reused:
+                total_questions += 1
 
         doc.question_gen_status = "completed" if total_questions > 0 else "failed"
         db.flush()
@@ -1115,7 +1160,11 @@ async def extract_from_pages(
     if provider is None:
         _require_question_generation_ready()
     extract_fn = provider or (lambda p: _llm_extract_for_page(
-        p, tag_hint=_format_tag_hint(_existing_tag_names(db, user_id, document_id=doc.id))
+        p,
+        tag_hint=_format_tag_hint(
+            _existing_tag_names(db, user_id, document_id=doc.id),
+            getattr(doc, "tcn_domain", None),
+        ),
     ))
     created_count = 0
     reused_count = 0
@@ -1147,7 +1196,8 @@ async def extract_from_pages(
                     created_count += 1
                 if reused:
                     reused_count += 1
-                total_questions += 1
+                if created or reused:
+                    total_questions += 1
 
         doc.question_gen_status = "completed" if total_questions > 0 else "failed"
         db.flush()
@@ -1174,7 +1224,7 @@ async def _generate_one_page(
     user_id: int,
     document_id: str,
     page_number: int,
-    questions_per_page: int,
+    questions_per_page: Optional[int] = None,
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ) -> dict:
@@ -1215,7 +1265,7 @@ async def stream_generate_from_pages(
     user_id: int,
     document_id: str,
     page_numbers: List[int],
-    questions_per_page: int = 1,
+    questions_per_page: Optional[int] = None,
     provider: Optional[PageProvider] = None,
     token: Optional[str] = None,
 ):

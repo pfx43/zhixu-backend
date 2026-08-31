@@ -5,11 +5,8 @@ pytest 期间不跑模型，避免单测打到真实 LLM。
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
 
 from tina import Agent
 
@@ -182,16 +179,3 @@ async def run_task_agent(db, user_id: int, *, is_refill: bool = False) -> int:
         logger.warning("任务 Agent 推理失败 user=%s", user_id, exc_info=True)
         raise
     return len(tools.assigned)
-
-
-def run_task_agent_sync(db, user_id: int, *, is_refill: bool = False) -> int:
-    def _inner() -> int:
-        return asyncio.run(run_task_agent(db, user_id, is_refill=is_refill))
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return _inner()
-
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        return pool.submit(_inner).result(timeout=90)

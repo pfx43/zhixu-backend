@@ -33,6 +33,14 @@ configure_tina_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    workers = int(os.getenv("WEB_CONCURRENCY", "1"))
+    cache_backend = os.getenv("CACHE_BACKEND", "memory")
+    if workers > 1 and cache_backend != "redis":
+        raise RuntimeError(
+            "WEB_CONCURRENCY>1 时必须 CACHE_BACKEND=redis，"
+            "否则验证码、限流、打断会在进程间分裂。"
+        )
+
     # 1. 初始化数据库
     try:
         from app.core.database import init_db

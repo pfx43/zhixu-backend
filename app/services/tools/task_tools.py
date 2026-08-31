@@ -314,6 +314,9 @@ class TaskPlannerTools:
             pages_with_questions = sorted(
                 p for p, c in counts.items() if c > 0
             )
+            from app.services.tcn.domains import label_for_domain
+
+            domain_id = getattr(doc, "tcn_domain", None)
             return json.dumps(
                 {
                     "document_id": doc.id,
@@ -322,6 +325,10 @@ class TaskPlannerTools:
                     "segment_pages": segment_pages,
                     "valid_pages": valid_pages,
                     "pages_with_questions": pages_with_questions,
+                    "tcn_domain": domain_id,
+                    "tcn_domain_label": (
+                        label_for_domain(db, domain_id) if domain_id else None
+                    ),
                 },
                 ensure_ascii=False,
             )
@@ -388,7 +395,7 @@ class TaskPlannerTools:
                         user_id=self._user_id,
                         document_id=doc_id,
                         page_numbers=pages,
-                        questions_per_page=1,
+                        questions_per_page=None,
                     )
                     db.commit()
                 return json.dumps(
@@ -409,7 +416,7 @@ class TaskPlannerTools:
                         user_id=self._user_id,
                         document_id=doc_id,
                         page_numbers=pages,
-                        questions_per_page=1,
+                        questions_per_page=None,
                         token=self._token,
                     )
                     db.commit()
@@ -429,7 +436,7 @@ class TaskPlannerTools:
                     user_id=self._user_id,
                     document_id=doc_id,
                     page_numbers=pages,
-                    questions_per_page=1,
+                    questions_per_page=None,
                     token=self._token,
                 )
                 db.commit()
@@ -530,7 +537,7 @@ class TaskPlannerTools:
 
     # ── 写入今日任务（Task，kind/完成规则程序定） ──────────────
 
-    def ensure_today_tasks(self) -> str:
+    async def ensure_today_tasks(self) -> str:
         """
         按当前缺口确保今天有任务（没书→上传；有书没题→按页出题；有题→刷题）。
         当天已有未完成任务时不重复派。kind / 完成规则由程序定。
@@ -539,7 +546,7 @@ class TaskPlannerTools:
             JSON：{status, tasks: [{id, title, task_type, reason, payload, status}]}
         """
         with short_session() as db:
-            tasks = task_service.ensure_today_tasks(db, self._user_id)
+            tasks = await task_service.ensure_today_tasks_async(db, self._user_id)
             out = [
                 {
                     "id": t.id,

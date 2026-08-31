@@ -159,7 +159,7 @@ def resume_targeted_training(
     return _plan_to_start_out(db, user_id, plan, session_out)
 
 
-def start_targeted_training(
+async def start_targeted_training(
     db: Session,
     user_id: int,
     *,
@@ -194,7 +194,7 @@ def start_targeted_training(
     plan: TrainingPlanResult
 
     if coach.is_ready:
-        plan = coach.plan_training(
+        plan = await coach.plan_training(
             report_content=report_content,
             report_title=report_title,
             token=token,
@@ -266,7 +266,7 @@ def _resolve_coach_agent(
     return coach
 
 
-def stream_training_tutor(
+async def stream_training_tutor(
     db: Session,
     user_id: int,
     agent_session_id: str,
@@ -275,5 +275,5 @@ def stream_training_tutor(
 ):
     """针对训练页 AI 辅导 SSE 流。"""
     coach = _resolve_coach_agent(db, user_id, agent_session_id)
-    for chunk in coach.tutor_stream(message, token=token):
+    async for chunk in coach.tutor_stream(message, token=token):
         yield chunk

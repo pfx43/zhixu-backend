@@ -367,7 +367,7 @@ class QuestionGenerationFailureTests(unittest.TestCase):
                 )
 
                 async def _fake_agent_generate(
-                    _segment, *, tag_hint="", token=None, _reason=reason
+                    _segment, *, tag_hint="", token=None, tcn_domain=None, _reason=reason
                 ):
                     return [{"_question_generation_failure": _reason}]
 

@@ -1,5 +1,6 @@
 fastapi==0.109.0
 uvicorn==0.27.0
+gunicorn==23.0.0
 sqlalchemy==2.0.25
 alembic==1.13.1
 asyncpg>=0.29.0
@@ -24,7 +25,6 @@ numpy>=1.21.0
 sentence-transformers>=2.2.0
 
 # OCR_BACKEND=local / auto 时才需要（mineru / baidu 不装）
-paddleocr>=2.7.0
 # Windows CPU 需单独安装 paddlepaddle，例如：
 #   pip install paddlepaddle -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 # 或见 https://www.paddlepaddle.org.cn/install/quick

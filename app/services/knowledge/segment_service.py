@@ -138,6 +138,61 @@ def _resolve_storage_path(document: Document) -> Optional[str]:
     return None
 
 
+def _assign_tcn_domain(
+    db: Session, document: Document, text: str, toc_entries: List[dict]
+) -> None:
+    """跟抽目录同一趟判学科。已有值（含人改过的）不覆盖；拿不准保持 None。"""
+    if getattr(document, "tcn_domain", None):
+        return
+    from app.services.tcn.domain_classifier import classify_tcn_domain_sync
+    from app.services.tcn.domains import list_domain_ids
+
+    titles = [e.get("title") or "" for e in toc_entries[:40]]
+    try:
+        domain = classify_tcn_domain_sync(
+            title=document.display_name or "",
+            toc_titles=titles,
+            excerpt=(text or "")[:1200],
+            allowed=list_domain_ids(db),
+        )
+    except Exception:
+        logger.warning(
+            "TCN 学科分类失败，保持 tcn_domain=None document=%s",
+            document.id,
+            exc_info=True,
+        )
+        return
+    if domain:
+        document.tcn_domain = domain
+
+
+async def _assign_tcn_domain_async(
+    document: Document, text: str, toc_entries: List[dict]
+) -> None:
+    if getattr(document, "tcn_domain", None):
+        return
+    from app.services.tcn.domain_classifier import classify_tcn_domain
+    from app.services.tcn.domains import list_domain_ids
+
+    titles = [e.get("title") or "" for e in toc_entries[:40]]
+    try:
+        domain = await classify_tcn_domain(
+            title=document.display_name or "",
+            toc_titles=titles,
+            excerpt=(text or "")[:1200],
+            allowed=list_domain_ids(None),
+        )
+    except Exception:
+        logger.warning(
+            "TCN 学科分类失败，保持 tcn_domain=None document=%s",
+            document.id,
+            exc_info=True,
+        )
+        return
+    if domain:
+        document.tcn_domain = domain
+
+
 def _apply_structure(
     db: Session, document: Document, text: str, segments: List[dict]
 ) -> None:
@@ -160,6 +215,7 @@ def _apply_structure(
     if not toc_entries:
         toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
     toc_crud.replace_toc_for_document(db, document.id, toc_entries)
+    _assign_tcn_domain(db, document, text, toc_entries)
 
 
 async def _apply_structure_async(
@@ -181,6 +237,7 @@ async def _apply_structure_async(
     if not toc_entries:
         toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
     await toc_crud.areplace_toc_for_document(db, document.id, toc_entries)
+    await _assign_tcn_domain_async(document, text, toc_entries)
 
 
 def recompute_document_structure(document_id: str, db: Session) -> int:
@@ -223,6 +280,7 @@ def recompute_document_structure(document_id: str, db: Session) -> int:
     if not toc_entries:
         toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
     toc_crud.replace_toc_for_document(db, document_id, toc_entries)
+    _assign_tcn_domain(db, doc, text, toc_entries)
     db.flush()
     return updated
 

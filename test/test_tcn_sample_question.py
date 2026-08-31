@@ -16,7 +16,7 @@ import pytest
 
 _REPO = Path(__file__).resolve().parent.parent
 _QUESTION_PATH = Path(__file__).resolve().parent / "fixtures" / "tcn_squeeze_theorem_question.json"
-_TAGS_PATH = _REPO / "docs" / "api" / "tcn-knowledge-tags.json"
+_TAGS_PATH = _REPO / "docs" / "api" / "TCN" / "higher_math.json"
 _DOCUMENTED_TCN = "http://47.82.118.95:8001"
 
 

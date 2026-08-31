@@ -18,7 +18,16 @@ from app.core.config import (
     is_local_rag,
     is_keyword_rag,
 )
-from app.schemas.kb import CollectionCreate, CollectionUpdate
+from app.schemas.kb import (
+    CollectionCreate,
+    CollectionUpdate,
+    DocumentTcnDomainOut,
+    DocumentTcnDomainUpdate,
+    DocumentTcnGraphOut,
+    DomainTcnGraphOut,
+    TcnDomainListOut,
+    TcnDomainOut,
+)
 from app.services.knowledge import kb_service
 from app.services.knowledge import page_service
 from app.services.knowledge import segment_service
@@ -398,10 +407,63 @@ def list_document_toc(
     if not doc:
         raise HTTPException(status_code=404, detail="文档不存在")
     rows = toc_crud.list_toc_for_document(db, doc.id)
+    domain_fields = kb_service._document_domain_fields(db, doc)
     return TocListOut(
         document_id=doc.id,
         toc=[TocOut.model_validate(r) for r in rows],
         total=len(rows),
+        **domain_fields,
+    )
+
+
+@router.patch(
+    "/documents/{doc_id}/tcn-domain",
+    response_model=DocumentTcnDomainOut,
+)
+def patch_document_tcn_domain(
+    doc_id: str,
+    body: DocumentTcnDomainUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """改书的 TCN 学科。只能是领域表里的 id 或 None；改完只影响新出的题。"""
+    return kb_service.update_document_tcn_domain(
+        db, current_user["user_id"], doc_id, body.tcn_domain
+    )
+
+
+@router.get(
+    "/tcn-domains/{domain_id}/graph",
+    response_model=DomainTcnGraphOut,
+)
+async def get_domain_tcn_graph(
+    domain_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """一科的 TCN 图 + 掌握度 + 前沿。不绑某一本书；路径页按领域拉这一口。"""
+    return await kb_service.get_domain_tcn_graph(
+        db,
+        domain_id,
+        user_hash=current_user.get("user_hash"),
+    )
+
+
+@router.get(
+    "/documents/{doc_id}/tcn-graph",
+    response_model=DocumentTcnGraphOut,
+)
+async def get_document_tcn_graph(
+    doc_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """这本书所属领域的 TCN 图（本地导出内部边）+ 可选掌握度 + 前沿 next_nodes。无学科则空图。"""
+    return await kb_service.get_document_tcn_graph(
+        db,
+        current_user["user_id"],
+        doc_id,
+        user_hash=current_user.get("user_hash"),
     )
 
 
@@ -425,11 +487,27 @@ def list_document_knowledge_tags(
 
 # ─── 配置查询（供前端使用） ───────────────────────────────
 
+@router.get("/tcn-domains", response_model=TcnDomainListOut)
+def list_tcn_domains(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """TCN 封闭学科名单。书的 tcn_domain 只能是这里的 id 或 None。"""
+    from app.services.tcn.domains import list_domains_public
+
+    return TcnDomainListOut(
+        domains=[TcnDomainOut(**item) for item in list_domains_public(db)]
+    )
+
+
 @router.get("/config")
 def get_kb_config(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
     """查询知识库配置（供前端展示提示等）"""
+    from app.services.tcn.domains import list_domains_public
+
     rag_backend = "keyword" if is_keyword_rag() else (
         "local" if is_local_rag() else "dify"
     )
@@ -444,4 +522,5 @@ def get_kb_config(
         # 出题页勾选上限。AI 出题入队不再按此截断；并发看 question_gen_max_agents。
         "max_pages_per_gen": MAX_PAGES_PER_GEN,
         "question_gen_max_agents": QUESTION_GEN_MAX_AGENTS,
+        "tcn_domains": list_domains_public(db),
     }

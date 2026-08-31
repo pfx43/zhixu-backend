@@ -556,6 +556,7 @@ class TestIssue35QuestionSchemasAndGrading:
     def test_sort_order_matters(self, pclient):
         """sort 判分：顺序不同结果不同（同一题判分逻辑直接验证，不经会话完成态干扰）。"""
         from app.services.quiz.quiz_service import _grade_answer
+        import asyncio
 
         client, SessionLocal = pclient
         with SessionLocal() as session:
@@ -578,9 +579,9 @@ class TestIssue35QuestionSchemasAndGrading:
             answer = q_answer
 
         # 顺序敏感：正序 correct，乱序 wrong
-        assert _grade_answer(_Q(), '["s1","s2","s3"]', None) == "correct"
-        assert _grade_answer(_Q(), '["s2","s1","s3"]', None) == "wrong"
-        assert _grade_answer(_Q(), 'not-json', None) == "wrong"
+        assert asyncio.run(_grade_answer(_Q(), '["s1","s2","s3"]', None)) == "correct"
+        assert asyncio.run(_grade_answer(_Q(), '["s2","s1","s3"]', None)) == "wrong"
+        assert asyncio.run(_grade_answer(_Q(), 'not-json', None)) == "wrong"
 
         # 再走一遍 HTTP 链路：单独会话答一次正确的（避免 upsert 撞会话完成态）
         sid = _start_session(client, "pdoc-sort", [qid])

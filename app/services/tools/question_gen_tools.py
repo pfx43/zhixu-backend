@@ -25,11 +25,13 @@ class QuestionGenTools:
         pages: Optional[Dict[int, dict]] = None,
         allowed_page_numbers: Optional[Set[int]] = None,
         max_near_lookups: int = 3,
+        tcn_domain: Optional[str] = None,
     ):
         self.pages: Dict[int, dict] = pages or {}
         self.allowed_page_numbers: Optional[Set[int]] = allowed_page_numbers
         self.max_near_lookups = max(1, max_near_lookups)
         self.near_lookup_count = 0
+        self.tcn_domain = tcn_domain
         self.submitted_questions: List[dict] = []
         self.tools = Tools(name="question_gen")
         self.tools.register_tool(self.submit_question)
@@ -113,7 +115,17 @@ class QuestionGenTools:
                 options.append({"key": key, "text": text.strip()})
 
         tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        from app.qgen.tcn_tags import tags_allowed_for_domain
         from app.services.quiz.question_normalize import normalize_question
+
+        if not tags_allowed_for_domain(tag_list, self.tcn_domain):
+            return json.dumps(
+                {
+                    "status": "invalid",
+                    "reason": "知识点 tag 必须全部来自本题封闭名单，且不能为空",
+                },
+                ensure_ascii=False,
+            )
 
         raw = {
             "stem": stem.strip(),

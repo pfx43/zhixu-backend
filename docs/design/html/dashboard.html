@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今天 - 知序 AI 知识工作台</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'foggy-bg': '#FAF9F8',
+            'sage': '#7B9C9A',
+            'sage-dark': '#6A8987',
+            'sage-soft': '#F3F6F5',
+            'ink': '#2D2A28',
+            'muted': '#8A8580',
+            'faint': '#A39E99',
+            'line': '#EAE8E4',
+            'ok': '#5B8F7A',
+            'warn': '#C4A35A',
+            'bad': '#C17B5A',
+          },
+          boxShadow: {
+            soft: '0 2px 8px rgba(45,42,40,0.05)',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans SC', sans-serif; background: #FAF9F8; color: #2D2A28; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    .nav-idle { color: #8A8580; }
+    .nav-idle:hover { background: #fff; color: #7B9C9A; }
+    .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .bar { height: 4px; background: #EAE8E4; border-radius: 999px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; border-radius: 999px; width: 0; transition: width 1s cubic-bezier(.32,.72,0,1); }
+    .pill { border-radius: 999px; }
+  </style>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body class="h-screen overflow-hidden flex bg-foggy-bg text-ink antialiased">
+
+<aside id="app-sidebar" class="w-64 flex-shrink-0 border-r border-line bg-foggy-bg flex flex-col h-full">
+  <div class="p-6 flex items-center space-x-3">
+    <img src="logo.jpg" alt="知序" class="brand-logo">
+    <div>
+      <h1 class="text-lg font-bold">知序</h1>
+      <p class="text-[10px] text-muted leading-tight">AI知识工作台</p>
+    </div>
+  </div>
+  <nav class="flex-1 px-4 py-2 space-y-6 overflow-y-auto">
+    <div>
+      <a class="nav-active flex items-center px-3 py-2 text-sm font-medium rounded-xl mb-4" href="dashboard.html">
+        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke-width="2"/><path d="M3 9h18" stroke-width="2"/></svg>
+        今天
+      </a>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-muted uppercase tracking-wider">工作台</p>
+      <div class="space-y-1">
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="tina.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          Tina
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="notes.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          笔记
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="quiz.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          资料
+        </a>
+      </div>
+    </div>
+    <div>
+      <p class="px-2 mb-2 text-[10px] font-semibold text-muted uppercase tracking-wider">学习</p>
+      <div class="space-y-1">
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="progress.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          进度
+        </a>
+        <a class="nav-idle flex items-center px-3 py-2 text-sm font-medium rounded-xl" href="path.html">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>
+          学习路径
+        </a>
+      </div>
+    </div>
+  </nav>
+  <div class="p-4 border-t border-line bg-[#F5F4F2]">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-full bg-sage/20 text-sage-dark text-sm font-bold flex items-center justify-center border-2 border-white">啊</div>
+      <div>
+        <p class="text-xs font-bold">啊噗</p>
+        <p class="text-[10px] text-muted">个人学习空间</p>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+  <header class="h-16 px-8 flex items-center gap-4 border-b border-line shrink-0">
+    <div class="flex-1 max-w-md flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm text-muted">
+      <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke-width="2"/></svg>
+      搜索笔记、资料或向 Tina 提问…
+    </div>
+    <a href="tina.html" class="ml-auto pill h-9 px-4 inline-flex items-center bg-sage text-white text-sm font-medium hover:bg-sage-dark">向 Tina 提问</a>
+  </header>
+
+  <div class="flex-1 overflow-y-auto px-8 py-7">
+    <div class="mx-auto max-w-[1120px] space-y-6">
+      <section>
+        <h2 class="text-3xl font-bold mb-2">下午好，啊噗</h2>
+        <p class="text-sm text-muted">当你不知道该做什么的时候，不妨 <a href="tina.html" class="text-sage hover:text-sage-dark">和 Tina 聊聊</a>。</p>
+      </section>
+
+      <div class="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div class="space-y-4">
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-6" style="border-left: 3px solid #7B9C9A;">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-[10px] font-semibold tracking-wide text-sage mb-2">当前学习目标</p>
+                <p class="text-lg font-semibold leading-relaxed">备战考研，主攻大学数学</p>
+                <p class="text-[11px] text-muted mt-2">距离目标日期还有 <span class="text-warn font-semibold">122 天</span></p>
+              </div>
+              <a href="tina.html" class="shrink-0 h-8 px-3 pill border border-line bg-foggy-bg text-xs text-muted hover:text-sage inline-flex items-center">和 Tina 改</a>
+            </div>
+          </section>
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-6">
+            <p class="text-[10px] font-semibold tracking-wide text-muted mb-4">我现在怎么样</p>
+            <div class="flex items-end gap-4 pb-4 mb-4 border-b border-line">
+              <div>
+                <p class="text-[11px] text-muted mb-1">整体掌握度</p>
+                <p class="text-4xl font-bold tabular-nums text-sage">68<span class="text-lg font-normal text-faint ml-0.5">%</span></p>
+              </div>
+              <div class="pb-1">
+                <span class="inline-block text-[11px] text-ok bg-sage-soft pill px-2 py-0.5 mb-1">较上周 +6%</span>
+                <p class="text-[11px] text-muted">已接触 31 / 177 节点（2 个已激活领域）</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center gap-3 rounded-xl border border-line bg-sage-soft/60 px-3 py-2.5">
+                <div class="min-w-0 flex-1">
+                  <p class="text-[10px] text-muted">当前最薄弱</p>
+                  <p class="text-sm font-semibold">极限与连续</p>
+                  <div class="bar mt-1.5"><i data-w="43%" class="bg-bad"></i></div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold tabular-nums text-bad">43%</p>
+                  <p class="text-[10px] text-muted">核心断层</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 rounded-xl border border-line bg-sage-soft/60 px-3 py-2.5">
+                <div class="min-w-0 flex-1">
+                  <p class="text-[10px] text-muted">正在形成</p>
+                  <p class="text-sm font-semibold">微分学</p>
+                  <div class="bar mt-1.5"><i data-w="61%" class="bg-warn"></i></div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold tabular-nums text-warn">61%</p>
+                  <p class="text-[10px] text-muted">上升中</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 rounded-xl border border-line bg-sage-soft/60 px-3 py-2.5">
+                <div class="min-w-0 flex-1">
+                  <p class="text-[10px] text-muted">相对稳定</p>
+                  <p class="text-sm font-semibold">积分基础</p>
+                  <div class="bar mt-1.5"><i data-w="84%" class="bg-ok"></i></div>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-sm font-bold tabular-nums text-ok">84%</p>
+                  <p class="text-[10px] text-muted">保持</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft overflow-hidden">
+            <div class="flex items-center gap-3 px-5 py-3 border-b border-line">
+              <div class="w-7 h-7 rounded-full bg-sage text-white text-[11px] font-bold flex items-center justify-center">T</div>
+              <div>
+                <p class="text-sm font-semibold">为什么是这样 · Tina 的判断</p>
+                <p class="text-[11px] text-muted">根据掌握度和作答记录</p>
+              </div>
+            </div>
+            <div class="px-5 py-4">
+              <p class="text-sm font-semibold leading-relaxed mb-3">你真正的问题<span class="text-warn">不是「不会做题」</span>，而是极限存在性的概念边界还没有建立。</p>
+              <div class="rounded-xl border border-line bg-sage-soft px-3 py-3 mb-3">
+                <p class="text-[11px] font-semibold text-muted mb-2">最近相关知识点</p>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs text-muted">极限计算</span>
+                    <div class="flex items-center gap-2">
+                      <div class="bar w-16"><i data-w="83%" class="bg-ok"></i></div>
+                      <span class="w-8 text-right text-xs font-semibold tabular-nums text-ok">83%</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs text-muted">存在性判断</span>
+                    <div class="flex items-center gap-2">
+                      <div class="bar w-16"><i data-w="38%" class="bg-bad"></i></div>
+                      <span class="w-8 text-right text-xs font-semibold tabular-nums text-bad">38%</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs text-muted">间隔一周再测</span>
+                    <div class="flex items-center gap-2">
+                      <div class="bar w-16"><i data-w="33%" class="bg-bad"></i></div>
+                      <span class="w-8 text-right text-xs font-semibold tabular-nums text-bad">33%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs leading-relaxed text-muted rounded-r-lg border-l-2 border-warn bg-[#FBF6EA] px-3 py-2 mb-4">
+                系统判断：<strong class="text-ink font-medium">这不是计算能力问题，是概念层的结构性断层。</strong>继续刷题只会绕开这个洞，不如现在直接修。
+              </p>
+              <div class="flex gap-2">
+                <a href="progress.html" class="flex-1 h-9 pill border border-line bg-foggy-bg text-xs text-muted hover:text-sage inline-flex items-center justify-center">查看学习进度</a>
+                <a href="practice.html" class="flex-[1.4] h-9 pill bg-sage text-white text-xs font-semibold hover:bg-sage-dark inline-flex items-center justify-center">去刷题</a>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div class="flex items-end justify-between mb-3">
+              <div>
+                <h3 class="text-lg font-bold">我现在应该做什么</h3>
+                <p class="text-xs text-muted mt-0.5">根据目标和学情排的，做完会进今日状态</p>
+              </div>
+              <span class="text-[11px] text-muted">还剩 3 件</span>
+            </div>
+            <div class="space-y-3">
+              <article class="flex items-center gap-4 rounded-2xl border border-line bg-white shadow-soft p-4">
+                <span class="w-8 h-8 rounded-full border border-line bg-foggy-bg text-xs font-semibold text-sage flex items-center justify-center shrink-0">1</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold">修复：极限存在性判断</p>
+                  <p class="mt-1 text-[11px] leading-relaxed text-muted">这是当前<strong class="text-ink font-medium">结构性断层</strong>，修复后可改善后续节点的连贯性</p>
+                  <span class="mt-1.5 inline-block text-[10px] pill px-2 py-0.5 bg-[#F8EEE9] text-bad">优先修复</span>
+                </div>
+                <a href="practice.html" class="shrink-0 pill bg-sage text-white text-xs font-medium px-4 py-2 hover:bg-sage-dark">去刷题</a>
+              </article>
+              <article class="flex items-center gap-4 rounded-2xl border border-line bg-white shadow-soft p-4">
+                <span class="w-8 h-8 rounded-full border border-line bg-foggy-bg text-xs font-semibold text-sage flex items-center justify-center shrink-0">2</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold">验证：导数概念掌握情况</p>
+                  <p class="mt-1 text-[11px] leading-relaxed text-muted">系统对这个知识点的判断还不稳，需一次小测试确认</p>
+                  <span class="mt-1.5 inline-block text-[10px] pill px-2 py-0.5 bg-[#FBF6EA] text-warn">待验证</span>
+                </div>
+                <a href="practice.html" class="shrink-0 pill bg-sage text-white text-xs font-medium px-4 py-2 hover:bg-sage-dark">去刷题</a>
+              </article>
+              <article class="flex items-center gap-4 rounded-2xl border border-line bg-white shadow-soft p-4">
+                <span class="w-8 h-8 rounded-full border border-line bg-foggy-bg text-xs font-semibold text-sage flex items-center justify-center shrink-0">3</span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold">巩固：积分基础 5 题</p>
+                  <p class="mt-1 text-[11px] leading-relaxed text-muted">该节点上周提升明显，今日间隔复习有助于稳住</p>
+                  <span class="mt-1.5 inline-block text-[10px] pill px-2 py-0.5 bg-sage-soft text-ok">长期巩固</span>
+                </div>
+                <a href="practice.html" class="shrink-0 pill bg-sage text-white text-xs font-medium px-4 py-2 hover:bg-sage-dark">去刷题</a>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="space-y-4">
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-5">
+            <p class="text-[10px] font-semibold tracking-wide text-muted mb-4">我的认知画像</p>
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-11 h-11 rounded-full bg-sage-soft text-sage text-sm font-semibold flex items-center justify-center">啊</div>
+              <div>
+                <p class="text-sm font-semibold">啊噗</p>
+                <p class="text-[11px] text-muted">已积累 42 次答题记录</p>
+              </div>
+            </div>
+            <p class="text-[11px] font-semibold text-muted mb-3">认知状态</p>
+            <div class="space-y-3 mb-4">
+              <div>
+                <div class="flex justify-between text-[12px] mb-1"><span>极限与连续</span><span class="font-semibold tabular-nums text-bad">43%</span></div>
+                <div class="bar"><i data-w="43%" class="bg-bad"></i></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[12px] mb-1"><span>微分学</span><span class="font-semibold tabular-nums text-warn">61%</span></div>
+                <div class="bar"><i data-w="61%" class="bg-warn"></i></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[12px] mb-1"><span>积分基础</span><span class="font-semibold tabular-nums text-ok">84%</span></div>
+                <div class="bar"><i data-w="84%" class="bg-ok"></i></div>
+              </div>
+            </div>
+            <div class="border-t border-line pt-4">
+              <p class="text-[10px] font-semibold tracking-wide text-sage mb-2">Tina 说</p>
+              <p class="rounded-xl bg-sage-soft px-3 py-2.5 text-xs leading-relaxed">你这周有点急，刷了不少题但概念层还有洞。先把极限定义那块搞清楚——这比再刷 20 道题有用。</p>
+            </div>
+          </section>
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-5">
+            <p class="text-[10px] font-semibold tracking-wide text-muted mb-3">最近学习</p>
+            <ol class="space-y-3">
+              <li class="flex gap-3">
+                <span class="mt-1.5 w-2.5 h-2.5 rounded-full bg-ok shrink-0"></span>
+                <div>
+                  <p class="text-[10px] text-faint">今天</p>
+                  <p class="text-xs text-muted leading-relaxed">整体 <strong class="text-ok">68%</strong> · 极限断层被识别为结构性问题</p>
+                </div>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-1.5 w-2.5 h-2.5 rounded-full bg-warn shrink-0"></span>
+                <div>
+                  <p class="text-[10px] text-faint">8月24日</p>
+                  <p class="text-xs text-muted leading-relaxed">上传了《张宇基础 30 讲》，并为前两章出了题</p>
+                </div>
+              </li>
+              <li class="flex gap-3">
+                <span class="mt-1.5 w-2.5 h-2.5 rounded-full bg-line shrink-0"></span>
+                <div>
+                  <p class="text-[10px] text-faint">8月17日</p>
+                  <p class="text-xs text-muted leading-relaxed">开始按页刷题，积分基础趋于稳定</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-5">
+            <p class="text-[10px] font-semibold tracking-wide text-muted mb-1">已激活知识域</p>
+            <p class="text-[11px] text-muted mb-3 leading-relaxed">按资料上的学科归类，点进去看学习路径。</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="pill h-7 px-3 inline-flex items-center gap-1.5 text-small text-sm bg-sage-soft text-sage-dark border border-sage/30">高等数学 <span class="text-[10px] opacity-70">2</span></span>
+              <span class="pill h-7 px-3 inline-flex items-center gap-1.5 text-sm bg-white text-muted border border-line">线性代数 <span class="text-[10px]">1</span></span>
+            </div>
+            <p class="mt-3 text-[10px] text-faint leading-relaxed">高数 2 份资料 · 线代 1 份资料</p>
+          </section>
+
+          <section class="bg-white rounded-2xl border border-line shadow-soft p-5">
+            <p class="text-sm font-medium mb-3">连续学习 <span class="font-semibold text-sage">7 天</span></p>
+            <div class="flex gap-1 mb-3">
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">一</div>
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">二</div>
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">三</div>
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">四</div>
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">五</div>
+              <div class="flex-1 h-7 rounded-md bg-sage-soft text-sage text-[10px] font-semibold flex items-center justify-center">六</div>
+              <div class="flex-1 h-7 rounded-md bg-sage text-white text-[10px] font-semibold flex items-center justify-center">日</div>
+            </div>
+            <p class="text-[11px] text-muted">今日已完成 <b class="text-ink">12 题</b>，正确率 <b class="text-ink">83%</b></p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="sidebar.js"></script>
+<script>
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.bar > i').forEach((el) => {
+      const w = el.getAttribute('data-w');
+      requestAnimationFrame(() => { el.style.width = w; });
+    });
+  });
+</script>
+</body>
+</html>

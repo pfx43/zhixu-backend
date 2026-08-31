@@ -90,7 +90,7 @@ def get_today_tasks(
 
 
 @router.post("/today/ensure", response_model=TodayTasksOut)
-def ensure_today_tasks(
+async def ensure_today_tasks(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
@@ -99,5 +99,5 @@ def ensure_today_tasks(
     有未完成的先展示，不重复派。
     """
     user_id = current_user["user_id"]
-    task_service.ensure_today_tasks(db, user_id)
+    await task_service.ensure_today_tasks_async(db, user_id)
     return _today_out(db, user_id)

@@ -10,22 +10,21 @@ from sqlalchemy.orm import Session
 from app.crud import kb as kb_crud
 from app.crud import note as note_crud
 from app.schemas.report import LearningReportGenerateOut, ReportOut
-from app.services.llm.llm_config import create_base_api
-from app.services.llm.llm_runner import llm_predict_no_stream
+from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.training import analytics_service
 from app.utils.prompt_loader import load_prompt
+from tina import Agent
 
 logger = logging.getLogger(__name__)
 
 REPORT_SYSTEM_PROMPT = load_prompt("report_analysis")
 
-def _get_llm():
-    """创建 Tina LLM 实例（每次新建，避免共享实例在并发下串 token 记账）。"""
-    try:
-        return create_base_api()
-    except Exception:
-        logger.warning("Tina LLM 不可用，将使用模板报告", exc_info=True)
-        return None
+
+def _agent_text(result) -> str:
+    if isinstance(result, dict):
+        return result.get("content") or ""
+    return getattr(result, "content", None) or ""
 
 
 def _template_report(stats_text: str) -> str:
@@ -81,23 +80,29 @@ def _build_stats_payload(db: Session, user_id: int) -> str:
     return "\n".join(lines)
 
 
-def generate_learning_report(
+async def generate_learning_report(
     db: Session, user_id: int, token: str = ""
 ) -> LearningReportGenerateOut:
     stats_text = _build_stats_payload(db, user_id)
-    llm = _get_llm()
+    llm = llm_pool.acquire()
     content_md: str
 
     if llm:
         try:
-            llm.set_token(token)
-            resp = llm_predict_no_stream(
-                llm,
-                input_text=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
-                sys_prompt=REPORT_SYSTEM_PROMPT,
+            if token:
+                llm.set_token(token)
+            agent = Agent(
+                llm=llm,
+                tools=None,
+                system_prompt=REPORT_SYSTEM_PROMPT,
+                name="learning_report",
+            )
+            attach_reasoning_roundtrip(agent)
+            result = await agent.apredict_no_stream(
+                instruction=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
                 temperature=0.4,
             )
-            content = resp.get("content", "") if isinstance(resp, dict) else str(resp)
+            content = _agent_text(result)
             content_md = (content or "").strip() or _template_report(stats_text)
         except Exception:
             logger.warning("LLM 报告生成失败，回退模板", exc_info=True)
