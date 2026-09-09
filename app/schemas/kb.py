@@ -35,6 +35,65 @@ class CollectionUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=500)
 
 
+class TcnDomainOut(BaseModel):
+    id: str
+    label: str
+
+
+class TcnDomainListOut(BaseModel):
+    domains: List[TcnDomainOut]
+
+
+class DocumentTcnDomainUpdate(BaseModel):
+    tcn_domain: Optional[str] = None
+
+
+class DocumentTcnDomainOut(BaseModel):
+    document_id: str
+    tcn_domain: Optional[str] = None
+    tcn_domain_label: Optional[str] = None
+
+
+class TcnGraphNodeOut(BaseModel):
+    id: str
+    name: str
+    mastery: Optional[float] = None
+
+
+class TcnGraphEdgeOut(BaseModel):
+    source: str
+    target: str
+    weight: Optional[float] = None
+
+
+class TcnGraphNextOut(BaseModel):
+    """先修已够、自身偏低的前沿节点。前端用 name 刷题，不要把 id 当 tc_node_id 传。"""
+
+    id: str
+    name: str
+    mastery: Optional[float] = None
+    reason: str
+
+
+class DomainTcnGraphOut(BaseModel):
+    """一科的 TCN 图，不绑某一本书。掌握度是这个学生在这一科上的。"""
+
+    domain: str
+    domain_label: Optional[str] = None
+    nodes: List[TcnGraphNodeOut] = []
+    edges: List[TcnGraphEdgeOut] = []
+    next_nodes: List[TcnGraphNextOut] = []
+
+
+class DocumentTcnGraphOut(BaseModel):
+    document_id: Optional[str] = None
+    domain: Optional[str] = None
+    domain_label: Optional[str] = None
+    nodes: List[TcnGraphNodeOut] = []
+    edges: List[TcnGraphEdgeOut] = []
+    next_nodes: List[TcnGraphNextOut] = []
+
+
 class DocumentOut(BaseModel):
     id: str
     name: str
@@ -45,6 +104,7 @@ class DocumentOut(BaseModel):
     indexing_status: str = "pending"
     segment_status: str = "not_started"
     question_gen_status: str = "not_started"
+    question_count: int = 0
     ocr_status: Optional[str] = None
     ocr_current_page: Optional[int] = None
     ocr_total_pages: Optional[int] = None
@@ -52,6 +112,8 @@ class DocumentOut(BaseModel):
     # #40 封面 / 缩略图可访问 URL；无封面时为 None，前端兜底
     cover_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    tcn_domain: Optional[str] = None
+    tcn_domain_label: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

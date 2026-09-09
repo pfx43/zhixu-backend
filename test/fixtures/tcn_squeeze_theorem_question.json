@@ -1,0 +1,16 @@
+{
+  "stem": "已知当 x→0 且 x≠0 时，有 -x² ≤ x² sin(1/x) ≤ x²。根据夹逼准则，lim_{x→0} x² sin(1/x) 等于？",
+  "question_type": "single_choice",
+  "options": [
+    {"key": "A", "text": "不存在"},
+    {"key": "B", "text": "0"},
+    {"key": "C", "text": "1"},
+    {"key": "D", "text": "∞"}
+  ],
+  "answer": "B",
+  "explanation": "夹逼准则：若对 x≠0 有 g(x) ≤ f(x) ≤ h(x)，且 lim g = lim h = L，则 lim f = L。这里 g(x)=-x²、h(x)=x² 在 x→0 时都趋于 0，故极限为 0。",
+  "tags": ["夹逼准则"],
+  "tc_node_id": "higher_math:夹逼准则",
+  "domain_id": "higher_math",
+  "source_type": "manual"
+}

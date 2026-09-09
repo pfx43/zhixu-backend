@@ -1,4 +1,5 @@
 """学习分析 — 聚合知识库、题库与刷题记录"""
+import re
 from collections import defaultdict
 from typing import Dict, List, Optional
 
@@ -17,7 +18,14 @@ from app.schemas.analytics import (
     TagStatsListOut,
     TagStatsOut,
 )
+from app.schemas.tag import DocumentKnowledgeTagListOut, DocumentKnowledgeTagOut
 from app.services.quiz import question_gen_service
+
+# 与前端 isDisplayableKnowledgeLabel 对齐：UUID 形 id 不是给人看的知识点。
+_OPAQUE_ID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.I,
+)
 
 
 def _accuracy_rate(correct: int, wrong: int) -> Optional[int]:
@@ -153,9 +161,37 @@ def get_learning_stats(db: Session, user_id: int) -> LearningStatsOut:
     )
 
 
-def get_tag_stats(db: Session, user_id: int) -> TagStatsListOut:
-    """按 tag 与 question_type 聚合 quiz_answers 统计。"""
-    rows = question_crud.list_user_questions(db, user_id)
+def displayable_tag_names(raw: Optional[str]) -> List[str]:
+    """题目 tags JSON 里给人看的知识点名；空串和 UUID 形 id 丢掉。"""
+    tags = question_crud.parse_tags_json(raw) or []
+    seen: set[str] = set()
+    names: List[str] = []
+    for item in tags:
+        name = str(item).strip()
+        if not name or _OPAQUE_ID_RE.match(name) or name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+    return names
+
+
+def _increment_status(bucket: Dict[str, int], status: Optional[str]) -> None:
+    if status == "correct":
+        bucket["correct"] += 1
+    elif status == "wrong":
+        bucket["wrong"] += 1
+    elif status == "unknown":
+        bucket["unknown"] += 1
+
+
+def get_tag_stats(
+    db: Session, user_id: int, document_id: Optional[str] = None
+) -> TagStatsListOut:
+    """按 tag 与 question_type 聚合 quiz_answers 统计。
+
+    document_id 有值时只看这本书的题，避免别的书的知识点串过来。
+    """
+    rows = question_crud.list_user_questions(db, user_id, document_id=document_id)
     question_ids = [q.id for _, q in rows]
     q_map = {q.id: q for _, q in rows}
     stats_map = quiz_crud.get_user_answer_stats_for_questions(db, user_id, question_ids)
@@ -172,28 +208,16 @@ def get_tag_stats(db: Session, user_id: int) -> TagStatsListOut:
         if attempt_count <= 0 or not latest_status:
             continue
         qtype = q.question_type or "unknown"
-        type_bucket = by_type[qtype]
-        if latest_status == "correct":
-            type_bucket["correct"] += 1
-        elif latest_status == "wrong":
-            type_bucket["wrong"] += 1
-        elif latest_status == "unknown":
-            type_bucket["unknown"] += 1
+        _increment_status(by_type[qtype], latest_status)
 
-        tags = question_crud.parse_tags_json(q.tags) or ["未分类"]
-        for tag in tags:
-            tag_name = str(tag).strip() or "未分类"
-            bucket = by_tag[tag_name]
-            if latest_status == "correct":
-                bucket["correct"] += 1
-            elif latest_status == "wrong":
-                bucket["wrong"] += 1
-            elif latest_status == "unknown":
-                bucket["unknown"] += 1
+        names = displayable_tag_names(q.tags)
+        if not names and not document_id:
+            names = ["未分类"]
+        for tag_name in names:
+            _increment_status(by_tag[tag_name], latest_status)
 
     tag_out: List[TagStatsOut] = []
     for tag_name, counts in by_tag.items():
-        graded = counts["correct"] + counts["wrong"]
         total = counts["correct"] + counts["wrong"] + counts["unknown"]
         tag_out.append(
             TagStatsOut(
@@ -223,5 +247,53 @@ def get_tag_stats(db: Session, user_id: int) -> TagStatsListOut:
             )
         )
 
-    return TagStatsListOut(by_tag=tag_out, by_question_type=type_out)
+    return TagStatsListOut(
+        document_id=document_id,
+        by_tag=tag_out,
+        by_question_type=type_out,
+    )
+
+
+def list_document_knowledge_tags(
+    db: Session, user_id: int, document_id: str
+) -> DocumentKnowledgeTagListOut:
+    """这本书题库上的知识点 tag 及题数；未刷过的 tag 也返回。"""
+    rows = question_crud.list_user_questions(db, user_id, document_id=document_id)
+    question_ids = [q.id for _, q in rows]
+    stats_map = quiz_crud.get_user_answer_stats_for_questions(db, user_id, question_ids)
+
+    buckets: Dict[str, Dict[str, int]] = defaultdict(
+        lambda: {
+            "question_count": 0,
+            "correct": 0,
+            "wrong": 0,
+            "unknown": 0,
+        }
+    )
+    for _, q in rows:
+        names = displayable_tag_names(q.tags)
+        latest_status, attempt_count = stats_map.get(q.id, (None, 0))
+        for name in names:
+            bucket = buckets[name]
+            bucket["question_count"] += 1
+            if attempt_count > 0:
+                _increment_status(bucket, latest_status)
+
+    tags: List[DocumentKnowledgeTagOut] = []
+    for name, counts in buckets.items():
+        tags.append(
+            DocumentKnowledgeTagOut(
+                name=name,
+                question_count=counts["question_count"],
+                correct_count=counts["correct"],
+                wrong_count=counts["wrong"],
+                unknown_count=counts["unknown"],
+            )
+        )
+    tags.sort(key=lambda x: (-x.question_count, x.name))
+    return DocumentKnowledgeTagListOut(
+        document_id=document_id,
+        tags=tags,
+        total=len(tags),
+    )
 

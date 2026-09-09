@@ -15,8 +15,10 @@ from typing import List, Optional
 from tina import Agent
 
 from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
+from app.services.quiz.qgen_count import count_instruction, questions_per_page_cap
 from app.services.tools.question_gen_tools import QuestionGenTools
-from app.services.usage_service import record_usage_for_token
+from app.services.usage_service import record_usage_for_token, record_usage_for_user_id
 from app.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -82,6 +84,7 @@ class QuestionGenAgent:
         pages=None,
         allowed_page_numbers=None,
         max_near_lookups: int = 3,
+        tcn_domain: Optional[str] = None,
     ):
         self.mode = mode
         self.question_tools: Optional[QuestionGenTools] = None
@@ -101,6 +104,7 @@ class QuestionGenAgent:
                 pages=pages,
                 allowed_page_numbers=allowed_page_numbers,
                 max_near_lookups=max_near_lookups,
+                tcn_domain=tcn_domain,
             )
             self.tools = self.question_tools.get_tools()
 
@@ -112,6 +116,7 @@ class QuestionGenAgent:
                 max_tool_result_length=4000,
                 name=f"question_gen_{mode}",
             )
+            attach_reasoning_roundtrip(self.agent)
             _last_readiness.update(
                 ready=True,
                 status="ok",
@@ -139,11 +144,11 @@ class QuestionGenAgent:
         title: str,
         content: str,
         tag_hint: str = "",
-        count: int = 1,
+        count: Optional[int] = None,
         user_id: int = 0,
         token: Optional[str] = None,
     ) -> List[dict]:
-        """根据文档内容生成题目，返回结构化题目列表。"""
+        """根据文档内容生成题目，返回结构化题目列表。count 省略则 Agent 自定 1～3 道。"""
         if self.question_tools is not None:
             self.question_tools.submitted_questions = []
         self.failure_reason = None
@@ -160,14 +165,17 @@ class QuestionGenAgent:
             instruction = (
                 f"段落/页面：{title}\n\n内容：\n{content[:3000]}\n\n"
                 f"{tag_hint}\n\n"
-                f"请生成 {count} 道练习题，逐题调用 submit_question 提交。"
+                f"{count_instruction(count, tool=True)}"
             )
 
         try:
             # 流式驱动完整工具循环（submit_question），流中发现 usage 即统一记账
             async for chunk in self.agent.apredict(instruction=instruction):
                 if isinstance(chunk, dict) and chunk.get("usage"):
-                    await record_usage_for_token(token or "", chunk["usage"])
+                    if user_id:
+                        await record_usage_for_user_id(user_id, chunk["usage"])
+                    else:
+                        await record_usage_for_token(token or "", chunk["usage"])
         except Exception as exc:
             self.failure_reason = _classify_failure(exc)
             _last_readiness.update(
@@ -203,12 +211,16 @@ class QuestionGenAgent:
                 reason=None,
             )
 
+        if self.mode == "generate":
+            return list(submitted_questions)[: questions_per_page_cap(count)]
         return list(submitted_questions)
 
 
-async def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Optional[str] = None) -> List[dict]:
+async def agent_generate_for_segment(
+    segment, *, tag_hint: str = "", token: Optional[str] = None, tcn_domain: Optional[str] = None
+) -> List[dict]:
     """Agent 路径：按分段出题；失败时返回内部失败标记。"""
-    agent = QuestionGenAgent(mode="generate")
+    agent = QuestionGenAgent(mode="generate", tcn_domain=tcn_domain)
     if not agent.is_ready:
         return _failure_marker(agent.failure_reason or "agent_unavailable")
     title = segment.title or "（无标题）"
@@ -216,7 +228,7 @@ async def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Opti
         title=title,
         content=segment.content,
         tag_hint=tag_hint,
-        count=1,
+        count=None,
         token=token,
     )
     if questions:
@@ -227,11 +239,13 @@ async def agent_generate_for_segment(segment, *, tag_hint: str = "", token: Opti
 async def agent_generate_for_page(
     page: dict,
     *,
-    count: int = 1,
+    count: Optional[int] = None,
     tag_hint: str = "",
     token: Optional[str] = None,
     near_pages=None,
     allowed_page_numbers=None,
+    user_id: int = 0,
+    tcn_domain: Optional[str] = None,
 ) -> List[dict]:
     """Agent 路径：按页出题；失败时返回内部失败标记。
 
@@ -242,6 +256,7 @@ async def agent_generate_for_page(
         mode="generate",
         pages=near_pages,
         allowed_page_numbers=allowed_page_numbers,
+        tcn_domain=tcn_domain,
     )
     if not agent.is_ready:
         return _failure_marker(agent.failure_reason or "agent_unavailable")
@@ -251,6 +266,7 @@ async def agent_generate_for_page(
         content=page["content"],
         tag_hint=tag_hint,
         count=count,
+        user_id=user_id,
         token=token,
     )
     if questions:

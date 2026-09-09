@@ -35,5 +35,18 @@ def index_document_segments(db: Session, document: Document) -> int:
     return count
 
 
+def index_loaded_segments(document: Document, segments) -> int:
+    """已在手的段写入 Chroma，不查库（给异步分段路径用）。"""
+    if not segments:
+        return 0
+    return chroma_store.upsert_segments(
+        document_id=document.id,
+        segments=segments,
+        user_id=document.user_id,
+        collection_id=document.collection_id,
+        display_name=document.display_name,
+    )
+
+
 def delete_document_index(document_id: str) -> None:
     chroma_store.delete_by_document(document_id)

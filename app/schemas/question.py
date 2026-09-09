@@ -116,5 +116,6 @@ class PageQuestionResponse(BaseModel):
     questions_created: int
     questions_reused: int
     total_questions: int
+    job_id: Optional[str] = None
     # 检查器挂载：payload 页已有题 → 今日出题任务自动完成（空则不弹窗）
     completed_tasks: List[TaskCompletedOut] = []

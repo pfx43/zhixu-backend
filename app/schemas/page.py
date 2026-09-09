@@ -39,7 +39,8 @@ class DocumentPageDetailOut(DocumentPageOut):
 class PageGenerateRequest(BaseModel):
     document_id: str
     page_numbers: List[int] = Field(..., min_length=1)
-    questions_per_page: int = Field(default=1, ge=1, le=3)
+    # 省略 = Agent 按内容自定 1～3 道；传入 1–3 则固定道数
+    questions_per_page: Optional[int] = Field(default=None, ge=1, le=3)
 
 
 class PageExtractRequest(BaseModel):

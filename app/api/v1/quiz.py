@@ -1,10 +1,13 @@
 """
 刷题会话 API — 创建、答题、判分、错题汇总
 """
+import logging
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.crud import quiz as quiz_crud
 from app.schemas.quiz import (
     AnswerResult,
     AnswerSubmit,
@@ -14,6 +17,8 @@ from app.schemas.quiz import (
 )
 from app.services.quiz import quiz_service
 from app.services.tasks import task_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["刷题"])
 
@@ -49,14 +54,14 @@ def get_session(
 
 
 @router.post("/sessions/{session_id}/answers", response_model=AnswerResult)
-def submit_answer(
+async def submit_answer(
     session_id: str,
     payload: AnswerSubmit,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
     """提交单题答案；status=unknown 表示「我不会」。"""
-    result = quiz_service.submit_answer(
+    result = await quiz_service.submit_answer(
         db=db,
         user_id=current_user["user_id"],
         session_id=session_id,
@@ -66,6 +71,20 @@ def submit_answer(
         time_spent_seconds=payload.time_spent_seconds,
     )
     db.commit()
+    try:
+        from app.services.tcn.quiz_hook import schedule_quiz_predict
+
+        session = quiz_crud.get_session(db, session_id, current_user["user_id"])
+        schedule_quiz_predict(
+            db,
+            user_hash=current_user.get("user_hash"),
+            document_id=session.document_id if session else None,
+            question_id=payload.question_id,
+            result_status=result.status,
+            session_id=session_id,
+        )
+    except Exception:
+        logger.warning("调度 TCN predict 失败，交卷不受影响", exc_info=True)
     # 检查器：任务范围内交够约定道数（含「不会」）→ 今日刷题任务自动完成
     result.completed_tasks = task_service.run_completion_checks(
         db,

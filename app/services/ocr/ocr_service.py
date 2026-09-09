@@ -9,6 +9,7 @@ OCR 服务 — 图片转文本（本地 PaddleOCR / 百度云端）
     local — 仅 PaddleOCR
     baidu — 仅百度 OCR（凭据见 BAIDU_OCR_* 或 baidu_ocr.json）
     auto  — 先 PaddleOCR，失败再百度
+    mineru — 扫描件/图片走 MinerU 云端（kb_service / pdf_ocr_service 主路径）
 """
 from app.core import paddle_env  # noqa: F401
 import base64
@@ -247,6 +248,10 @@ def extract_text_from_image_bytes(image_bytes: bytes) -> Optional[str]:
     if backend == "baidu":
         return _extract_text_baidu_bytes(image_bytes)
 
+    if backend == "mineru":
+        logger.error("ocr_service: MinerU 不走按字节 OCR，由后台 pipeline 异步处理")
+        return None
+
     # auto: 先 Paddle 再百度
     paddle_text = _ocr_with_paddle(image_bytes)
     if paddle_text is not None:
@@ -293,6 +298,13 @@ def ocr_unavailable_message() -> str:
                 "或在 zhishi_app/assets/config/baidu_ocr.json 中填写凭据"
             )
         return "百度 OCR 调用失败，请检查凭据与网络"
+
+    if OCR_BACKEND == "mineru":
+        from app.services.ocr.mineru_service import is_mineru_configured
+
+        if not is_mineru_configured():
+            return "OCR_BACKEND=mineru，但未配置 MINERU_API_TOKEN"
+        return "MinerU 解析失败，请检查 Token 与网络"
 
     # auto
     if not is_paddle_ocr_available() and not is_baidu_ocr_configured():

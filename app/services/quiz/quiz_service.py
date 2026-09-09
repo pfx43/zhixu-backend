@@ -8,11 +8,14 @@ from typing import List, Optional, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from tina import Agent
 
 from app.crud import kb as kb_crud
 from app.crud import question as question_crud
 from app.crud import quiz as quiz_crud
 from app.models import DocumentSegment, GlobalQuestion, UserQuestionRef
+from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.schemas.question import QuestionOption
 from app.schemas.quiz import (
     AnswerResult,
@@ -63,7 +66,7 @@ def _build_citation(
     )
 
 
-def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) -> str:
+async def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) -> str:
     if not user_answer or not user_answer.strip():
         return "wrong"
     user = user_answer.strip().lower()
@@ -78,24 +81,33 @@ def _grade_short_answer(question: GlobalQuestion, user_answer: Optional[str]) ->
         if hit >= max(1, len(key_parts) // 2):
             return "correct"
     try:
-        from app.services.quiz.question_gen_service import _get_llm
-        from app.services.llm.llm_runner import llm_predict_no_stream
-
-        llm = _get_llm()
-        if llm:
-            prompt = (
-                f"题干：{question.stem}\n标准答案：{question.answer}\n学生答案：{user_answer}\n"
-                "仅回答 correct 或 wrong。"
-            )
-            resp = llm_predict_no_stream(
-                llm, input_text=prompt, sys_prompt="你是判题助手，只输出 correct 或 wrong。", temperature=0
-            )
-            content = (resp.get("content", "") if isinstance(resp, dict) else str(resp)).strip().lower()
-            if "correct" in content and "wrong" not in content:
-                return "correct"
+        llm = llm_pool.acquire()
+        if llm is None:
+            return "wrong"
+        agent = Agent(
+            llm=llm,
+            tools=None,
+            system_prompt="你是判题助手，只输出 correct 或 wrong。",
+            name="short_answer_grader",
+        )
+        attach_reasoning_roundtrip(agent)
+        prompt = (
+            f"题干：{question.stem}\n标准答案：{question.answer}\n学生答案：{user_answer}\n"
+            "仅回答 correct 或 wrong。"
+        )
+        result = await agent.apredict_no_stream(instruction=prompt, temperature=0)
+        content = _agent_text(result).strip().lower()
+        if "correct" in content and "wrong" not in content:
+            return "correct"
     except Exception:
         pass
     return "wrong"
+
+
+def _agent_text(result) -> str:
+    if isinstance(result, dict):
+        return result.get("content") or ""
+    return getattr(result, "content", None) or ""
 
 
 def _parse_json_answer(raw: Optional[str]):
@@ -205,7 +217,7 @@ def _grade_fill_blank(question: GlobalQuestion, user_answer: str) -> str:
     return "correct" if user_answer.strip() == question.answer.strip() else "wrong"
 
 
-def _grade_answer(
+async def _grade_answer(
     question: GlobalQuestion, user_answer: Optional[str], status_hint: Optional[str]
 ) -> str:
     """按题型判分（Issue #35）：
@@ -223,7 +235,7 @@ def _grade_answer(
         return "unknown"
     qtype = (question.question_type or "single_choice").lower()
     if qtype in ("short_answer", "application"):
-        return _grade_short_answer(question, user_answer)
+        return await _grade_short_answer(question, user_answer)
     if not user_answer or not user_answer.strip():
         return "wrong"
 
@@ -408,7 +420,7 @@ def get_quiz_session(db: Session, user_id: int, session_id: str) -> QuizSessionO
     return _build_session_out(db, session)
 
 
-def submit_answer(
+async def submit_answer(
     db: Session,
     user_id: int,
     session_id: str,
@@ -435,7 +447,7 @@ def submit_answer(
     if status_hint and status_hint not in ("unknown",):
         raise HTTPException(status_code=400, detail="无效的 status 值")
 
-    result_status = _grade_answer(question, user_answer, status_hint)
+    result_status = await _grade_answer(question, user_answer, status_hint)
     quiz_crud.upsert_answer(
         db,
         session_id=session_id,

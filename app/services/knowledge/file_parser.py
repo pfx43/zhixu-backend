@@ -18,7 +18,7 @@ from typing import Optional
 
 
 
-from app.core.config import DOCUMENT_PIPELINE_ASYNC, PDF_MAX_PAGES
+from app.core.config import DOCUMENT_PIPELINE_ASYNC, OCR_BACKEND, PDF_MAX_PAGES
 
 
 
@@ -79,6 +79,8 @@ class ParseOutcome:
     ocr_used: bool = False
 
     page_texts: Optional[list[str]] = None
+
+    images: Optional[dict[str, bytes]] = None
 
 
 
@@ -434,7 +436,9 @@ def _parse_pdf(
     detail = "；".join(errors) if errors else "所有 PDF 解析器均未能提取文本"
 
     needs_ocr, page_count = is_scanned_pdf(file_path)
-    if needs_ocr and (DOCUMENT_PIPELINE_ASYNC or not allow_ocr_fallback):
+    if needs_ocr and (
+        OCR_BACKEND == "mineru" or DOCUMENT_PIPELINE_ASYNC or not allow_ocr_fallback
+    ):
         return ParseOutcome(
             text=None,
             error=(

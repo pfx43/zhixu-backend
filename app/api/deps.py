@@ -82,6 +82,15 @@ def get_admin_user(
     return current_user
 
 
+def require_internal_key(
+    x_internal_key: str = Header(None, alias="X-Internal-Key"),
+) -> None:
+    """出题 worker 等内部服务：只认 X-Internal-Key，不走用户登录。"""
+    internal_key = os.getenv("INTERNAL_API_KEY", "")
+    if not internal_key or x_internal_key != internal_key:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+
 def get_admin_or_internal(
     current_user: dict = Depends(get_current_active_user),
     x_internal_key: str = Header(None, alias="X-Internal-Key"),

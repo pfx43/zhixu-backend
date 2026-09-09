@@ -503,6 +503,113 @@ class ChatPersistenceAsyncTests(unittest.TestCase):
         self.assertTrue(asyncio.run(chat_api._check_interrupt(1, session_id)))
         self.assertFalse(asyncio.run(chat_api._check_interrupt(1, session_id)))
 
+    def test_onboarding_ui_forwarded_and_saved(self):
+        saved = []
+        raw = [
+            {"type": "answer", "role": "assistant", "content": "记下了。"},
+            {
+                "type": "onboarding_ui",
+                "role": "assistant",
+                "content": "",
+                "item": {"type": "goal_card", "goal": "考研上岸"},
+            },
+            {
+                "type": "onboarding_ui",
+                "role": "assistant",
+                "content": "",
+                "item": {"type": "rail", "id": "goal", "status": "on"},
+            },
+        ]
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=RawAgent(raw)),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
+            patch.object(chat_api, "_clear_interrupt", AsyncMock()),
+            patch.object(chat_api, "_check_interrupt", AsyncMock(return_value=False)),
+        ):
+            lines = _collect(chat_api._stream_agent_response(
+                user_id=8801,
+                session_id="ob-1",
+                message="考研上岸",
+                dataset_id="ds1",
+                collection_id=None,
+                history=[],
+                mode="onboarding",
+                token="t",
+            ))
+        events = _parse_sse("".join(lines))
+        self.assertEqual(events[-1], "[DONE]")
+        payloads = [json.loads(e) for e in events[:-1]]
+        ui = [p for p in payloads if p["type"] == "onboarding_ui"]
+        self.assertEqual(ui[0]["item"]["type"], "goal_card")
+        self.assertEqual(ui[0]["item"]["goal"], "考研上岸")
+        save_calls = [s for s in saved if s[0][2] == "assistant"]
+        self.assertTrue(save_calls)
+        self.assertEqual(
+            save_calls[-1][1]["payload"],
+            {"onboarding": [{"type": "goal_card", "goal": "考研上岸"}]},
+        )
+
+    def test_show_question_and_tip_forwarded_and_saved(self):
+        """嵌题 / 嵌 tip 有独立 type；不漏答案；无正文也落库 payload。"""
+        saved = []
+        raw = [
+            {
+                "type": "show_question",
+                "role": "assistant",
+                "question": {
+                    "question_id": "q1",
+                    "stem": "题干",
+                    "question_type": "single_choice",
+                    "options": [{"key": "A", "text": "对"}],
+                    "answer": "A",
+                    "explanation": "不该出现",
+                },
+            },
+            {
+                "type": "show_tip",
+                "role": "assistant",
+                "tip": {
+                    "id": "t1",
+                    "title": "难词",
+                    "content_md": "那句原文",
+                    "tags": ["英语"],
+                },
+            },
+        ]
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=RawAgent(raw)),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
+            patch.object(chat_api, "_clear_interrupt", AsyncMock()),
+            patch.object(chat_api, "_check_interrupt", AsyncMock(return_value=False)),
+        ):
+            lines = _collect(chat_api._stream_agent_response(
+                user_id=8801,
+                session_id="embed-1",
+                message="给我看这道题",
+                dataset_id="ds1",
+                collection_id=None,
+                history=[],
+                mode="qa",
+                token="t",
+            ))
+        events = _parse_sse("".join(lines))
+        self.assertEqual(events[-1], "[DONE]")
+        payloads = [json.loads(e) for e in events[:-1]]
+        shown = [p for p in payloads if p["type"] == "show_question"]
+        tips = [p for p in payloads if p["type"] == "show_tip"]
+        self.assertEqual(shown[0]["question"]["question_id"], "q1")
+        self.assertNotIn("answer", shown[0]["question"])
+        self.assertNotIn("explanation", shown[0]["question"])
+        self.assertNotIn("content", shown[0])
+        self.assertEqual(tips[0]["tip"]["id"], "t1")
+        self.assertNotIn("onboarding_ui", [p["type"] for p in payloads])
+        save_calls = [s for s in saved if s[0][2] == "assistant"]
+        self.assertTrue(save_calls)
+        payload = save_calls[-1][1]["payload"]
+        self.assertEqual(payload["questions"][0]["question_id"], "q1")
+        self.assertNotIn("answer", payload["questions"][0])
+        self.assertEqual(payload["tips"][0]["id"], "t1")
+
 
 if __name__ == "__main__":
     unittest.main()

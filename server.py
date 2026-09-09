@@ -26,9 +26,21 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.core.logging_setup import configure_tina_logging
+
+configure_tina_logging()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    workers = int(os.getenv("WEB_CONCURRENCY", "1"))
+    cache_backend = os.getenv("CACHE_BACKEND", "memory")
+    if workers > 1 and cache_backend != "redis":
+        raise RuntimeError(
+            "WEB_CONCURRENCY>1 时必须 CACHE_BACKEND=redis，"
+            "否则验证码、限流、打断会在进程间分裂。"
+        )
+
     # 1. 初始化数据库
     try:
         from app.core.database import init_db
@@ -149,6 +161,14 @@ REQUIRED_DEPLOYMENT_PATHS = (
 def _question_generation_readiness() -> dict:
     """独立探测 Question Agent/LLM，不复用 TCN 的 model_loaded。"""
     try:
+        from app.core.config import QUESTION_GEN_WORKER
+
+        if QUESTION_GEN_WORKER:
+            return {
+                "ready": True,
+                "status": "delegated",
+                "reason": "qgen_worker",
+            }
         from app.services.agents.question_gen_agent import (
             get_question_agent_readiness,
         )

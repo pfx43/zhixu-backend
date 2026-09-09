@@ -1,0 +1,2248 @@
+{
+  "schema": "tcn.graph.export.v1",
+  "exported_at": "2026-08-30T14:32:42.310Z",
+  "domains": [
+    {
+      "schema_version": 1,
+      "domain": "discrete_math",
+      "version": 2,
+      "description": "",
+      "author": "",
+      "generator": null,
+      "created_at": "",
+      "updated_at": "",
+      "nodes": [
+        {
+          "id": "discrete_math:命题与联结词",
+          "name": "原子命题与五种基本联结词（¬∧∨→↔）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:命题公式与真值表",
+          "name": "合式公式的构造语法与真值赋值",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:合取范式与析取范式",
+          "name": "CNF与DNF的定义及转化方法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:永真式与等价式",
+          "name": "重言式、矛盾式与基本逻辑等价律",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:逻辑等价的替换定理",
+          "name": "等价替换定理与公式化简",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:主范式",
+          "name": "主析取范式与主合取范式的构造算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:联结词完备集",
+          "name": "{¬,∧}、{¬,∨}、NAND等完备联结词集",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:自然推理系统",
+          "name": "假设推理规则（引入/消去/假言/析取三段论）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:归结原理",
+          "name": "子句集归结消解算法与完备性",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:命题逻辑完备性",
+          "name": "命题逻辑形式系统的可靠性与完备性元定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:谓词与量词",
+          "name": "个体域、谓词符号与全称∀存在∃量词",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:谓词公式",
+          "name": "谓词逻辑公式的语法、自由变元与约束变元",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:谓词逻辑的语义",
+          "name": "解释、模型与公式在解释下的真值",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:谓词等价与蕴含",
+          "name": "谓词逻辑重要等价式与量词分配律",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:前束范式",
+          "name": "将谓词公式化为前束范式的换名规则",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:Skolem化",
+          "name": "消去存在量词的Skolemization方法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:谓词逻辑推理",
+          "name": "全称/存在量词的引入与消去推理规则",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:一阶逻辑完备性",
+          "name": "Gödel完备性定理与紧致性定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:集合的基本运算",
+          "name": "并、交、差、补、幂集的定义与运算律",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:集合的基数",
+          "name": "有限集的基数定义与基数算术",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:可数集与不可数集",
+          "name": "可数集定义、Cantor对角线与不可数集",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:笛卡尔积",
+          "name": "有序对与笛卡尔积的定义及性质",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:二元关系",
+          "name": "关系的集合定义、定义域与值域",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:关系的性质",
+          "name": "自反、对称、反对称、传递性的定义与判断",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:关系矩阵与关系图",
+          "name": "关系的布尔矩阵表示与有向图表示",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:关系的合成运算",
+          "name": "关系合成（复合）、幂次与关系的逆",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:关系的闭包",
+          "name": "自反/对称/传递闭包的定义与Warshall算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:等价关系与划分",
+          "name": "等价类、商集与集合划分的对应关系",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:偏序关系与哈斯图",
+          "name": "偏序集、极大元、最大元与哈斯图",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:全序与良序",
+          "name": "全序关系、良序集与最小元的存在性",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:函数与映射",
+          "name": "单射、满射、双射的定义与判断",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:函数合成与逆函数",
+          "name": "函数的复合运算与逆函数的存在条件",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:特征函数",
+          "name": "集合的特征函数与集合代数的对偶",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的基本概念",
+          "name": "顶点、边、度数序列、简单图与多重图",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的度数序列",
+          "name": "度数序列的可图化条件（Erdős–Gallai定理）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:完全图与完全二部图",
+          "name": "完全图K_n与完全二部图K_{m,n}的性质",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的矩阵表示",
+          "name": "邻接矩阵与关联矩阵的构造及路径计数",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的同构",
+          "name": "图同构的定义、不变量与判断方法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的连通性",
+          "name": "路径、连通图、割点、桥与连通分量",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:欧拉路径与回路",
+          "name": "欧拉路径的充要条件与Fleury构造算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:哈密顿路径与回路",
+          "name": "哈密顿路径充分条件（Dirac/Ore定理）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:带权图与最短路",
+          "name": "带权图的定义与最短路问题建模",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:最短路径算法",
+          "name": "Dijkstra算法与Floyd-Warshall全对最短路",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:树的性质",
+          "name": "树的等价定义与n个顶点树有n-1条边",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:有根树与二叉树",
+          "name": "有根树层次结构、二叉树遍历与Huffman树",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:生成树",
+          "name": "生成树的定义、基本回路系统与割集",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:最小生成树算法",
+          "name": "Kruskal算法（边贪心）与Prim算法（顶点贪心）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:平面图",
+          "name": "平面嵌入定义、Euler公式V-E+F=2与非平面图判别",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图的着色",
+          "name": "顶点着色、色多项式与四色定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:有向图",
+          "name": "有向图的强连通分量、可达矩阵与拓扑排序",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:网络流基础",
+          "name": "流网络、最大流最小割定理（Ford-Fulkerson）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:二部图与匹配",
+          "name": "二部图的判别、完美匹配与Hall定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:代数系统",
+          "name": "代数系统的定义、运算封闭性与特殊元素",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:半群与幺半群",
+          "name": "半群的结合律、幺半群的单位元与自由幺半群",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:群",
+          "name": "群的定义、基本性质与典型例子（Z_n, S_n）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:子群与陪集",
+          "name": "子群判别定理、左右陪集与Lagrange定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:正规子群与商群",
+          "name": "正规子群的定义、商群构造与群同态基本定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:循环群",
+          "name": "循环群的生成元、结构定理与子群格",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:置换群",
+          "name": "对称群S_n、置换的轮换分解与奇偶性",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:同态与同构",
+          "name": "群同态的核与像、同态基本定理与同构",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:群的直积",
+          "name": "群的直积、内直积与Sylow定理简介",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:环与域",
+          "name": "环的定义、整环、除环与域的充要条件",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:多项式环",
+          "name": "多项式环R[x]、整除性与不可约多项式",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:有限域",
+          "name": "有限域GF(p^n)的构造与元素个数",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:格",
+          "name": "格的代数定义、分配格与有界格",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:分配格与模格",
+          "name": "分配格、模格的判别与Birkhoff表示定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:布尔代数",
+          "name": "布尔代数的公理化定义与布尔函数",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:布尔函数化简",
+          "name": "卡诺图化简与Quine-McCluskey算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:加法原理与乘法原理",
+          "name": "分类计数加法原理与分步计数乘法原理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:排列与组合",
+          "name": "排列数A(n,r)与组合数C(n,r)的正式推导",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:多重集排列与组合",
+          "name": "有重复元素的排列与组合计数",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:容斥原理",
+          "name": "容斥原理的公式推导与错排公式",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:鸽巢原理",
+          "name": "鸽巢原理（Pigeonhole）与广义/加强形式",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:二项式系数恒等式",
+          "name": "Vandermonde、Pascal、Chu-Vandermonde等恒等式",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:Stirling数",
+          "name": "第一类与第二类Stirling数及组合意义",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:递推关系",
+          "name": "递推关系的建立与分类（线性/非线性）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:特征根法",
+          "name": "常系数齐次/非齐次线性递推关系的特征根求解",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:生成函数",
+          "name": "普通生成函数的构造、运算与组合应用",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:指数生成函数",
+          "name": "指数生成函数与有标号组合结构",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:Polya计数",
+          "name": "群作用、Burnside引理与Polya计数定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:Ramsey理论",
+          "name": "Ramsey数R(m,n)的定义与基本上下界",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:整除",
+          "name": "整除的定义、性质与带余除法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:最大公因子",
+          "name": "gcd的性质与Euclid辗转相除算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:扩展Euclid算法",
+          "name": "Bezout等式与扩展Euclid算法求逆元",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:素数与唯一分解",
+          "name": "算术基本定理（唯一分解定理）与无穷多素数",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:同余",
+          "name": "同余的定义、性质与模运算",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:欧拉函数",
+          "name": "Euler函数φ(n)的计算公式与性质",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:中国剩余定理",
+          "name": "中国剩余定理（CRT）的构造证明与应用",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:费马小定理",
+          "name": "费马小定理与Euler定理",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:原根与离散对数",
+          "name": "原根的存在性定理与离散对数问题",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:二次剩余",
+          "name": "Legendre符号与二次互反律",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:公钥密码学基础",
+          "name": "RSA加密原理与基于数论的密码学",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:算法复杂度基础",
+          "name": "大O记号、时间复杂度类与基本算法分析",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:P与NP类",
+          "name": "P类、NP类、NP完全性与P≠NP猜想",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:有限状态机",
+          "name": "DFA与NFA的定义、等价性与最小化算法",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:正则语言",
+          "name": "正则表达式与有限自动机等价（Kleene定理）",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:上下文无关文法",
+          "name": "CFG的定义、推导、语法分析树与Chomsky范式",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:图灵机",
+          "name": "图灵机的定义、Church-Turing论题与可判定性",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:编码理论基础",
+          "name": "线性码的定义、生成矩阵与校验矩阵",
+          "status": "active"
+        },
+        {
+          "id": "discrete_math:纠错码",
+          "name": "汉明码、Hamming界与完美码",
+          "status": "active"
+        }
+      ],
+      "edges": [
+        {
+          "from": "discrete_math:命题与联结词",
+          "to": "discrete_math:命题公式与真值表",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:合取范式与析取范式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:永真式与等价式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:逻辑等价的替换定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:合取范式与析取范式",
+          "to": "discrete_math:主范式",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:逻辑等价的替换定理",
+          "to": "discrete_math:主范式",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:联结词完备集",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:自然推理系统",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:自然推理系统",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:归结原理",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:命题逻辑完备性",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:命题逻辑完备性",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:谓词与量词",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词与量词",
+          "to": "discrete_math:谓词公式",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词逻辑的语义",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词等价与蕴含",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词等价与蕴含",
+          "to": "discrete_math:前束范式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:前束范式",
+          "to": "discrete_math:Skolem化",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词逻辑推理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:前束范式",
+          "to": "discrete_math:谓词逻辑推理",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词逻辑的语义",
+          "to": "discrete_math:一阶逻辑完备性",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:谓词逻辑推理",
+          "to": "discrete_math:一阶逻辑完备性",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:集合的基数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基数",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:笛卡尔积",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:笛卡尔积",
+          "to": "discrete_math:二元关系",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:关系的性质",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:关系矩阵与关系图",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:关系的合成运算",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系矩阵与关系图",
+          "to": "discrete_math:关系的合成运算",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系的合成运算",
+          "to": "discrete_math:关系的闭包",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:等价关系与划分",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:偏序关系与哈斯图",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:偏序关系与哈斯图",
+          "to": "discrete_math:全序与良序",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:特征函数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:特征函数",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:图的基本概念",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的度数序列",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:完全图与完全二部图",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的矩阵表示",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的同构",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的连通性",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:关系矩阵与关系图",
+          "to": "discrete_math:图的矩阵表示",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:欧拉路径与回路",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:哈密顿路径与回路",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:带权图与最短路",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:带权图与最短路",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:最短路径算法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的矩阵表示",
+          "to": "discrete_math:最短路径算法",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:树的性质",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:树的性质",
+          "to": "discrete_math:有根树与二叉树",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:树的性质",
+          "to": "discrete_math:生成树",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:生成树",
+          "to": "discrete_math:最小生成树算法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:最小生成树算法",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:平面图",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:平面图",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:平面图",
+          "to": "discrete_math:图的着色",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:图的着色",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:有向图",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的矩阵表示",
+          "to": "discrete_math:有向图",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有向图",
+          "to": "discrete_math:网络流基础",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:网络流基础",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:二部图与匹配",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:二部图与匹配",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:代数系统",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:等价关系与划分",
+          "to": "discrete_math:代数系统",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:代数系统",
+          "to": "discrete_math:半群与幺半群",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:半群与幺半群",
+          "to": "discrete_math:群",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:子群与陪集",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:正规子群与商群",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:循环群",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:置换群",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:正规子群与商群",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:循环群",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同态与同构",
+          "to": "discrete_math:群的直积",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:群的直积",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同态与同构",
+          "to": "discrete_math:环与域",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:环与域",
+          "to": "discrete_math:多项式环",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:多项式环",
+          "to": "discrete_math:有限域",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:环与域",
+          "to": "discrete_math:有限域",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:代数系统",
+          "to": "discrete_math:格",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:偏序关系与哈斯图",
+          "to": "discrete_math:格",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:格",
+          "to": "discrete_math:分配格与模格",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:格",
+          "to": "discrete_math:布尔代数",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:分配格与模格",
+          "to": "discrete_math:布尔代数",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:布尔代数",
+          "to": "discrete_math:布尔函数化简",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:加法原理与乘法原理",
+          "to": "discrete_math:排列与组合",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:多重集排列与组合",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:容斥原理",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:鸽巢原理",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:二项式系数恒等式",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:Stirling数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:等价关系与划分",
+          "to": "discrete_math:Stirling数",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:递推关系",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:特征根法",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:生成函数",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:二项式系数恒等式",
+          "to": "discrete_math:生成函数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:指数生成函数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:容斥原理",
+          "to": "discrete_math:生成函数",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:置换群",
+          "to": "discrete_math:Polya计数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:Polya计数",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:图的着色",
+          "to": "discrete_math:Ramsey理论",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:鸽巢原理",
+          "to": "discrete_math:Ramsey理论",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:最大公因子",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:扩展Euclid算法",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:素数与唯一分解",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:素数与唯一分解",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:同余",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:同余",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:素数与唯一分解",
+          "to": "discrete_math:欧拉函数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:欧拉函数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:中国剩余定理",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:扩展Euclid算法",
+          "to": "discrete_math:中国剩余定理",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:费马小定理",
+          "weight": 0.95,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:费马小定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:原根与离散对数",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:费马小定理",
+          "to": "discrete_math:原根与离散对数",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:二次剩余",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:二次剩余",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:中国剩余定理",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:费马小定理",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:原根与离散对数",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:算法复杂度基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:算法复杂度基础",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:算法复杂度基础",
+          "to": "discrete_math:P与NP类",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:归结原理",
+          "to": "discrete_math:P与NP类",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有向图",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:布尔代数",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.7,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有限状态机",
+          "to": "discrete_math:正则语言",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:正则语言",
+          "to": "discrete_math:上下文无关文法",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有限状态机",
+          "to": "discrete_math:图灵机",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:P与NP类",
+          "to": "discrete_math:图灵机",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有限域",
+          "to": "discrete_math:编码理论基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:编码理论基础",
+          "weight": 0.75,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:编码理论基础",
+          "to": "discrete_math:纠错码",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "discrete_math:有限域",
+          "to": "discrete_math:纠错码",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        }
+      ],
+      "inner_edges": [
+        {
+          "from": "discrete_math:命题与联结词",
+          "to": "discrete_math:命题公式与真值表",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:合取范式与析取范式",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:永真式与等价式",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:逻辑等价的替换定理",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:合取范式与析取范式",
+          "to": "discrete_math:主范式",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:逻辑等价的替换定理",
+          "to": "discrete_math:主范式",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:联结词完备集",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:命题公式与真值表",
+          "to": "discrete_math:自然推理系统",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:自然推理系统",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:归结原理",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:永真式与等价式",
+          "to": "discrete_math:命题逻辑完备性",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:命题逻辑完备性",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:自然推理系统",
+          "to": "discrete_math:谓词与量词",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:谓词与量词",
+          "to": "discrete_math:谓词公式",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词逻辑的语义",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词等价与蕴含",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:谓词等价与蕴含",
+          "to": "discrete_math:前束范式",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:前束范式",
+          "to": "discrete_math:Skolem化",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:谓词公式",
+          "to": "discrete_math:谓词逻辑推理",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:前束范式",
+          "to": "discrete_math:谓词逻辑推理",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:谓词逻辑的语义",
+          "to": "discrete_math:一阶逻辑完备性",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:谓词逻辑推理",
+          "to": "discrete_math:一阶逻辑完备性",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:集合的基数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:集合的基数",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:笛卡尔积",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:笛卡尔积",
+          "to": "discrete_math:二元关系",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:关系的性质",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:关系矩阵与关系图",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:关系的合成运算",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:关系矩阵与关系图",
+          "to": "discrete_math:关系的合成运算",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:关系的合成运算",
+          "to": "discrete_math:关系的闭包",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:等价关系与划分",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:关系的性质",
+          "to": "discrete_math:偏序关系与哈斯图",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:偏序关系与哈斯图",
+          "to": "discrete_math:全序与良序",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:二元关系",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:特征函数",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:特征函数",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:图的基本概念",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的度数序列",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:完全图与完全二部图",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的矩阵表示",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的同构",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:图的连通性",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:关系矩阵与关系图",
+          "to": "discrete_math:图的矩阵表示",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:欧拉路径与回路",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:哈密顿路径与回路",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:带权图与最短路",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:带权图与最短路",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:最短路径算法",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:图的矩阵表示",
+          "to": "discrete_math:最短路径算法",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:树的性质",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:树的性质",
+          "to": "discrete_math:有根树与二叉树",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:树的性质",
+          "to": "discrete_math:生成树",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:生成树",
+          "to": "discrete_math:最小生成树算法",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:最小生成树算法",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:图的基本概念",
+          "to": "discrete_math:平面图",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:平面图",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:平面图",
+          "to": "discrete_math:图的着色",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:图的着色",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:有向图",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:图的矩阵表示",
+          "to": "discrete_math:有向图",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:有向图",
+          "to": "discrete_math:网络流基础",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:带权图与最短路",
+          "to": "discrete_math:网络流基础",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:完全图与完全二部图",
+          "to": "discrete_math:二部图与匹配",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:图的连通性",
+          "to": "discrete_math:二部图与匹配",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:代数系统",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:等价关系与划分",
+          "to": "discrete_math:代数系统",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:代数系统",
+          "to": "discrete_math:半群与幺半群",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:半群与幺半群",
+          "to": "discrete_math:群",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:子群与陪集",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:正规子群与商群",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:循环群",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:置换群",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:正规子群与商群",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:循环群",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:同态与同构",
+          "to": "discrete_math:群的直积",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:子群与陪集",
+          "to": "discrete_math:群的直积",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:同态与同构",
+          "to": "discrete_math:环与域",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:环与域",
+          "to": "discrete_math:多项式环",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:多项式环",
+          "to": "discrete_math:有限域",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:环与域",
+          "to": "discrete_math:有限域",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:代数系统",
+          "to": "discrete_math:格",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:偏序关系与哈斯图",
+          "to": "discrete_math:格",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:格",
+          "to": "discrete_math:分配格与模格",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:格",
+          "to": "discrete_math:布尔代数",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:分配格与模格",
+          "to": "discrete_math:布尔代数",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:布尔代数",
+          "to": "discrete_math:布尔函数化简",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:加法原理与乘法原理",
+          "to": "discrete_math:排列与组合",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:多重集排列与组合",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:容斥原理",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:鸽巢原理",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:二项式系数恒等式",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:Stirling数",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:等价关系与划分",
+          "to": "discrete_math:Stirling数",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:排列与组合",
+          "to": "discrete_math:递推关系",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:特征根法",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:生成函数",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:二项式系数恒等式",
+          "to": "discrete_math:生成函数",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:指数生成函数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:容斥原理",
+          "to": "discrete_math:生成函数",
+          "weight": 0.7
+        },
+        {
+          "from": "discrete_math:置换群",
+          "to": "discrete_math:Polya计数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:Polya计数",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:图的着色",
+          "to": "discrete_math:Ramsey理论",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:鸽巢原理",
+          "to": "discrete_math:Ramsey理论",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:最大公因子",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:扩展Euclid算法",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:素数与唯一分解",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:素数与唯一分解",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:整除",
+          "to": "discrete_math:同余",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:最大公因子",
+          "to": "discrete_math:同余",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:素数与唯一分解",
+          "to": "discrete_math:欧拉函数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:欧拉函数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:中国剩余定理",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:扩展Euclid算法",
+          "to": "discrete_math:中国剩余定理",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:费马小定理",
+          "weight": 0.95
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:费马小定理",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:原根与离散对数",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:费马小定理",
+          "to": "discrete_math:原根与离散对数",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:欧拉函数",
+          "to": "discrete_math:二次剩余",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:同余",
+          "to": "discrete_math:二次剩余",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:中国剩余定理",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:费马小定理",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:原根与离散对数",
+          "to": "discrete_math:公钥密码学基础",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:递推关系",
+          "to": "discrete_math:算法复杂度基础",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:生成函数",
+          "to": "discrete_math:算法复杂度基础",
+          "weight": 0.7
+        },
+        {
+          "from": "discrete_math:算法复杂度基础",
+          "to": "discrete_math:P与NP类",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:归结原理",
+          "to": "discrete_math:P与NP类",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:函数与映射",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:集合的基本运算",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:有向图",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:布尔代数",
+          "to": "discrete_math:有限状态机",
+          "weight": 0.7
+        },
+        {
+          "from": "discrete_math:有限状态机",
+          "to": "discrete_math:正则语言",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:正则语言",
+          "to": "discrete_math:上下文无关文法",
+          "weight": 0.9
+        },
+        {
+          "from": "discrete_math:有限状态机",
+          "to": "discrete_math:图灵机",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:P与NP类",
+          "to": "discrete_math:图灵机",
+          "weight": 0.8
+        },
+        {
+          "from": "discrete_math:有限域",
+          "to": "discrete_math:编码理论基础",
+          "weight": 0.85
+        },
+        {
+          "from": "discrete_math:群",
+          "to": "discrete_math:编码理论基础",
+          "weight": 0.75
+        },
+        {
+          "from": "discrete_math:编码理论基础",
+          "to": "discrete_math:纠错码",
+          "weight": 1
+        },
+        {
+          "from": "discrete_math:有限域",
+          "to": "discrete_math:纠错码",
+          "weight": 0.8
+        }
+      ],
+      "cross_edges": [],
+      "incoming_edges": [
+        {
+          "from": "higher_math:集合论基础",
+          "to": "discrete_math:集合的基数",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:映射与函数",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:实数与极限",
+          "to": "discrete_math:可数集与不可数集",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "discrete_math:关系矩阵与关系图",
+          "weight": 0.78
+        },
+        {
+          "from": "higher_math:线性变换",
+          "to": "discrete_math:同态与同构",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:向量空间",
+          "to": "discrete_math:代数系统",
+          "weight": 0.72
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "discrete_math:特征根法",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:古典概型",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:数列极限",
+          "to": "discrete_math:生成函数",
+          "weight": 0.7
+        },
+        {
+          "from": "math:命题与逻辑",
+          "to": "discrete_math:命题与联结词",
+          "weight": 0.9
+        },
+        {
+          "from": "math:逻辑联结词",
+          "to": "discrete_math:命题与联结词",
+          "weight": 0.88
+        },
+        {
+          "from": "math:充分必要条件",
+          "to": "discrete_math:命题与联结词",
+          "weight": 0.75
+        },
+        {
+          "from": "math:集合与基本运算",
+          "to": "discrete_math:集合的基本运算",
+          "weight": 0.88
+        },
+        {
+          "from": "math:集合的交并补",
+          "to": "discrete_math:集合的基本运算",
+          "weight": 0.85
+        },
+        {
+          "from": "math:子集与集合包含关系",
+          "to": "discrete_math:集合的基本运算",
+          "weight": 0.8
+        },
+        {
+          "from": "math:函数的概念与性质",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.82
+        },
+        {
+          "from": "math:映射与函数对应",
+          "to": "discrete_math:函数与映射",
+          "weight": 0.85
+        },
+        {
+          "from": "math:排列与组合",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.88
+        },
+        {
+          "from": "math:排列数公式",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.82
+        },
+        {
+          "from": "math:组合数公式",
+          "to": "discrete_math:排列与组合",
+          "weight": 0.82
+        },
+        {
+          "from": "math:数学归纳法",
+          "to": "discrete_math:递推关系",
+          "weight": 0.75
+        },
+        {
+          "from": "math:递推关系",
+          "to": "discrete_math:递推关系",
+          "weight": 0.85
+        },
+        {
+          "from": "math:数列基础",
+          "to": "discrete_math:递推关系",
+          "weight": 0.72
+        },
+        {
+          "from": "math:二项式定理",
+          "to": "discrete_math:生成函数",
+          "weight": 0.68
+        },
+        {
+          "from": "math:命题与逻辑",
+          "to": "discrete_math:命题公式与真值表",
+          "weight": 0.82
+        },
+        {
+          "from": "math:集合与基本运算",
+          "to": "discrete_math:笛卡尔积",
+          "weight": 0.78
+        },
+        {
+          "from": "math:排列与组合",
+          "to": "discrete_math:加法原理与乘法原理",
+          "weight": 0.85
+        },
+        {
+          "from": "math:排列与组合",
+          "to": "discrete_math:容斥原理",
+          "weight": 0.72
+        },
+        {
+          "from": "math:二项式定理",
+          "to": "discrete_math:二项式系数恒等式",
+          "weight": 0.82
+        },
+        {
+          "from": "math:函数的概念与性质",
+          "to": "discrete_math:函数合成与逆函数",
+          "weight": 0.75
+        }
+      ]
+    }
+  ]
+}

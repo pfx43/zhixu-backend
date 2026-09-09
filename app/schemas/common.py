@@ -79,6 +79,7 @@ class UserResponse(BaseModel):
     username: Optional[str] = None
     is_active: bool
     created_at: datetime
+    storage_used_bytes: int = 0
     plan_info: PlanInfo
 
 # Alias for PlanTier to match user request
@@ -226,7 +227,7 @@ class ChatRequest(BaseModel):
     content: str
     session_id: Optional[str] = None
     collection_id: Optional[str] = None
-    # 对话模式: qa / learning / classroom_note / verify
+    # 对话模式: qa / learning / classroom_note / verify / onboarding
     mode: Optional[str] = "qa"
     # TCN 集成字段（可选，不传则跳过知识状态更新）
     tc_node_id: Optional[str] = None
@@ -256,6 +257,7 @@ class ChatHistoryItem(BaseModel):
     # 可选：历史恢复思考内容与工具名（旧历史数据缺失时为空）
     reasoning_content: Optional[str] = None
     tool_names: Optional[List[str]] = None
+    payload: Optional[dict] = None
 
 class ChatSession(BaseModel):
     id: str
@@ -263,6 +265,7 @@ class ChatSession(BaseModel):
     created_at: datetime
     updated_at: datetime
     message_count: int
+    kind: Optional[str] = None
 
 class ChatSessionList(BaseModel):
     sessions: List[ChatSession]

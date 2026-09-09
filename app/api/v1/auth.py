@@ -7,6 +7,7 @@ from datetime import timedelta, datetime, timezone
 from app.api.deps import get_db, get_current_active_user, get_admin_or_internal, oauth2_scheme
 from app.core.security import get_password_hash, verify_password
 from app.models import User, PlanTier
+from app.services.storage_usage import refresh_user_storage
 from app.schemas import (
     UserCreate, UserRegistrationResponse, Token, UserResponse, UserWithPlan,
     UpgradeRequest, SendVerificationRequest, SendVerificationResponse,
@@ -114,6 +115,9 @@ def read_users_me(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    storage_used_bytes = refresh_user_storage(db, db_user.id)
+    db.commit()
+
     days_remaining = None
     if db_user.expires_at:
         delta = db_user.expires_at - datetime.now(timezone.utc)
@@ -130,6 +134,7 @@ def read_users_me(
         "username": db_user.username,
         "is_active": db_user.is_active,
         "created_at": db_user.created_at,
+        "storage_used_bytes": storage_used_bytes,
         "plan_info": {
             "level": db_user.plan_level,
             "name": plan_config.name if plan_config else "未知套餐",
@@ -168,13 +173,16 @@ def check_my_quota(
     if not user_data:
         raise HTTPException(status_code=404, detail="用户数据异常")
 
+    storage_used_bytes = refresh_user_storage(db, current_user["user_id"])
+    db.commit()
     return {
         "has_quota": has_quota,
         "plan_level": user_data.get("plan_level"),
         "plan_name": user_data.get("plan_name"),
         "api_limit_daily": user_data.get("api_limit_daily"),
         "expires_at": user_data.get("expires_at"),
-        "days_remaining": user_data.get("days_remaining")
+        "days_remaining": user_data.get("days_remaining"),
+        "storage_used_bytes": storage_used_bytes,
     }
 
 @router.post("/users/me/upgrade-plan")

@@ -72,6 +72,7 @@ class TagStatsOut(BaseModel):
 
 
 class TagStatsListOut(BaseModel):
+    document_id: Optional[str] = None
     by_tag: List[TagStatsOut] = []
     by_question_type: List[TagStatsOut] = []
-
+

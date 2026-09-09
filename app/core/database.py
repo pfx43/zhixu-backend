@@ -64,15 +64,43 @@ def short_session():
 
 # ── 异步引擎（PostgreSQL + asyncpg） ──
 import re as _re
-_async_url = _re.sub(
-    r"^postgresql(?:\+\w+)?://",
-    "postgresql+asyncpg://",
-    SQLALCHEMY_DATABASE_URL,
-    count=1,
-)
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+
+def _asyncpg_url_and_connect_args(sync_url: str) -> tuple[str, dict]:
+    """psycopg2 的 options=-csearch_path=… 不能原样传给 asyncpg。"""
+    async_url = _re.sub(
+        r"^postgresql(?:\+\w+)?://",
+        "postgresql+asyncpg://",
+        sync_url,
+        count=1,
+    )
+    parsed = urlparse(async_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    connect_args: dict = {}
+    options = query.pop("options", "") or ""
+    settings: dict[str, str] = {}
+    for token in options.replace("-c", " ").split():
+        if "=" not in token:
+            continue
+        key, value = token.split("=", 1)
+        key = key.strip()
+        if key:
+            settings[key] = value.strip().strip('"')
+    if settings:
+        connect_args["server_settings"] = settings
+    clean = urlunparse(parsed._replace(query=urlencode(query)))
+    return clean, connect_args
+
+
+_async_url, _async_connect_args = _asyncpg_url_and_connect_args(SQLALCHEMY_DATABASE_URL)
 
 try:
-    async_engine = create_async_engine(_async_url, **_engine_kwargs)
+    async_engine = create_async_engine(
+        _async_url,
+        connect_args=_async_connect_args,
+        **_engine_kwargs,
+    )
     AsyncSessionLocal = async_sessionmaker(
         async_engine, class_=AsyncSession, expire_on_commit=False
     )
@@ -107,3 +135,11 @@ def init_db():
     import app.models  # noqa: F401 — 注册全部 model 到 Base.metadata
 
     Base.metadata.create_all(bind=engine)
+    from app.services.tcn.domains import ensure_tcn_domains
+
+    db = SessionLocal()
+    try:
+        ensure_tcn_domains(db)
+        db.commit()
+    finally:
+        db.close()

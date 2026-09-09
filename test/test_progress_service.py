@@ -28,3 +28,44 @@ def test_counts_from_stats_aggregates():
     assert out["correct"] == 2
     assert out["wrong"] == 1
     assert out["unknown"] == 1
+
+
+def test_pick_current_chapter_last_practiced():
+    from app.schemas.progress import ChapterProgressOut
+
+    chapters = [
+        ChapterProgressOut(
+            order_index=0, title="一", page_start=1, page_end=4,
+            question_count=3, answered_count=3, accuracy_rate=80,
+        ),
+        ChapterProgressOut(
+            order_index=1, title="二", page_start=5, page_end=10,
+            question_count=2, answered_count=1, accuracy_rate=50,
+        ),
+        ChapterProgressOut(
+            order_index=2, title="三", page_start=11, page_end=20,
+            question_count=0, answered_count=0,
+        ),
+    ]
+    cur = progress_service._pick_current_chapter(chapters)
+    assert cur and cur.title == "二"
+    nxt = progress_service._pick_document_next(chapters)
+    assert nxt and nxt.action == "generate" and nxt.title == "三"
+
+
+def test_pick_document_next_weak_chapter():
+    from app.schemas.progress import ChapterProgressOut
+
+    chapters = [
+        ChapterProgressOut(
+            order_index=0, title="一", page_start=1, page_end=4,
+            question_count=4, answered_count=4, accuracy_rate=40,
+        ),
+        ChapterProgressOut(
+            order_index=1, title="二", page_start=5, page_end=10,
+            question_count=2, answered_count=2, accuracy_rate=90,
+        ),
+    ]
+    nxt = progress_service._pick_document_next(chapters)
+    assert nxt and nxt.title == "一" and nxt.action == "quiz"
+    assert nxt.reason == "这一章还需要巩固"

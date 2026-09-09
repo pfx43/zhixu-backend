@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知序 · 今天</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:        #0d1117;
+  --sidebar:   #111318;
+  --card:      #161b22;
+  --card2:     #1c2128;
+  --border:    #30363d;
+  --green:     #3fb06e;
+  --green-dim: #1a3326;
+  --green-txt: #56d98a;
+  --red:       #f85149;
+  --red-dim:   #3d1a1a;
+  --amber:     #d29922;
+  --amber-dim: #312508;
+  --blue:      #58a6ff;
+  --blue-dim:  #0d2040;
+  --purple:    #bc8cff;
+  --purple-dim:#1e1040;
+  --txt1:      #e6edf3;
+  --txt2:      #8b949e;
+  --txt3:      #3a4049;
+}
+
+body {
+  font-family: -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  background: var(--bg); color: var(--txt1);
+  display: flex; height: 100vh; overflow: hidden;
+}
+
+@keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:.35} }
+@keyframes glow    { 0%,100%{box-shadow:0 0 0 0 rgba(63,176,110,.25)} 50%{box-shadow:0 0 0 7px rgba(63,176,110,0)} }
+@keyframes fillBar { from{width:0} }
+
+.fu { animation: fadeUp .45s ease both; }
+.fu1{animation-delay:.05s}.fu2{animation-delay:.12s}.fu3{animation-delay:.19s}
+.fu4{animation-delay:.26s}.fu5{animation-delay:.33s}.fu6{animation-delay:.40s}
+
+/* ── 侧边栏 ── */
+.sidebar {
+  width:200px;min-width:200px;background:var(--sidebar);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0;
+}
+.logo { display:flex;align-items:center;gap:10px;padding:0 16px 18px;border-bottom:1px solid var(--border);margin-bottom:10px; }
+.logo-icon {
+  width:32px;height:32px;background:var(--green);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#fff;animation:glow 3s infinite;
+}
+.logo-text{font-size:15px;font-weight:600}.logo-sub{font-size:11px;color:var(--txt2)}
+.nav-sec{padding:0 8px;flex:1}
+.nav-lbl{font-size:10px;color:var(--txt3);padding:8px 8px 4px;letter-spacing:.5px}
+.nav-item {
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;
+  cursor:pointer;font-size:13px;color:var(--txt2);
+  transition:background .15s,color .15s;margin-bottom:1px;
+}
+.nav-item:hover{background:var(--card2);color:var(--txt1)}
+.nav-item.active{background:var(--green-dim);color:var(--green-txt);font-weight:500}
+.nav-item svg{width:15px;height:15px;flex-shrink:0}
+.user-block{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--green),#1a7a4a);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.u-name{font-size:13px;font-weight:500}.u-sub{font-size:11px;color:var(--txt2)}
+
+/* ── 主体 ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;color:var(--txt2);transition:border-color .2s}
+.search:hover{border-color:var(--green)}.search svg{width:14px;height:14px;flex-shrink:0}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2);background:var(--card2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;margin-left:auto}
+.s-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+.btn-tina{display:flex;align-items:center;gap:6px;background:var(--green);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn-tina:hover{opacity:.85}.btn-tina svg{width:14px;height:14px}
+
+.content{flex:1;overflow-y:auto;padding:22px 26px}
+.content::-webkit-scrollbar{width:5px}
+.content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+.layout{display:grid;grid-template-columns:1fr 310px;gap:18px;align-items:start}
+.left{display:flex;flex-direction:column;gap:13px}
+.right{display:flex;flex-direction:column;gap:13px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.block-title{font-size:12px;font-weight:600;color:var(--txt2);display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.bdot{width:6px;height:6px;border-radius:50%}
+.bdot-green{background:var(--green);animation:pulse 2s infinite}
+.bdot-amber{background:var(--amber);animation:pulse 2s infinite}
+.bdot-purple{background:var(--purple);animation:pulse 2s infinite}
+.bdot-blue{background:var(--blue);animation:pulse 2s infinite}
+
+/* ① 目标 */
+.goal-block{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:10px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between}
+.goal-lbl{font-size:11px;color:var(--txt2);margin-bottom:3px}
+.goal-val{font-size:15px;font-weight:600}
+.goal-meta{font-size:11px;color:var(--txt2);margin-top:2px}
+.goal-meta span{color:var(--amber);font-weight:600}
+.btn-sm{font-size:12px;color:var(--txt2);border:1px solid var(--border);border-radius:5px;padding:4px 10px;cursor:pointer;background:transparent;transition:border-color .15s,color .15s;white-space:nowrap;flex-shrink:0}
+.btn-sm:hover{border-color:var(--green);color:var(--green-txt)}
+
+/* ② 学习状态 */
+.state-block{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.state-top{display:flex;align-items:flex-end;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.state-pct{font-size:46px;font-weight:700;line-height:1;color:var(--green-txt)}
+.state-pct-unit{font-size:18px;font-weight:400;color:var(--txt2)}
+.state-delta{font-size:12px;color:var(--green-txt);background:var(--green-dim);border-radius:100px;padding:2px 9px;margin-bottom:4px;display:inline-block}
+.state-items{display:flex;flex-direction:column;gap:8px}
+.state-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--card2);border:1px solid var(--border);cursor:pointer;transition:border-color .15s,transform .1s}
+.state-item:hover{transform:translateX(3px)}
+.si-red:hover{border-color:var(--red)}.si-amber:hover{border-color:var(--amber)}.si-green:hover{border-color:var(--green)}
+.si-icon{font-size:15px;flex-shrink:0}
+.si-body{flex:1}
+.si-label{font-size:10px;color:var(--txt2);margin-bottom:2px}
+.si-name{font-size:13px;font-weight:600}
+.si-right{text-align:right;flex-shrink:0}
+.si-pct{font-size:15px;font-weight:700}
+.si-trend{font-size:10px;color:var(--txt2)}
+.c-red{color:var(--red)}.c-amber{color:var(--amber)}.c-green{color:var(--green-txt)}
+.bar-wrap{height:3px;background:var(--border);border-radius:100px;margin-top:5px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;animation:fillBar .9s cubic-bezier(.4,0,.2,1) both}
+.bf-red{background:var(--red)}.bf-amber{background:var(--amber)}.bf-green{background:var(--green)}
+
+/* ③ Tina发现 */
+.tina-block{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.tina-header{padding:13px 16px 11px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.tina-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),#1a7a4a);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.tina-name{font-size:13px;font-weight:600;color:var(--green-txt)}
+.tina-sub{font-size:11px;color:var(--txt2)}
+.tina-body{padding:14px 16px}
+.tina-lead{font-size:14px;font-weight:600;line-height:1.6;margin-bottom:12px}
+.tina-lead em{color:var(--amber);font-style:normal;font-weight:700}
+.evidence-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:12px}
+.ev-title{font-size:11px;color:var(--txt2);margin-bottom:8px;font-weight:600}
+.ev-rows{display:flex;flex-direction:column;gap:6px}
+.ev-row{display:flex;align-items:center;justify-content:space-between}
+.ev-lbl{font-size:12px;color:var(--txt2)}
+.ev-val{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600}
+.ev-mini-bar{width:72px;height:4px;background:var(--border);border-radius:100px;overflow:hidden;flex-shrink:0}
+.ev-mini-fill{height:100%;border-radius:100px;animation:fillBar .9s ease both}
+.tina-conclusion{font-size:12px;color:var(--txt2);line-height:1.6;padding:9px 12px;background:var(--amber-dim);border-left:2px solid var(--amber);border-radius:0 6px 6px 0;margin-bottom:12px}
+.tina-conclusion strong{color:var(--txt1)}
+.tina-actions{display:flex;gap:8px}
+.btn-ev{flex:1;padding:8px;border:1px solid var(--border);border-radius:7px;background:transparent;color:var(--txt2);font-size:12px;cursor:pointer;transition:border-color .15s,color .15s}
+.btn-ev:hover{border-color:var(--amber);color:var(--amber)}
+.btn-fix{flex:1.5;padding:8px;border:none;border-radius:7px;background:var(--green);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn-fix:hover{opacity:.85;transform:scale(1.02)}
+
+/* ④ 今天为什么 */
+.task-items{display:flex;flex-direction:column;gap:8px}
+.task-item{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;background:var(--card2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .15s}
+.task-item:hover{border-color:var(--green)}
+.task-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.tn-red{background:var(--red-dim);color:var(--red)}.tn-amber{background:var(--amber-dim);color:var(--amber)}.tn-green{background:var(--green-dim);color:var(--green-txt)}
+.task-action{font-size:13px;font-weight:600;margin-bottom:3px}
+.task-why{font-size:11px;color:var(--txt2);line-height:1.5}
+.task-why strong{color:var(--txt1)}
+.task-tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:100px;margin-top:4px}
+.tt-red{background:var(--red-dim);color:var(--red)}.tt-amber{background:var(--amber-dim);color:var(--amber)}.tt-green{background:var(--green-dim);color:var(--green-txt)}
+
+/* ── 右栏 ── */
+.divider{height:1px;background:var(--border);margin:12px 0}
+
+/* 画像头 */
+.profile-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.profile-av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--green),#1a7a4a);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 0 0 3px var(--green-dim)}
+.p-name{font-size:14px;font-weight:600}.p-sub{font-size:11px;color:var(--txt2)}
+
+.persona-tag{display:inline-flex;align-items:center;gap:5px;background:var(--purple-dim);border:1px solid rgba(188,140,255,.2);color:var(--purple);border-radius:100px;padding:3px 11px;font-size:12px;font-weight:500;margin-bottom:4px}
+.persona-note{font-size:10px;color:var(--txt3);margin-bottom:12px}
+
+/* 认知状态层（动态） */
+.cog-state-title{font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.cog-state-badge{font-size:10px;color:var(--green-txt);background:var(--green-dim);padding:1px 7px;border-radius:100px}
+.cog-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:4px}
+.cog-row{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:8px;padding:7px 10px;background:var(--card2);border-radius:6px;border:1px solid var(--border)}
+.cog-name{font-size:12px;font-weight:500}
+.cog-pct{font-size:12px;font-weight:700;width:32px;text-align:right}
+.cog-conf{font-size:10px;color:var(--txt2);background:var(--card);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.cog-transfer{font-size:12px;width:16px;text-align:center}
+.mini-bar-wrap{height:3px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:3px;grid-column:1/-1}
+.mini-bar-fill{height:100%;border-radius:100px;animation:fillBar .9s cubic-bezier(.4,0,.2,1) both}
+
+/* 行为特征层（稳定） */
+.behavior-title{font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:8px}
+.trait-list{display:flex;flex-direction:column;gap:7px}
+.trait-item{display:flex;align-items:flex-start;gap:7px}
+.t-icon{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px}
+.t-lbl{font-size:10px;color:var(--txt2);margin-bottom:1px}
+.t-val{font-size:11px;font-weight:500;line-height:1.4}
+
+/* Tina说 */
+.tina-says-lbl{font-size:10px;color:var(--green-txt);font-weight:600;display:flex;align-items:center;gap:4px;margin-bottom:6px}
+.ts-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+.tina-bubble{background:var(--card2);border:1px solid var(--border);border-radius:4px 9px 9px 9px;padding:10px 13px;font-size:12px;color:var(--txt1);line-height:1.7}
+
+/* 状态变化时间线 */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;align-items:flex-start;gap:10px;padding-bottom:12px;position:relative}
+.tl-item:not(:last-child)::before{content:'';position:absolute;left:5px;top:14px;bottom:0;width:1px;background:var(--border)}
+.tl-dot{width:11px;height:11px;border-radius:50%;border:2px solid;flex-shrink:0;margin-top:3px;background:var(--bg)}
+.tl-dot-green{border-color:var(--green)}.tl-dot-amber{border-color:var(--amber)}.tl-dot-gray{border-color:var(--txt3)}
+.tl-date{font-size:10px;color:var(--txt3);margin-bottom:2px}
+.tl-content{font-size:12px;color:var(--txt2);line-height:1.5}
+.tl-content strong{color:var(--txt1);font-weight:500}
+.tl-pct{font-size:11px;font-weight:600}
+
+/* 知识域 */
+.domain-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.d-chip{display:inline-flex;align-items:center;gap:4px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer;transition:border-color .15s,color .15s}
+.d-chip:hover{border-color:var(--green);color:var(--green-txt)}
+.d-chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green-txt)}
+.d-chip.add{background:transparent;border-style:dashed;color:var(--txt2)}
+.d-chip.add:hover{border-color:var(--green);color:var(--green-txt)}
+.chip-dot{width:5px;height:5px;border-radius:50%}
+.domain-note{font-size:10px;color:var(--txt3);line-height:1.6}
+
+/* 打卡 */
+.streak-label{font-size:12px;font-weight:500;margin-bottom:7px}
+.streak-label span{color:var(--green-txt);font-weight:700}
+.streak-row{display:flex;gap:4px;margin-bottom:7px}
+.s-day{flex:1;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.sd-done{background:var(--green-dim);color:var(--green-txt)}
+.sd-today{background:var(--green);color:#fff;animation:glow 2s infinite}
+.sd-miss{background:var(--card2);color:var(--txt3)}
+.streak-stats{font-size:11px;color:var(--txt2)}
+.streak-stats b{color:var(--green-txt)}
+</style>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">知</div>
+    <div><div class="logo-text">知序</div><div class="logo-sub">AI 知识工作台</div></div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-item active">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>今天
+    </div>
+    <div class="nav-lbl">工作台</div>
+    <div class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Tina
+    </div>
+    <div class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>笔记
+    </div>
+    <div class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>资料
+    </div>
+    <div class="nav-lbl">学习</div>
+    <div class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的状态
+    </div>
+    <div class="nav-item">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>学习路径
+    </div>
+  </div>
+  <div class="user-block">
+    <div class="avatar">竹</div>
+    <div><div class="u-name">竹溪禅</div><div class="u-sub">个人学习空间</div></div>
+  </div>
+</aside>
+
+<!-- 主体 -->
+<div class="main">
+  <div class="topbar">
+    <div class="search">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      搜索笔记、资料或向 Tina 提问…
+    </div>
+    <div class="status-pill"><div class="s-dot"></div>认知状态追踪中</div>
+    <button class="btn-tina">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      向 Tina 提问
+    </button>
+  </div>
+
+  <div class="content">
+    <div class="layout">
+
+      <!-- ══ 左栏：三个问题 ══ -->
+      <div class="left">
+
+        <!-- Q1 目标 -->
+        <div class="goal-block fu fu1">
+          <div>
+            <div class="goal-lbl">当前学习目标</div>
+            <div class="goal-val">备战考研，主攻大学数学</div>
+            <div class="goal-meta">距离目标考试还有 <span>122 天</span>，当前进度需要加速</div>
+          </div>
+          <button class="btn-sm">和 Tina 改</button>
+        </div>
+
+        <!-- Q1 我现在怎么样 -->
+        <div class="state-block fu fu2">
+          <div class="block-title"><div class="bdot bdot-green"></div>我现在怎么样</div>
+          <div class="state-top">
+            <div>
+              <div style="font-size:11px;color:var(--txt2);margin-bottom:4px">整体掌握度</div>
+              <div class="state-pct">68<span class="state-pct-unit">%</span></div>
+            </div>
+            <div style="padding-bottom:8px">
+              <div class="state-delta">↑ 较上周 +6%</div>
+              <div style="font-size:11px;color:var(--txt2)">已掌握 31 / 177 节点（2个已激活领域）</div>
+            </div>
+          </div>
+          <div class="state-items">
+            <div class="state-item si-red">
+              <div class="si-icon">🔴</div>
+              <div class="si-body">
+                <div class="si-label">当前最薄弱</div>
+                <div class="si-name">极限与连续</div>
+                <div class="bar-wrap"><div class="bar-fill bf-red" style="width:43%;animation-delay:.3s"></div></div>
+              </div>
+              <div class="si-right"><div class="si-pct c-red">43%</div><div class="si-trend">↓ 核心断层</div></div>
+            </div>
+            <div class="state-item si-amber">
+              <div class="si-icon">🟡</div>
+              <div class="si-body">
+                <div class="si-label">正在形成</div>
+                <div class="si-name">微分学</div>
+                <div class="bar-wrap"><div class="bar-fill bf-amber" style="width:61%;animation-delay:.45s"></div></div>
+              </div>
+              <div class="si-right"><div class="si-pct c-amber">61%</div><div class="si-trend">↑ 上升中</div></div>
+            </div>
+            <div class="state-item si-green">
+              <div class="si-icon">🟢</div>
+              <div class="si-body">
+                <div class="si-label">已较稳定</div>
+                <div class="si-name">积分基础</div>
+                <div class="bar-wrap"><div class="bar-fill bf-green" style="width:84%;animation-delay:.6s"></div></div>
+              </div>
+              <div class="si-right"><div class="si-pct c-green">84%</div><div class="si-trend">→ 保持</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q2 我为什么是这样 -->
+        <div class="tina-block fu fu3">
+          <div class="tina-header">
+            <div class="tina-av">T</div>
+            <div>
+              <div class="tina-name">为什么是这样 · Tina 的判断</div>
+              <div class="tina-sub">上次答题后更新 · 刚刚</div>
+            </div>
+          </div>
+          <div class="tina-body">
+            <div class="tina-lead">
+              你真正的问题<em>不是"不会做题"</em>，而是<br>极限存在性的概念边界还没有建立。
+            </div>
+            <div class="evidence-box">
+              <div class="ev-title">📊 证据：最近 8 次相关题目</div>
+              <div class="ev-rows">
+                <div class="ev-row">
+                  <div class="ev-lbl">直接计算题</div>
+                  <div class="ev-val">
+                    <div class="ev-mini-bar"><div class="ev-mini-fill bf-green" style="width:83%;animation-delay:.5s"></div></div>
+                    <span class="c-green">83%</span>
+                  </div>
+                </div>
+                <div class="ev-row">
+                  <div class="ev-lbl">存在性判断题</div>
+                  <div class="ev-val">
+                    <div class="ev-mini-bar"><div class="ev-mini-fill bf-red" style="width:38%;animation-delay:.65s"></div></div>
+                    <span class="c-red">38%</span>
+                  </div>
+                </div>
+                <div class="ev-row">
+                  <div class="ev-lbl">间隔一周再测</div>
+                  <div class="ev-val">
+                    <div class="ev-mini-bar"><div class="ev-mini-fill bf-red" style="width:33%;animation-delay:.8s"></div></div>
+                    <span class="c-red">33%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tina-conclusion">
+              系统判断：<strong>这不是计算能力问题，是概念层的结构性断层。</strong>继续刷题只会绕开这个洞，不如现在直接修。
+            </div>
+            <div class="tina-actions">
+              <button class="btn-ev">查看完整证据</button>
+              <button class="btn-fix">开始修复「极限定义」→</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Q3 我现在应该做什么 -->
+        <div class="card fu fu4">
+          <div class="block-title"><div class="bdot bdot-green"></div>我现在应该做什么</div>
+          <div class="task-items">
+            <div class="task-item">
+              <div class="task-num tn-red">1</div>
+              <div>
+                <div class="task-action">修复：极限存在性判断</div>
+                <div class="task-why">这是当前<strong>结构性断层</strong>，修复后可改善 7 个后续节点的连贯性</div>
+                <div class="task-tag tt-red">优先修复</div>
+              </div>
+            </div>
+            <div class="task-item">
+              <div class="task-num tn-amber">2</div>
+              <div>
+                <div class="task-action">验证：导数概念掌握情况</div>
+                <div class="task-why">系统对这个知识点的<strong>判断置信度只有 54%</strong>，需一次小测试确认</div>
+                <div class="task-tag tt-amber">待验证</div>
+              </div>
+            </div>
+            <div class="task-item">
+              <div class="task-num tn-green">3</div>
+              <div>
+                <div class="task-action">巩固：积分基础 5 题</div>
+                <div class="task-why">该节点上周提升明显，今日<strong>间隔复习</strong>有助于稳定长期记忆</div>
+                <div class="task-tag tt-green">长期巩固</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══ 右栏：认知画像 ══ -->
+      <div class="right">
+
+        <!-- 画像卡 -->
+        <div class="card fu fu2">
+          <div class="block-title"><div class="bdot bdot-purple"></div>我的认知画像</div>
+
+          <div class="profile-head">
+            <div class="profile-av">竹</div>
+            <div><div class="p-name">竹溪禅</div><div class="p-sub">已积累 42 次答题记录</div></div>
+          </div>
+
+          <div class="persona-tag">⚡ 战略型学习者</div>
+          <div class="persona-note">根据 42 次答题行为推断 · 随状态持续更新</div>
+
+          <!-- 层一：认知状态（动态） -->
+          <div class="cog-state-title">
+            认知状态
+            <span class="cog-state-badge">每次答题后更新</span>
+          </div>
+          <div class="cog-rows">
+            <div class="cog-row">
+              <div>
+                <div class="cog-name" style="color:var(--red)">极限与连续</div>
+                <div class="mini-bar-wrap"><div class="mini-bar-fill bf-red" style="width:43%;animation-delay:.35s"></div></div>
+              </div>
+              <div class="cog-pct c-red">43%</div>
+              <div class="cog-conf">置信度 中</div>
+              <div class="cog-transfer">⚠️</div>
+            </div>
+            <div class="cog-row">
+              <div>
+                <div class="cog-name" style="color:var(--amber)">微分学</div>
+                <div class="mini-bar-wrap"><div class="mini-bar-fill bf-amber" style="width:61%;animation-delay:.5s"></div></div>
+              </div>
+              <div class="cog-pct c-amber">61%</div>
+              <div class="cog-conf">置信度 高</div>
+              <div class="cog-transfer">→</div>
+            </div>
+            <div class="cog-row">
+              <div>
+                <div class="cog-name" style="color:var(--green-txt)">积分基础</div>
+                <div class="mini-bar-wrap"><div class="mini-bar-fill bf-green" style="width:84%;animation-delay:.65s"></div></div>
+              </div>
+              <div class="cog-pct c-green">84%</div>
+              <div class="cog-conf">置信度 高</div>
+              <div class="cog-transfer">✓</div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--txt3);margin-bottom:12px;padding-left:2px">
+            ⚠ 迁移不稳定 &nbsp;→ 形成中 &nbsp;✓ 可迁移
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- 层二：行为特征（稳定） -->
+          <div class="behavior-title">学习行为特征 <span style="font-size:10px;color:var(--txt3);font-weight:400">· 积累后形成，较稳定</span></div>
+          <div class="trait-list">
+            <div class="trait-item">
+              <div class="t-icon" style="background:var(--green-dim)">🧠</div>
+              <div><div class="t-lbl">思维偏好</div><div class="t-val">逻辑优先，先搞懂"为什么"再记公式</div></div>
+            </div>
+            <div class="trait-item">
+              <div class="t-icon" style="background:var(--blue-dim)">⏰</div>
+              <div><div class="t-lbl">高效时段</div><div class="t-val">下午 14:00–17:00（答题准确率推断）</div></div>
+            </div>
+            <div class="trait-item">
+              <div class="t-icon" style="background:var(--red-dim)">⚠️</div>
+              <div><div class="t-lbl">常见陷阱</div><div class="t-val">跳过概念直接刷题，易"会做不会说"</div></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="tina-says-lbl"><div class="ts-dot"></div>Tina 说</div>
+          <div class="tina-bubble">
+            你这周有点急，刷了不少题但概念层还有洞。先把极限定义那块搞清楚——这比再刷 20 道题有用。💪
+          </div>
+        </div>
+
+        <!-- 状态变化时间线 -->
+        <div class="card fu fu3">
+          <div class="block-title"><div class="bdot bdot-blue"></div>认知状态变化</div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-green"></div>
+              <div>
+                <div class="tl-date">8月31日 · 今天</div>
+                <div class="tl-content">整体 <strong class="tl-pct c-green">68%</strong> ↑ &nbsp;极限断层首次被识别为<strong>结构性问题</strong></div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-amber"></div>
+              <div>
+                <div class="tl-date">8月24日</div>
+                <div class="tl-content">整体 <strong class="tl-pct c-amber">62%</strong> ↑ &nbsp;导数概念完成第一次验证，<strong>置信度提升</strong></div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-amber"></div>
+              <div>
+                <div class="tl-date">8月17日</div>
+                <div class="tl-content">整体 <strong class="tl-pct c-amber">58%</strong> → &nbsp;积分基础趋于稳定，<strong>迁移能力形成</strong></div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-gray"></div>
+              <div>
+                <div class="tl-date">8月10日</div>
+                <div class="tl-content">整体 <strong class="tl-pct" style="color:var(--txt2)">52%</strong> &nbsp;初始状态，大部分节点<strong>尚未形成稳定判断</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 已激活知识域 -->
+        <div class="card fu fu4">
+          <div class="block-title" style="margin-bottom:8px"><div class="bdot bdot-green"></div>已激活知识域</div>
+          <p style="font-size:11px;color:var(--txt2);margin-bottom:10px">每个领域对应一张知识图谱。激活后该图谱所有节点进入追踪，未激活领域不计入掌握度。</p>
+          <div class="domain-chips">
+            <div class="d-chip active"><div class="chip-dot" style="background:var(--green)"></div>高等数学</div>
+            <div class="d-chip active"><div class="chip-dot" style="background:var(--blue)"></div>线性代数</div>
+            <div class="d-chip"><div class="chip-dot" style="background:var(--txt3)"></div>概率论</div>
+            <div class="d-chip add">＋ 添加领域</div>
+          </div>
+          <div class="domain-note">高数 119 节点 · 线代 58 节点 · 合计 177 节点已进入追踪<br>未激活领域的节点不计入掌握度分母</div>
+        </div>
+
+        <!-- 连续打卡 -->
+        <div class="card fu fu5">
+          <div class="streak-label">连续学习 <span>7 天 🔥</span></div>
+          <div class="streak-row">
+            <div class="s-day sd-done">一</div>
+            <div class="s-day sd-done">二</div>
+            <div class="s-day sd-done">三</div>
+            <div class="s-day sd-done">四</div>
+            <div class="s-day sd-done">五</div>
+            <div class="s-day sd-done">六</div>
+            <div class="s-day sd-today">日</div>
+          </div>
+          <div class="streak-stats">今日已完成 <b>12 题</b>，正确率 <b>83%</b></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', () => {
+  document.querySelectorAll('.bar-fill,.ev-mini-fill,.mini-bar-fill').forEach(el => {
+    const w = el.style.width;
+    const delay = parseFloat(el.style.animationDelay || 0) * 1000;
+    el.style.width = '0';
+    setTimeout(() => {
+      el.style.transition = 'width 1s cubic-bezier(.4,0,.2,1)';
+      el.style.width = w;
+    }, 350 + delay);
+  });
+});
+</script>
+</body>
+</html>

@@ -4,13 +4,16 @@
 import logging
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_current_token
-from app.core.config import LLM_ASYNC, is_local_rag
+from app.api.deps import get_current_active_user, get_current_token, get_db
+from app.core.config import is_local_rag
+from app.crud import kb as kb_crud
 from app.services.knowledge.dify_kb import DifyKB
-from app.services.llm.llm_config import create_base_api
-from app.services.llm.llm_runner import llm_predict_no_stream
+from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.utils.prompt_loader import load_prompt
+from tina import Agent
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,7 @@ def _parse_suggestions(content: str) -> list[str]:
 
 @router.get("/suggestions")
 async def get_dashboard_suggestions(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
     token: str = Depends(get_current_token),
 ):
@@ -55,7 +59,16 @@ async def get_dashboard_suggestions(
         }
 
     docs: list = []
-    if dataset_id and not is_local_rag():
+    if is_local_rag():
+        rows, _ = kb_crud.list_documents(db, current_user["user_id"], page=1, limit=20)
+        docs = [
+            {
+                "name": row.display_name or "未命名文档",
+                "created_at": row.created_at.isoformat() if row.created_at else "",
+            }
+            for row in rows
+        ]
+    elif dataset_id:
         try:
             kb = DifyKB(dataset_id)
             result = kb.list_documents(page=1, limit=20)
@@ -80,23 +93,22 @@ async def get_dashboard_suggestions(
         + "\n".join(doc_lines)
         + "\n\n请根据上述文档给出学习建议。"
     )
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_prompt},
-    ]
 
     try:
-        llm = create_base_api()
-        llm.set_token(token)
-        if LLM_ASYNC:
-            response = await llm.apredict_no_stream(
-                messages=messages, temperature=0.7, max_tokens=300
-            )
-        else:
-            response = llm_predict_no_stream(
-                llm, messages=messages, temperature=0.7, max_tokens=300
-            )
-        content = response.get("content", "")
+        llm = llm_pool.acquire()
+        if llm is None:
+            return {"suggestions": _FALLBACK.copy()}
+        if token and hasattr(llm, "set_token"):
+            llm.set_token(token)
+        agent = Agent(
+            llm=llm,
+            tools=None,
+            system_prompt=SYSTEM_PROMPT,
+            name="dashboard_suggestions",
+        )
+        attach_reasoning_roundtrip(agent)
+        result = await agent.apredict_no_stream(instruction=user_prompt, temperature=0.7)
+        content = result.get("content", "") if isinstance(result, dict) else getattr(result, "content", "") or ""
         return {"suggestions": _parse_suggestions(content)}
     except Exception as e:
         logger.error(f"生成建议失败: {e}")

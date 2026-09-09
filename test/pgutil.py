@@ -44,7 +44,16 @@ def make_sessionmaker():
 
     engine = empty_test_engine()
     Base.metadata.create_all(bind=engine)
-    return engine, sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    seed = SessionLocal()
+    try:
+        from app.services.tcn.domains import ensure_tcn_domains
+
+        ensure_tcn_domains(seed)
+        seed.commit()
+    finally:
+        seed.close()
+    return engine, SessionLocal
 
 
 def ensure_test_schema(url: str) -> None:

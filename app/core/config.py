@@ -116,8 +116,13 @@ OCR_PAGES_DIR_NAME = os.getenv(
     "OCR_PAGES_DIR_NAME", _app_cfg.ocr_pages_dir_name
 )
 
-# OCR 后端：local（默认，PaddleOCR 本地）| baidu | auto（先 Paddle 再百度）
+# OCR 后端：local（PaddleOCR）| baidu | auto | mineru（扫描件走 MinerU 云端，出影子文档）
 OCR_BACKEND = os.getenv("OCR_BACKEND", _app_cfg.ocr_backend).lower()
+MINERU_API_TOKEN = os.getenv("MINERU_API_TOKEN", "").strip()
+MINERU_BASE_URL = os.getenv("MINERU_BASE_URL", "https://mineru.net").strip() or "https://mineru.net"
+MINERU_MODEL_VERSION = os.getenv("MINERU_MODEL_VERSION", "vlm").strip() or "vlm"
+MINERU_POLL_INTERVAL_SEC = float(os.getenv("MINERU_POLL_INTERVAL_SEC", "3"))
+MINERU_POLL_TIMEOUT_SEC = int(os.getenv("MINERU_POLL_TIMEOUT_SEC", "600"))
 
 # 文档解析/分段/索引是否后台异步（config.json document_pipeline_async）
 DOCUMENT_PIPELINE_ASYNC = (
@@ -129,6 +134,9 @@ DOCUMENT_PIPELINE_ASYNC = (
 QUESTION_GEN_ASYNC = (
     os.getenv("QUESTION_GEN_ASYNC", str(_app_cfg.question_gen_async)).lower() == "true"
 )
+
+# 按页出题交给独立 FastAPI worker（python -m app.qgen）。默认关，避免现有同步测试断。
+QUESTION_GEN_WORKER = os.getenv("QUESTION_GEN_WORKER", "false").lower() == "true"
 
 # Tina LLM / Agent 是否使用 apredict（config.json llm_async）
 LLM_ASYNC = (
@@ -148,9 +156,24 @@ MAX_QUESTIONS_PER_DOCUMENT = int(
     )
 )
 
-# 单次按页出题最多页数（config.json max_pages_per_gen，前后端同一数字 10）
+# 出题页勾选上限（config.json max_pages_per_gen）。队列入队不再用这个截断。
 MAX_PAGES_PER_GEN = int(
     os.getenv("MAX_PAGES_PER_GEN", str(_app_cfg.max_pages_per_gen))
+)
+
+# 出题队列同时跑几个 Agent（config.json question_gen_max_agents；一页一个）
+_QUESTION_GEN_MAX_AGENTS_HARD = 32
+QUESTION_GEN_MAX_AGENTS = max(
+    1,
+    min(
+        int(
+            os.getenv(
+                "QUESTION_GEN_MAX_AGENTS",
+                str(_app_cfg.question_gen_max_agents),
+            )
+        ),
+        _QUESTION_GEN_MAX_AGENTS_HARD,
+    ),
 )
 
 # Dify 知识库单文件大小上限（字节）；0 表示不限制，仅在上传前做本地预检

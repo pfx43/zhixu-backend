@@ -1,0 +1,1704 @@
+{
+  "schema": "tcn.graph.export.v1",
+  "exported_at": "2026-08-30T14:32:51.098Z",
+  "domains": [
+    {
+      "schema_version": 1,
+      "domain": "physics",
+      "version": 2,
+      "description": "",
+      "author": "",
+      "generator": null,
+      "created_at": "",
+      "updated_at": "",
+      "nodes": [
+        {
+          "id": "physics:位移速度加速度",
+          "name": "位移、速度与加速度的定义",
+          "status": "active"
+        },
+        {
+          "id": "physics:匀变速直线运动",
+          "name": "匀变速直线运动的规律",
+          "status": "active"
+        },
+        {
+          "id": "physics:抛体运动",
+          "name": "抛体运动（平抛/斜抛）",
+          "status": "active"
+        },
+        {
+          "id": "physics:圆周运动与向心力",
+          "name": "匀速圆周运动与向心加速度",
+          "status": "active"
+        },
+        {
+          "id": "physics:相对运动",
+          "name": "相对运动与参考系变换",
+          "status": "active"
+        },
+        {
+          "id": "physics:质点运动学",
+          "name": "质点运动学（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:力的合成与分解",
+          "name": "力的合成、分解与平衡",
+          "status": "active"
+        },
+        {
+          "id": "physics:弹力与胡克定律",
+          "name": "弹性形变与胡克定律",
+          "status": "active"
+        },
+        {
+          "id": "physics:摩擦力",
+          "name": "静摩擦力与动摩擦力",
+          "status": "active"
+        },
+        {
+          "id": "physics:牛顿运动定律",
+          "name": "牛顿三大运动定律",
+          "status": "active"
+        },
+        {
+          "id": "physics:非惯性系与惯性力",
+          "name": "非惯性参考系与惯性力",
+          "status": "active"
+        },
+        {
+          "id": "physics:功的计算",
+          "name": "功的定义与计算（变力做功）",
+          "status": "active"
+        },
+        {
+          "id": "physics:动能定理",
+          "name": "动能定理及其应用",
+          "status": "active"
+        },
+        {
+          "id": "physics:势能",
+          "name": "重力势能与弹性势能",
+          "status": "active"
+        },
+        {
+          "id": "physics:机械能守恒定律",
+          "name": "机械能守恒定律及条件",
+          "status": "active"
+        },
+        {
+          "id": "physics:功与能定理",
+          "name": "功能定理（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:动量定理",
+          "name": "动量定理的推导与应用",
+          "status": "active"
+        },
+        {
+          "id": "physics:动量守恒定律",
+          "name": "动量守恒定律及条件",
+          "status": "active"
+        },
+        {
+          "id": "physics:碰撞",
+          "name": "弹性碰撞、非弹性碰撞与完全非弹性碰撞",
+          "status": "active"
+        },
+        {
+          "id": "physics:动量与冲量",
+          "name": "动量与冲量（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:转动惯量",
+          "name": "刚体转动惯量的定义与计算",
+          "status": "active"
+        },
+        {
+          "id": "physics:角动量定理",
+          "name": "角动量定理与角动量守恒",
+          "status": "active"
+        },
+        {
+          "id": "physics:刚体力学",
+          "name": "刚体力学（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:开普勒定律",
+          "name": "开普勒三定律",
+          "status": "active"
+        },
+        {
+          "id": "physics:万有引力与天体运动",
+          "name": "万有引力定律与天体力学",
+          "status": "active"
+        },
+        {
+          "id": "physics:简谐振动方程",
+          "name": "简谐振动的方程与能量",
+          "status": "active"
+        },
+        {
+          "id": "physics:受迫振动与共振",
+          "name": "阻尼振动、受迫振动与共振",
+          "status": "active"
+        },
+        {
+          "id": "physics:机械振动",
+          "name": "机械振动（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:横波与纵波",
+          "name": "横波与纵波的描述",
+          "status": "active"
+        },
+        {
+          "id": "physics:波的干涉与衍射",
+          "name": "机械波的叠加、干涉与衍射",
+          "status": "active"
+        },
+        {
+          "id": "physics:驻波",
+          "name": "驻波的形成与节点",
+          "status": "active"
+        },
+        {
+          "id": "physics:多普勒效应",
+          "name": "多普勒效应及其应用",
+          "status": "active"
+        },
+        {
+          "id": "physics:机械波",
+          "name": "机械波（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:理想气体状态方程",
+          "name": "理想气体三个实验定律与状态方程",
+          "status": "active"
+        },
+        {
+          "id": "physics:气体分子运动论",
+          "name": "分子热运动与气体压强的微观解释",
+          "status": "active"
+        },
+        {
+          "id": "physics:麦克斯韦速率分布",
+          "name": "麦克斯韦速率分布律",
+          "status": "active"
+        },
+        {
+          "id": "physics:热力学过程",
+          "name": "等温/等压/等容/绝热过程的p-V图",
+          "status": "active"
+        },
+        {
+          "id": "physics:热力学第一定律",
+          "name": "热力学第一定律与内能",
+          "status": "active"
+        },
+        {
+          "id": "physics:卡诺循环",
+          "name": "卡诺循环与热机效率极限",
+          "status": "active"
+        },
+        {
+          "id": "physics:热力学第二定律与熵",
+          "name": "热力学第二定律与熵增加原理",
+          "status": "active"
+        },
+        {
+          "id": "physics:库仑定律与电场",
+          "name": "库仑定律与电场强度",
+          "status": "active"
+        },
+        {
+          "id": "physics:电场线与等势面",
+          "name": "电场线、电通量与等势面",
+          "status": "active"
+        },
+        {
+          "id": "physics:高斯定理",
+          "name": "高斯定理（静电学）",
+          "status": "active"
+        },
+        {
+          "id": "physics:导体静电平衡",
+          "name": "导体的静电平衡与感应电荷",
+          "status": "active"
+        },
+        {
+          "id": "physics:电势与电位移",
+          "name": "电势、电位移矢量与电场能量",
+          "status": "active"
+        },
+        {
+          "id": "physics:电容器与电介质",
+          "name": "电容器的电容与电介质极化",
+          "status": "active"
+        },
+        {
+          "id": "physics:电容的计算",
+          "name": "常见电容器的电容计算",
+          "status": "active"
+        },
+        {
+          "id": "physics:欧姆定律",
+          "name": "欧姆定律与电阻的微观解释",
+          "status": "active"
+        },
+        {
+          "id": "physics:基尔霍夫定律",
+          "name": "基尔霍夫电流与电压定律",
+          "status": "active"
+        },
+        {
+          "id": "physics:RC电路暂态",
+          "name": "RC电路的充放电过程",
+          "status": "active"
+        },
+        {
+          "id": "physics:稳恒电流",
+          "name": "稳恒电流（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:磁场与磁感应强度",
+          "name": "磁场、磁感应强度与磁通量",
+          "status": "active"
+        },
+        {
+          "id": "physics:毕奥-萨伐尔定律",
+          "name": "毕奥-萨伐尔定律与电流磁场",
+          "status": "active"
+        },
+        {
+          "id": "physics:安培定律",
+          "name": "安培环路定理",
+          "status": "active"
+        },
+        {
+          "id": "physics:洛伦兹力",
+          "name": "洛伦兹力与带电粒子在磁场中运动",
+          "status": "active"
+        },
+        {
+          "id": "physics:安培定律与毕奥-萨伐尔",
+          "name": "磁场的高斯定理与安培定律（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:法拉第电磁感应定律",
+          "name": "法拉第电磁感应定律与感应电动势",
+          "status": "active"
+        },
+        {
+          "id": "physics:楞次定律",
+          "name": "楞次定律（感应电流方向）",
+          "status": "active"
+        },
+        {
+          "id": "physics:自感与互感",
+          "name": "自感系数、互感与变压器原理",
+          "status": "active"
+        },
+        {
+          "id": "physics:电磁感应",
+          "name": "电磁感应（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:位移电流",
+          "name": "位移电流与麦克斯韦假设",
+          "status": "active"
+        },
+        {
+          "id": "physics:麦克斯韦方程组",
+          "name": "麦克斯韦方程组的积分形式",
+          "status": "active"
+        },
+        {
+          "id": "physics:电磁波",
+          "name": "电磁波的传播与能量",
+          "status": "active"
+        },
+        {
+          "id": "physics:折射定律与全反射",
+          "name": "光的折射定律与全内反射",
+          "status": "active"
+        },
+        {
+          "id": "physics:薄透镜成像",
+          "name": "薄透镜成像公式与光路图",
+          "status": "active"
+        },
+        {
+          "id": "physics:几何光学",
+          "name": "几何光学（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:杨氏双缝干涉",
+          "name": "杨氏双缝干涉实验",
+          "status": "active"
+        },
+        {
+          "id": "physics:薄膜干涉",
+          "name": "薄膜干涉与等厚干涉",
+          "status": "active"
+        },
+        {
+          "id": "physics:光的干涉",
+          "name": "光的干涉（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:单缝衍射",
+          "name": "单缝衍射的光强分布",
+          "status": "active"
+        },
+        {
+          "id": "physics:光栅方程",
+          "name": "衍射光栅与光栅方程",
+          "status": "active"
+        },
+        {
+          "id": "physics:光的衍射",
+          "name": "光的衍射（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:光的偏振",
+          "name": "光的偏振与马吕斯定律",
+          "status": "active"
+        },
+        {
+          "id": "physics:洛伦兹变换",
+          "name": "洛伦兹坐标变换与速度变换",
+          "status": "active"
+        },
+        {
+          "id": "physics:时间膨胀与长度收缩",
+          "name": "时间膨胀与长度收缩效应",
+          "status": "active"
+        },
+        {
+          "id": "physics:相对论动能与质能方程",
+          "name": "相对论动能、动量与质能关系",
+          "status": "active"
+        },
+        {
+          "id": "physics:狭义相对论",
+          "name": "狭义相对论（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:黑体辐射与普朗克公式",
+          "name": "黑体辐射与普朗克量子假设",
+          "status": "active"
+        },
+        {
+          "id": "physics:光电效应",
+          "name": "光电效应与爱因斯坦方程",
+          "status": "active"
+        },
+        {
+          "id": "physics:氢原子玻尔模型",
+          "name": "玻尔氢原子模型与能级",
+          "status": "active"
+        },
+        {
+          "id": "physics:波粒二象性",
+          "name": "德布罗意波与波粒二象性",
+          "status": "active"
+        },
+        {
+          "id": "physics:海森堡不确定原理",
+          "name": "海森堡不确定关系",
+          "status": "active"
+        },
+        {
+          "id": "physics:量子力学基础",
+          "name": "量子力学基础（综合）",
+          "status": "active"
+        },
+        {
+          "id": "physics:薛定谔方程",
+          "name": "薛定谔方程与波函数的物理意义",
+          "status": "active"
+        },
+        {
+          "id": "physics:核反应与放射性",
+          "name": "原子核结构、放射性衰变与核反应",
+          "status": "active"
+        },
+        {
+          "id": "physics:半导体物理基础",
+          "name": "能带理论与半导体的导电机制",
+          "status": "active"
+        },
+        {
+          "id": "physics:固体物理与能带理论",
+          "name": "晶体结构与能带理论（综合）",
+          "status": "active"
+        }
+      ],
+      "edges": [
+        {
+          "from": "physics:位移速度加速度",
+          "to": "physics:匀变速直线运动",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:匀变速直线运动",
+          "to": "physics:抛体运动",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:匀变速直线运动",
+          "to": "physics:圆周运动与向心力",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:抛体运动",
+          "to": "physics:质点运动学",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:圆周运动与向心力",
+          "to": "physics:质点运动学",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:相对运动",
+          "to": "physics:质点运动学",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:力的合成与分解",
+          "to": "physics:弹力与胡克定律",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:力的合成与分解",
+          "to": "physics:摩擦力",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:质点运动学",
+          "to": "physics:牛顿运动定律",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:弹力与胡克定律",
+          "to": "physics:牛顿运动定律",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:摩擦力",
+          "to": "physics:牛顿运动定律",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:非惯性系与惯性力",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:功的计算",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:功的计算",
+          "to": "physics:动能定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:动能定理",
+          "to": "physics:势能",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:势能",
+          "to": "physics:机械能守恒定律",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:机械能守恒定律",
+          "to": "physics:功与能定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:动量定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:动量定理",
+          "to": "physics:动量守恒定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:动量守恒定律",
+          "to": "physics:碰撞",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:动量定理",
+          "to": "physics:动量与冲量",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:动量守恒定律",
+          "to": "physics:动量与冲量",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:转动惯量",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:转动惯量",
+          "to": "physics:角动量定理",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:角动量定理",
+          "to": "physics:刚体力学",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:开普勒定律",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:开普勒定律",
+          "to": "physics:万有引力与天体运动",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:简谐振动方程",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:简谐振动方程",
+          "to": "physics:受迫振动与共振",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:简谐振动方程",
+          "to": "physics:机械振动",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:受迫振动与共振",
+          "to": "physics:机械振动",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:机械振动",
+          "to": "physics:横波与纵波",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:波的干涉与衍射",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:波的干涉与衍射",
+          "to": "physics:驻波",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:多普勒效应",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:机械波",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:波的干涉与衍射",
+          "to": "physics:机械波",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:理想气体状态方程",
+          "to": "physics:气体分子运动论",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:气体分子运动论",
+          "to": "physics:麦克斯韦速率分布",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:理想气体状态方程",
+          "to": "physics:热力学过程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:热力学过程",
+          "to": "physics:热力学第一定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:气体分子运动论",
+          "to": "physics:热力学第一定律",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:热力学第一定律",
+          "to": "physics:卡诺循环",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:卡诺循环",
+          "to": "physics:热力学第二定律与熵",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:库仑定律与电场",
+          "to": "physics:电场线与等势面",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电场线与等势面",
+          "to": "physics:高斯定理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:导体静电平衡",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:库仑定律与电场",
+          "to": "physics:电势与电位移",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:电势与电位移",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电势与电位移",
+          "to": "physics:电容器与电介质",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电容器与电介质",
+          "to": "physics:电容的计算",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:欧姆定律",
+          "to": "physics:基尔霍夫定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:基尔霍夫定律",
+          "to": "physics:RC电路暂态",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:欧姆定律",
+          "to": "physics:稳恒电流",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:基尔霍夫定律",
+          "to": "physics:稳恒电流",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:毕奥-萨伐尔定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:毕奥-萨伐尔定律",
+          "to": "physics:安培定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:洛伦兹力",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:安培定律",
+          "to": "physics:安培定律与毕奥-萨伐尔",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:毕奥-萨伐尔定律",
+          "to": "physics:安培定律与毕奥-萨伐尔",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:法拉第电磁感应定律",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:楞次定律",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:自感与互感",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:电磁感应",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:楞次定律",
+          "to": "physics:电磁感应",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电磁感应",
+          "to": "physics:位移电流",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:位移电流",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:位移电流",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:安培定律与毕奥-萨伐尔",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:麦克斯韦方程组",
+          "to": "physics:电磁波",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:折射定律与全反射",
+          "to": "physics:薄透镜成像",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:薄透镜成像",
+          "to": "physics:几何光学",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:折射定律与全反射",
+          "to": "physics:几何光学",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电磁波",
+          "to": "physics:杨氏双缝干涉",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:杨氏双缝干涉",
+          "to": "physics:薄膜干涉",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:杨氏双缝干涉",
+          "to": "physics:光的干涉",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:薄膜干涉",
+          "to": "physics:光的干涉",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:光的干涉",
+          "to": "physics:单缝衍射",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:单缝衍射",
+          "to": "physics:光栅方程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:单缝衍射",
+          "to": "physics:光的衍射",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:光栅方程",
+          "to": "physics:光的衍射",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:光的衍射",
+          "to": "physics:光的偏振",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:质点运动学",
+          "to": "physics:洛伦兹变换",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:洛伦兹变换",
+          "to": "physics:时间膨胀与长度收缩",
+          "weight": 1,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:时间膨胀与长度收缩",
+          "to": "physics:相对论动能与质能方程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:相对论动能与质能方程",
+          "to": "physics:狭义相对论",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:洛伦兹变换",
+          "to": "physics:狭义相对论",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:电磁波",
+          "to": "physics:黑体辐射与普朗克公式",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:黑体辐射与普朗克公式",
+          "to": "physics:光电效应",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:光电效应",
+          "to": "physics:氢原子玻尔模型",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:氢原子玻尔模型",
+          "to": "physics:波粒二象性",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:波粒二象性",
+          "to": "physics:海森堡不确定原理",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:波粒二象性",
+          "to": "physics:量子力学基础",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:海森堡不确定原理",
+          "to": "physics:量子力学基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:量子力学基础",
+          "to": "physics:薛定谔方程",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:氢原子玻尔模型",
+          "to": "physics:核反应与放射性",
+          "weight": 0.8,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:相对论动能与质能方程",
+          "to": "physics:核反应与放射性",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:量子力学基础",
+          "to": "physics:半导体物理基础",
+          "weight": 0.85,
+          "relation": "prerequisite"
+        },
+        {
+          "from": "physics:半导体物理基础",
+          "to": "physics:固体物理与能带理论",
+          "weight": 0.9,
+          "relation": "prerequisite"
+        }
+      ],
+      "inner_edges": [
+        {
+          "from": "physics:位移速度加速度",
+          "to": "physics:匀变速直线运动",
+          "weight": 1
+        },
+        {
+          "from": "physics:匀变速直线运动",
+          "to": "physics:抛体运动",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:匀变速直线运动",
+          "to": "physics:圆周运动与向心力",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:抛体运动",
+          "to": "physics:质点运动学",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:圆周运动与向心力",
+          "to": "physics:质点运动学",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:相对运动",
+          "to": "physics:质点运动学",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:力的合成与分解",
+          "to": "physics:弹力与胡克定律",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:力的合成与分解",
+          "to": "physics:摩擦力",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:质点运动学",
+          "to": "physics:牛顿运动定律",
+          "weight": 1
+        },
+        {
+          "from": "physics:弹力与胡克定律",
+          "to": "physics:牛顿运动定律",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:摩擦力",
+          "to": "physics:牛顿运动定律",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:非惯性系与惯性力",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:功的计算",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:功的计算",
+          "to": "physics:动能定理",
+          "weight": 1
+        },
+        {
+          "from": "physics:动能定理",
+          "to": "physics:势能",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:势能",
+          "to": "physics:机械能守恒定律",
+          "weight": 1
+        },
+        {
+          "from": "physics:机械能守恒定律",
+          "to": "physics:功与能定理",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:动量定理",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:动量定理",
+          "to": "physics:动量守恒定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:动量守恒定律",
+          "to": "physics:碰撞",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:动量定理",
+          "to": "physics:动量与冲量",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:动量守恒定律",
+          "to": "physics:动量与冲量",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:转动惯量",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:转动惯量",
+          "to": "physics:角动量定理",
+          "weight": 1
+        },
+        {
+          "from": "physics:角动量定理",
+          "to": "physics:刚体力学",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:开普勒定律",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:开普勒定律",
+          "to": "physics:万有引力与天体运动",
+          "weight": 1
+        },
+        {
+          "from": "physics:牛顿运动定律",
+          "to": "physics:简谐振动方程",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:简谐振动方程",
+          "to": "physics:受迫振动与共振",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:简谐振动方程",
+          "to": "physics:机械振动",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:受迫振动与共振",
+          "to": "physics:机械振动",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:机械振动",
+          "to": "physics:横波与纵波",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:波的干涉与衍射",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:波的干涉与衍射",
+          "to": "physics:驻波",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:多普勒效应",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:横波与纵波",
+          "to": "physics:机械波",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:波的干涉与衍射",
+          "to": "physics:机械波",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:理想气体状态方程",
+          "to": "physics:气体分子运动论",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:气体分子运动论",
+          "to": "physics:麦克斯韦速率分布",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:理想气体状态方程",
+          "to": "physics:热力学过程",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:热力学过程",
+          "to": "physics:热力学第一定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:气体分子运动论",
+          "to": "physics:热力学第一定律",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:热力学第一定律",
+          "to": "physics:卡诺循环",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:卡诺循环",
+          "to": "physics:热力学第二定律与熵",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:库仑定律与电场",
+          "to": "physics:电场线与等势面",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:电场线与等势面",
+          "to": "physics:高斯定理",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:导体静电平衡",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:库仑定律与电场",
+          "to": "physics:电势与电位移",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:电势与电位移",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:电势与电位移",
+          "to": "physics:电容器与电介质",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:电容器与电介质",
+          "to": "physics:电容的计算",
+          "weight": 1
+        },
+        {
+          "from": "physics:欧姆定律",
+          "to": "physics:基尔霍夫定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:基尔霍夫定律",
+          "to": "physics:RC电路暂态",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:欧姆定律",
+          "to": "physics:稳恒电流",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:基尔霍夫定律",
+          "to": "physics:稳恒电流",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:毕奥-萨伐尔定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:毕奥-萨伐尔定律",
+          "to": "physics:安培定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:洛伦兹力",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:安培定律",
+          "to": "physics:安培定律与毕奥-萨伐尔",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:毕奥-萨伐尔定律",
+          "to": "physics:安培定律与毕奥-萨伐尔",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:磁场与磁感应强度",
+          "to": "physics:法拉第电磁感应定律",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:楞次定律",
+          "weight": 1
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:自感与互感",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:法拉第电磁感应定律",
+          "to": "physics:电磁感应",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:楞次定律",
+          "to": "physics:电磁感应",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:电磁感应",
+          "to": "physics:位移电流",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:高斯定理",
+          "to": "physics:位移电流",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:位移电流",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 1
+        },
+        {
+          "from": "physics:安培定律与毕奥-萨伐尔",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:麦克斯韦方程组",
+          "to": "physics:电磁波",
+          "weight": 1
+        },
+        {
+          "from": "physics:折射定律与全反射",
+          "to": "physics:薄透镜成像",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:薄透镜成像",
+          "to": "physics:几何光学",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:折射定律与全反射",
+          "to": "physics:几何光学",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:电磁波",
+          "to": "physics:杨氏双缝干涉",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:杨氏双缝干涉",
+          "to": "physics:薄膜干涉",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:杨氏双缝干涉",
+          "to": "physics:光的干涉",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:薄膜干涉",
+          "to": "physics:光的干涉",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:光的干涉",
+          "to": "physics:单缝衍射",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:单缝衍射",
+          "to": "physics:光栅方程",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:单缝衍射",
+          "to": "physics:光的衍射",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:光栅方程",
+          "to": "physics:光的衍射",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:光的衍射",
+          "to": "physics:光的偏振",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:质点运动学",
+          "to": "physics:洛伦兹变换",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:洛伦兹变换",
+          "to": "physics:时间膨胀与长度收缩",
+          "weight": 1
+        },
+        {
+          "from": "physics:时间膨胀与长度收缩",
+          "to": "physics:相对论动能与质能方程",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:相对论动能与质能方程",
+          "to": "physics:狭义相对论",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:洛伦兹变换",
+          "to": "physics:狭义相对论",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:电磁波",
+          "to": "physics:黑体辐射与普朗克公式",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:黑体辐射与普朗克公式",
+          "to": "physics:光电效应",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:光电效应",
+          "to": "physics:氢原子玻尔模型",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:氢原子玻尔模型",
+          "to": "physics:波粒二象性",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:波粒二象性",
+          "to": "physics:海森堡不确定原理",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:波粒二象性",
+          "to": "physics:量子力学基础",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:海森堡不确定原理",
+          "to": "physics:量子力学基础",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:量子力学基础",
+          "to": "physics:薛定谔方程",
+          "weight": 0.9
+        },
+        {
+          "from": "physics:氢原子玻尔模型",
+          "to": "physics:核反应与放射性",
+          "weight": 0.8
+        },
+        {
+          "from": "physics:相对论动能与质能方程",
+          "to": "physics:核反应与放射性",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:量子力学基础",
+          "to": "physics:半导体物理基础",
+          "weight": 0.85
+        },
+        {
+          "from": "physics:半导体物理基础",
+          "to": "physics:固体物理与能带理论",
+          "weight": 0.9
+        }
+      ],
+      "cross_edges": [],
+      "incoming_edges": [
+        {
+          "from": "higher_math:导数的物理意义",
+          "to": "physics:质点运动学",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:质点运动学",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:向量代数",
+          "to": "physics:磁场与磁感应强度",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:定积分概念",
+          "to": "physics:功与能定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:功与能定理",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:定积分物理应用",
+          "to": "physics:动量与冲量",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:微分方程基本概念",
+          "to": "physics:机械振动",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.92
+        },
+        {
+          "from": "higher_math:常系数非齐次方程",
+          "to": "physics:机械振动",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:电磁感应",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:一阶线性微分方程",
+          "to": "physics:稳恒电流",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:偏导数",
+          "to": "physics:热力学第一定律",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:多元函数极限与连续",
+          "to": "physics:热力学第一定律",
+          "weight": 0.72
+        },
+        {
+          "from": "higher_math:傅里叶级数",
+          "to": "physics:机械波",
+          "weight": 0.85
+        },
+        {
+          "from": "higher_math:傅里叶变换初步",
+          "to": "physics:电磁波",
+          "weight": 0.82
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:高斯定理",
+          "weight": 0.95
+        },
+        {
+          "from": "higher_math:场论基础",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.92
+        },
+        {
+          "from": "higher_math:高斯公式",
+          "to": "physics:高斯定理",
+          "weight": 0.9
+        },
+        {
+          "from": "higher_math:斯托克斯公式",
+          "to": "physics:麦克斯韦方程组",
+          "weight": 0.88
+        },
+        {
+          "from": "higher_math:格林公式",
+          "to": "physics:电势与电位移",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:特征值与特征向量",
+          "to": "physics:量子力学基础",
+          "weight": 0.8
+        },
+        {
+          "from": "higher_math:矩阵运算",
+          "to": "physics:量子力学基础",
+          "weight": 0.75
+        },
+        {
+          "from": "higher_math:常系数齐次方程",
+          "to": "physics:薛定谔方程",
+          "weight": 0.78
+        },
+        {
+          "from": "higher_math:方向导数与梯度",
+          "to": "physics:库仑定律与电场",
+          "weight": 0.82
+        },
+        {
+          "from": "math:平面向量",
+          "to": "physics:质点运动学",
+          "weight": 0.82
+        },
+        {
+          "from": "math:向量运算与坐标",
+          "to": "physics:质点运动学",
+          "weight": 0.78
+        },
+        {
+          "from": "math:三角函数基础",
+          "to": "physics:机械振动",
+          "weight": 0.8
+        },
+        {
+          "from": "math:和角差角公式",
+          "to": "physics:简谐振动方程",
+          "weight": 0.75
+        },
+        {
+          "from": "math:导数基础与求导法则",
+          "to": "physics:位移速度加速度",
+          "weight": 0.78
+        },
+        {
+          "from": "math:解三角形",
+          "to": "physics:抛体运动",
+          "weight": 0.68
+        }
+      ]
+    }
+  ]
+}

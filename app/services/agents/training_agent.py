@@ -8,15 +8,12 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Generator, List, Optional, TYPE_CHECKING
+from typing import AsyncGenerator, List, Optional, TYPE_CHECKING
 
 from tina import Agent
 
-from app.services.llm.llm_config import create_base_api
-from app.services.llm.llm_runner import (
-    agent_predict_no_stream,
-    iter_agent_continue_stream,
-)
+from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.tools.training_tools import TrainingTools
 from app.utils.prompt_loader import load_prompt
 
@@ -26,6 +23,28 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 MAX_TRAINING_QUESTIONS = 20
+
+
+def _chunk_to_dict(chunk) -> dict:
+    if isinstance(chunk, dict):
+        return chunk
+    if hasattr(chunk, "model_dump"):
+        try:
+            return chunk.model_dump()
+        except Exception:
+            pass
+    role = getattr(chunk, "role", None) or "assistant"
+    content = getattr(chunk, "content", None)
+    if content is None and hasattr(chunk, "get"):
+        content = chunk.get("content", "")
+    result = {"role": role, "content": content or ""}
+    for key in ("reasoning_content", "tool_name", "tool_calls"):
+        val = getattr(chunk, key, None)
+        if val is None and isinstance(chunk, dict):
+            val = chunk.get(key)
+        if val:
+            result[key] = val
+    return result
 
 SYSTEM_PROMPT = load_prompt("training_coach")
 
@@ -51,7 +70,9 @@ class TrainingCoachAgent:
         self.tools = None
 
         try:
-            self.llm = create_base_api()
+            self.llm = llm_pool.acquire()
+            if self.llm is None:
+                raise RuntimeError("LLMPool 为空")
             self.training_tools = TrainingTools(db, user_id)
             self.tools = self.training_tools.get_tools()
 
@@ -63,6 +84,7 @@ class TrainingCoachAgent:
                 max_tool_result_length=6000,
                 name=f"training_coach_{user_id}_{agent_session_id[:8]}",
             )
+            attach_reasoning_roundtrip(self.agent)
         except Exception as e:
             logger.error("TrainingCoachAgent 初始化失败: user_id=%s error=%s", user_id, e)
 
@@ -70,7 +92,7 @@ class TrainingCoachAgent:
     def is_ready(self) -> bool:
         return self.agent is not None
 
-    def plan_training(
+    async def plan_training(
         self,
         *,
         report_content: Optional[str] = None,
@@ -98,7 +120,8 @@ class TrainingCoachAgent:
 
         try:
             self.llm.set_token(token or "")
-            agent_predict_no_stream(self.agent, instruction=instruction)
+            async for _chunk in self.agent.apredict(instruction=instruction):
+                pass
         except Exception as e:
             logger.warning("TrainingCoachAgent.plan_training 失败: %s", e, exc_info=True)
 
@@ -129,9 +152,9 @@ class TrainingCoachAgent:
         except Exception as e:
             logger.warning("注入训练计划上下文失败: %s", e)
 
-    def tutor_stream(
+    async def tutor_stream(
         self, message: str, token: Optional[str] = None
-    ) -> Generator[dict, None, None]:
+    ) -> AsyncGenerator[dict, None]:
         """辅导对话流式输出（复用同一 Agent 会话上下文）。"""
         if not self.agent:
             yield {"role": "assistant", "content": "抱歉，AI 教练暂时不可用，请稍后重试。"}
@@ -139,17 +162,18 @@ class TrainingCoachAgent:
 
         try:
             self.llm.set_token(token or "")
-            for chunk in iter_agent_continue_stream(self.agent, message):
-                content = chunk.get("content", "")
+            async for chunk in self.agent.apredict(instruction=message):
+                mapped = _chunk_to_dict(chunk)
+                content = mapped.get("content", "")
                 yield {
-                    "role": chunk.get("role", "assistant"),
+                    "role": mapped.get("role", "assistant"),
                     "content": content,
                     **(
-                        {"reasoning_content": chunk["reasoning_content"]}
-                        if chunk.get("reasoning_content")
+                        {"reasoning_content": mapped["reasoning_content"]}
+                        if mapped.get("reasoning_content")
                         else {}
                     ),
-                    **({"tool_name": chunk["tool_name"]} if chunk.get("tool_name") else {}),
+                    **({"tool_name": mapped["tool_name"]} if mapped.get("tool_name") else {}),
                 }
         except Exception as e:
             logger.error("TrainingCoachAgent.tutor_stream 错误: %s", e)

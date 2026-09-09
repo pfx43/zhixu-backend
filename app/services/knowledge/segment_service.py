@@ -1,11 +1,13 @@
 """
 文档分段服务 — 学习区文档按标题或定长窗口切分 document_segments
 """
+import asyncio
 import logging
 import re
 from typing import List, Optional
 
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.crud import kb as kb_crud
@@ -136,6 +138,61 @@ def _resolve_storage_path(document: Document) -> Optional[str]:
     return None
 
 
+def _assign_tcn_domain(
+    db: Session, document: Document, text: str, toc_entries: List[dict]
+) -> None:
+    """跟抽目录同一趟判学科。已有值（含人改过的）不覆盖；拿不准保持 None。"""
+    if getattr(document, "tcn_domain", None):
+        return
+    from app.services.tcn.domain_classifier import classify_tcn_domain_sync
+    from app.services.tcn.domains import list_domain_ids
+
+    titles = [e.get("title") or "" for e in toc_entries[:40]]
+    try:
+        domain = classify_tcn_domain_sync(
+            title=document.display_name or "",
+            toc_titles=titles,
+            excerpt=(text or "")[:1200],
+            allowed=list_domain_ids(db),
+        )
+    except Exception:
+        logger.warning(
+            "TCN 学科分类失败，保持 tcn_domain=None document=%s",
+            document.id,
+            exc_info=True,
+        )
+        return
+    if domain:
+        document.tcn_domain = domain
+
+
+async def _assign_tcn_domain_async(
+    document: Document, text: str, toc_entries: List[dict]
+) -> None:
+    if getattr(document, "tcn_domain", None):
+        return
+    from app.services.tcn.domain_classifier import classify_tcn_domain
+    from app.services.tcn.domains import list_domain_ids
+
+    titles = [e.get("title") or "" for e in toc_entries[:40]]
+    try:
+        domain = await classify_tcn_domain(
+            title=document.display_name or "",
+            toc_titles=titles,
+            excerpt=(text or "")[:1200],
+            allowed=list_domain_ids(None),
+        )
+    except Exception:
+        logger.warning(
+            "TCN 学科分类失败，保持 tcn_domain=None document=%s",
+            document.id,
+            exc_info=True,
+        )
+        return
+    if domain:
+        document.tcn_domain = domain
+
+
 def _apply_structure(
     db: Session, document: Document, text: str, segments: List[dict]
 ) -> None:
@@ -158,6 +215,29 @@ def _apply_structure(
     if not toc_entries:
         toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
     toc_crud.replace_toc_for_document(db, document.id, toc_entries)
+    _assign_tcn_domain(db, document, text, toc_entries)
+
+
+async def _apply_structure_async(
+    db: AsyncSession, document: Document, text: str, segments: List[dict]
+) -> None:
+    page_ranges = doc_structure.extract_page_ranges(text)
+    for seg in segments:
+        if "char_start" in seg and "char_end" in seg:
+            seg["page_start"], seg["page_end"] = doc_structure.map_segment_pages(
+                seg["char_start"], seg["char_end"], page_ranges
+            )
+        else:
+            seg["page_start"], seg["page_end"] = None, None
+
+    storage = _resolve_storage_path(document) or ""
+    toc_entries = await asyncio.to_thread(
+        doc_structure.extract_toc_from_pdf_bookmarks, storage
+    )
+    if not toc_entries:
+        toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
+    await toc_crud.areplace_toc_for_document(db, document.id, toc_entries)
+    await _assign_tcn_domain_async(document, text, toc_entries)
 
 
 def recompute_document_structure(document_id: str, db: Session) -> int:
@@ -200,6 +280,7 @@ def recompute_document_structure(document_id: str, db: Session) -> int:
     if not toc_entries:
         toc_entries = doc_structure.extract_toc_from_headings(text, page_ranges)
     toc_crud.replace_toc_for_document(db, document_id, toc_entries)
+    _assign_tcn_domain(db, doc, text, toc_entries)
     db.flush()
     return updated
 
@@ -262,6 +343,63 @@ def segment_document(document_id: str, db: Session) -> int:
         logger.exception("segment_document failed: document_id=%s", document_id)
         doc.segment_status = "failed"
         db.flush()
+        return 0
+
+
+async def segment_document_async(document_id: str, db: AsyncSession) -> int:
+    """segment_document 的异步 SQL 版本，供 MinerU 后台 pipeline 使用。"""
+    doc = await segment_crud.aget_document_by_id(db, document_id)
+    if not doc:
+        logger.warning("segment_document_async: document not found %s", document_id)
+        return 0
+    if doc.zone != "study":
+        return 0
+
+    doc.segment_status = "processing"
+    await db.flush()
+
+    try:
+        text, parse_error = await asyncio.to_thread(_load_document_text, doc)
+        if text is None:
+            raise ValueError(parse_error or "无法获取文档文本")
+
+        segment_dicts = split_text(text)
+        await _apply_structure_async(db, doc, text, segment_dicts)
+        await segment_crud.adelete_segments_for_document(db, document_id)
+        rows = await segment_crud.abulk_create_segments(db, document_id, segment_dicts)
+
+        doc.segment_status = "completed"
+        await db.flush()
+        logger.info(
+            "segment_document_async completed: document_id=%s, segments=%d",
+            document_id,
+            len(segment_dicts),
+        )
+
+        from app.core.config import is_local_rag, is_keyword_rag
+
+        if is_local_rag():
+            if is_keyword_rag():
+                doc.indexing_status = "completed"
+                await db.flush()
+            else:
+                from app.services.knowledge.index_service import index_loaded_segments
+
+                try:
+                    await asyncio.to_thread(index_loaded_segments, doc, rows)
+                    doc.indexing_status = "completed"
+                except Exception:
+                    logger.exception(
+                        "Chroma index failed: document_id=%s", document_id
+                    )
+                    doc.indexing_status = "failed"
+                await db.flush()
+
+        return len(segment_dicts)
+    except Exception:
+        logger.exception("segment_document_async failed: document_id=%s", document_id)
+        doc.segment_status = "failed"
+        await db.flush()
         return 0
 
 

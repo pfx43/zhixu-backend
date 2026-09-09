@@ -17,7 +17,7 @@
 | 种类 | 用途 | 进 TCN？ |
 | --- | --- | --- |
 | 题目知识点 | 图谱 `name` | 是 |
-| 书的学科 `domain` | 对应引擎 `domain_id`，现在只有 `higher_math` | 用来选词表 |
+| 书的学科 `domain` | 对应引擎 `domain_id`，封闭名单：`higher_math` / `math` / `physics` / `discrete_math` | 用来选词表 |
 | tip / 画像 | 用户自己的分类 | 否 |
 
 学生身份是知序库里的 `users.user_hash`。引擎按这个键记掌握度。调用方不用带答题历史。`session_id` 只是日志。前端不直连 TCN，也不传 `tc_node_id`。
@@ -33,7 +33,7 @@
 ## 2. 知序怎么接（开发顺序）
 
 1. 词表当代码模块加载 `tcn-knowledge-tags.json`（按 `domain` → `name` → `id`）。图更新整表换一版，记下 `graph_version`。
-2. **目录提取时判学科**（跟章→页同一趟，但是单独字段）。prompt 只给封闭名单（现在就 `higher_math`），输出只能是名单里的 id 或 `None`。拿不准就 `None`，不要猜，不要自造「微积分」。页码规则不变：优先书签/目录，禁止编页。学科不要和编目录揉成一段自由发挥。
+2. **目录提取时判学科**（跟章→页同一趟，但是单独字段）。prompt 只给封闭名单（`higher_math` / `math` / `physics` / `discrete_math`，来自 `tcn_domains` 表），输出只能是名单里的 id 或 `None`。拿不准就 `None`，不要猜，不要自造「微积分」。页码规则不变：优先书签/目录，禁止编页。学科不要和编目录揉成一段自由发挥。
 3. 书上持久化 `tcn_domain`（或等价列）。人以后能改；改完只影响新出的题。旧题按当时 tag 查表，查不到就不 `predict`。
 4. `domain != None`：出题 prompt 带该领域 **name 列表**。入库前程序校验，不在词表里 → 整题打回一次；再不行丢弃，非法 tag 不准入库。有 domain 时禁用 `["自动生成", …]` 那种兜底。一道题只拿词表内 tag；`predict` 用第一个合法 name 对应的 `id`。`domain is None`：出题刷题照旧，不调 TCN。
 5. 交卷挂钩 `predict`。开关默认关，配置齐了再开。

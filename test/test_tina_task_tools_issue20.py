@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pgutil import make_sessionmaker
-from app.models import User, Goal, KbCollection, Document, DocumentSegment, QuestionProvenance, GlobalQuestion, UserQuestionRef
+from app.models import User, Goal, KbCollection, Document, DocumentSegment, QuestionProvenance, GlobalQuestion, UserQuestionRef, UserNote
 from app.services.quiz import question_gen_service
 from app.services.tools.task_tools import TaskPlannerTools, build_user_context
 from app.services.tasks import task_service
@@ -94,8 +94,10 @@ def _seed_question_on_page(session, user_id: int, doc_id: str, page: int):
 
 
 @pytest.fixture()
-def task_tools_env():
+def task_tools_env(monkeypatch):
     """构造 A(8801)/B(8802) 两用户 + 各自文档的独立测试库。"""
+    from contextlib import contextmanager
+
     engine, SessionLocal = _create_temp_db()
     with SessionLocal() as s:
         _seed_user(s, 8801, "a@example.com")
@@ -103,6 +105,19 @@ def task_tools_env():
         _seed_document(s, 8801, "doc-a", "A 的书.pdf")
         _seed_document(s, 8802, "doc-b", "B 的书.pdf")
         _seed_question_on_page(s, 8801, "doc-a", 2)
+
+    @contextmanager
+    def _short():
+        db = SessionLocal()
+        try:
+            yield db
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    monkeypatch.setattr("app.services.tools.task_tools.short_session", _short)
     yield SessionLocal
     engine.dispose()
 
@@ -132,6 +147,10 @@ def test_document_isolation(task_tools_env):
 
     resp_own = json.loads(tools_b.get_document_toc("doc-b"))
     assert resp_own["document_id"] == "doc-b"
+    assert resp_own.get("pages_with_questions") == []
+
+    resp_a = json.loads(_tools_a().get_document_toc("doc-a"))
+    assert 2 in resp_a["pages_with_questions"]
 
 
 def test_learning_gaps_only_own_data(task_tools_env):
@@ -228,6 +247,11 @@ def test_tools_do_not_expose_submit_question():
         "generate_questions",
         "get_learning_gaps",
         "ensure_today_tasks",
+        "list_tips",
+        "create_tip",
+        "search_questions",
+        "show_question",
+        "show_tip",
     }
     prefix = "task_planner_"
     suffixes = {n[len(prefix):] for n in names if n.startswith(prefix)}
@@ -238,7 +262,9 @@ def test_tools_do_not_expose_submit_question():
 
 def test_ensure_today_tasks_writes_daily_tasks(task_tools_env):
     """B 有书没题 → ensure 布置按页出题任务；任务落在 daily_tasks（与 tasks/today 同一张表）。"""
-    resp = json.loads(_tools_b().ensure_today_tasks())
+    import asyncio
+
+    resp = json.loads(asyncio.run(_tools_b().ensure_today_tasks()))
     assert resp["status"] == "ok"
     assert len(resp["tasks"]) >= 1
     gen_tasks = [t for t in resp["tasks"] if t["task_type"] == "generate_questions"]
@@ -252,13 +278,15 @@ def test_ensure_today_tasks_writes_daily_tasks(task_tools_env):
         assert {t.id for t in db_tasks} == {t["id"] for t in resp["tasks"]}
 
     # 再 ensure 不重复派
-    resp2 = json.loads(_tools_b().ensure_today_tasks())
+    resp2 = json.loads(asyncio.run(_tools_b().ensure_today_tasks()))
     assert [t["id"] for t in resp2["tasks"]] == [t["id"] for t in resp["tasks"]]
 
 
 def test_ensure_today_tasks_generates_practice_when_questions_exist(task_tools_env):
     """A 有书有题 → 派刷题任务。"""
-    resp = json.loads(_tools_a().ensure_today_tasks())
+    import asyncio
+
+    resp = json.loads(asyncio.run(_tools_a().ensure_today_tasks()))
     practice_tasks = [t for t in resp["tasks"] if t["task_type"] == "practice"]
     assert practice_tasks
 
@@ -290,3 +318,90 @@ def test_build_user_context_includes_state(task_tools_env):
     assert "资料列表" in context
     assert "当前目标" in context
     assert "今日任务" in context
+    assert "称呼：" in context
+    assert "身份：" in context
+
+
+# ── 对话嵌卡：search_questions / show_question / show_tip ─────
+
+def test_search_questions_own_only_no_answer(task_tools_env):
+    """只搜到自己的题，摘要不含答案。"""
+    with task_tools_env() as db:
+        q = db.query(GlobalQuestion).filter(GlobalQuestion.id == "q-doc-a-p2").one()
+        q.tags = '["夹逼准则"]'
+        db.commit()
+
+    resp = json.loads(_tools_a().search_questions(keyword="第 2 页"))
+    assert resp["count"] == 1
+    assert resp["questions"][0]["question_id"] == "q-doc-a-p2"
+    blob = json.dumps(resp, ensure_ascii=False)
+    assert "解析" not in blob
+    assert '"answer"' not in blob
+
+    by_tag = json.loads(_tools_a().search_questions(tag="夹逼准则"))
+    assert by_tag["count"] == 1
+
+    others = json.loads(_tools_b().search_questions())
+    assert others["count"] == 0
+
+    denied = json.loads(_tools_b().search_questions(document_id="doc-a"))
+    assert denied.get("error") and "无权" in denied["error"]
+
+
+def test_show_question_ownership_and_no_answer(task_tools_env):
+    """展示自己的题进 pending_ui；不含答案；他人题拒绝。"""
+    tools_a = _tools_a()
+    resp = json.loads(tools_a.show_question("q-doc-a-p2"))
+    assert resp["status"] == "ok"
+    items = tools_a.drain_ui()
+    assert len(items) == 1
+    question = items[0]["question"]
+    assert question["question_id"] == "q-doc-a-p2"
+    assert question["stem"]
+    assert "answer" not in question
+    assert "explanation" not in question
+    assert json.dumps(question, ensure_ascii=False).count("解析") == 0
+
+    denied = json.loads(_tools_b().show_question("q-doc-a-p2"))
+    assert denied.get("error") and "无权" in denied["error"]
+    assert _tools_b().drain_ui() == []
+
+
+def test_show_tip_own_only_and_create_emits_card(task_tools_env):
+    """只能展示自己的 tip；create_tip 会直接嵌卡。"""
+    with task_tools_env() as db:
+        db.add(UserNote(
+            id="tip-a",
+            user_id=8801,
+            title="build 相关",
+            content_md="那句原文",
+            note_type="tip",
+            tags=["难词"],
+            source="tina",
+        ))
+        db.add(UserNote(
+            id="tip-b",
+            user_id=8802,
+            title="别人的 tip",
+            content_md="不该被 A 看见",
+            note_type="tip",
+            source="tina",
+        ))
+        db.commit()
+
+    tools_a = _tools_a()
+    resp = json.loads(tools_a.show_tip("tip-a"))
+    assert resp["status"] == "ok"
+    items = tools_a.drain_ui()
+    assert items[0]["tip"]["id"] == "tip-a"
+    assert items[0]["tip"]["content_md"] == "那句原文"
+
+    denied = json.loads(tools_a.show_tip("tip-b"))
+    assert denied.get("error") and "无权" in denied["error"]
+    assert tools_a.drain_ui() == []
+
+    created = json.loads(tools_a.create_tip("新 tip", "刚才那句"))
+    assert created["status"] == "ok"
+    cards = tools_a.drain_ui()
+    assert cards[0]["kind"] == "show_tip"
+    assert cards[0]["tip"]["title"] == "新 tip"

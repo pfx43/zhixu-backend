@@ -357,3 +357,58 @@ def finish_onboarding_with_goal(
             "created_at": active_goal.created_at,
         },
     }
+
+
+def _ensure_state(db: Session, user_id: int) -> OnboardingState:
+    """按登录用户取或建引导行。不读、不写其他用户。"""
+    state = (
+        db.query(OnboardingState)
+        .filter_by(user_id=user_id)
+        .with_for_update()
+        .one_or_none()
+    )
+    if state is None:
+        state = OnboardingState(
+            user_id=user_id,
+            guide_version=1,
+            revision=0,
+            status="pending",
+            current_step=None,
+            steps=_default_steps(),
+            channel_answer=None,
+            profile_answer=None,
+            tags=None,
+        )
+        db.add(state)
+        db.flush()
+    return state
+
+
+def mark_onboarding_in_progress(db: Session, user_id: int) -> Dict[str, Any]:
+    """对话引导开始：只把当前用户标成 in_progress。"""
+    state = _ensure_state(db, user_id)
+    if state.status == "pending":
+        state.status = "in_progress"
+        state.revision = int(state.revision) + 1
+        db.add(state)
+        db.flush()
+    return serialize_state(state)
+
+
+def complete_onboarding_for_user(db: Session, user_id: int) -> Dict[str, Any]:
+    """对话引导结束：跳过老五步，只改当前用户。已结束则原样返回。"""
+    state = _ensure_state(db, user_id)
+    if state.status in ("completed", "skipped"):
+        return serialize_state(state)
+    steps = state.steps or _default_steps()
+    for key, value in steps.items():
+        if value == "pending":
+            steps[key] = "skipped"
+    state.steps = steps
+    _flag_state_dirty(state)
+    state.status = "completed"
+    state.current_step = None
+    state.revision = int(state.revision) + 1
+    db.add(state)
+    db.flush()
+    return serialize_state(state)

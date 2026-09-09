@@ -17,8 +17,9 @@ def get_learning_path(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """学习路径：每本书按章（目录）聚合题目进度 + tag 知识点进度。
+    """进度页仍读 documents（按书/章记分）。路径页读 domains：一科一张图，资料挂在科下面。
 
+    有学科时下一步以该科 tcn-graph.next_nodes 为准，不绑某一本书。
     goal_id 传入时仅校验该目标属于当前用户；暂不做范围过滤。
     """
     return progress_service.get_learning_path(

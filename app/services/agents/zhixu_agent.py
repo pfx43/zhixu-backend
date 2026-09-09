@@ -26,8 +26,16 @@ from app.services.chat.local_retrieval_service import search as local_search
 from app.services.chat.keyword_retrieval_service import search_async as keyword_search_async
 from app.services.chat.chat_contract import ChatChunkNormalizer
 from app.services.tools.knowledge_retriever import KnowledgeRetriever
+from app.services.tools.onboarding_tools import OnboardingTools
 from app.services.tools.task_tools import TaskPlannerTools, build_user_context
+from app.services.onboarding.chat_cards import (
+    build_onboarding_context,
+    cards_shown_from_history,
+    user_confirmed_goal_from_history,
+)
 from app.services.llm.llm_pool import llm_pool
+from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
+from app.services.llm.safe_context import PairedContextManager
 from app.services.usage_service import record_usage_for_token
 
 if not is_local_rag():
@@ -39,13 +47,37 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = load_prompt("zhixu_agent_qa")
 SYSTEM_PROMPT_LEARNING = load_prompt("zhixu_agent_learning")
 SYSTEM_PROMPT_CLASSROOM_NOTE = load_prompt("zhixu_agent_classroom_note")
+SYSTEM_PROMPT_ONBOARDING = load_prompt("zhixu_agent_onboarding")
 
 MODE_PROMPTS = {
     "qa": SYSTEM_PROMPT,
     "verify": SYSTEM_PROMPT,
     "learning": SYSTEM_PROMPT_LEARNING,
     "classroom_note": SYSTEM_PROMPT_CLASSROOM_NOTE,
+    "onboarding": SYSTEM_PROMPT_ONBOARDING,
 }
+
+
+def _embed_events_from_tools(task_tools: Optional[TaskPlannerTools]) -> List[dict]:
+    """把 show_question / show_tip 从 pending_ui 转成独立 SSE 事件，不混进 onboarding_ui。"""
+    if task_tools is None:
+        return []
+    events: List[dict] = []
+    for item in task_tools.drain_ui():
+        kind = item.get("kind")
+        if kind == "show_question" and isinstance(item.get("question"), dict):
+            events.append({
+                "type": "show_question",
+                "role": "assistant",
+                "question": item["question"],
+            })
+        elif kind == "show_tip" and isinstance(item.get("tip"), dict):
+            events.append({
+                "type": "show_tip",
+                "role": "assistant",
+                "tip": item["tip"],
+            })
+    return events
 
 
 class ZhixuAgent:
@@ -146,14 +178,37 @@ class ZhixuAgent:
         )
         await retriever.set_token(token)
 
-        # Issue #20：主对话注册「派任务」工具包（只调已有接口，user_id 只来自登录）。
-        # 内部出题 submit_question 不挂到这里。
-        task_tools = TaskPlannerTools(user_id=self.user_id, token=token)
+        onboard_tools = None
+        task_tools = None
+        tool_bundles = [retriever.get_tools()]
+        if mode == "onboarding":
+            shown = cards_shown_from_history(history)
+            confirmed = user_confirmed_goal_from_history(history, current=message)
+            onboard_tools = OnboardingTools(
+                user_id=self.user_id,
+                shown_cards=shown,
+                goal_confirmed=confirmed,
+            )
+            tool_bundles.append(onboard_tools.get_tools())
+        else:
+            # Issue #20：主对话注册「派任务」工具包（只调已有接口，user_id 只来自登录）。
+            # 内部出题 submit_question 不挂到这里。show_question / show_tip 走 pending_ui。
+            task_tools = TaskPlannerTools(user_id=self.user_id, token=token)
+            tool_bundles.append(task_tools.get_tools())
 
         try:
             base_prompt = MODE_PROMPTS.get(mode, SYSTEM_PROMPT)
             try:
-                context = build_user_context(self.user_id)
+                if mode == "onboarding":
+                    context = build_onboarding_context(
+                        self.user_id,
+                        shown_cards=cards_shown_from_history(history),
+                        goal_confirmed=user_confirmed_goal_from_history(
+                            history, current=message
+                        ),
+                    )
+                else:
+                    context = build_user_context(self.user_id)
                 if context:
                     base_prompt = f"{base_prompt}\n\n【当前状态】\n{context}"
             except Exception as e:
@@ -161,14 +216,19 @@ class ZhixuAgent:
 
             agent = Agent(
                 llm=llm,
-                tools=[retriever.get_tools(), task_tools.get_tools()],
+                tools=tool_bundles,
                 system_prompt=base_prompt,
-                max_context_length=80000,
-                max_tool_result_length=6000,
+                context_manager=PairedContextManager(
+                    max_length=80000,
+                    max_tool_result_length=6000,
+                ),
                 max_tool_loop=LLM_MAX_TOOL_LOOP,
                 name=f"zhixu_{self.user_id}"
             )
+            attach_reasoning_roundtrip(agent)
+            # 0.5.3 clear_messages 会整表清空（含 system）。灌历史前把人设写回索引 0。
             agent.clear_messages()
+            agent.set_system_prompt(base_prompt)
             if history:
                 for msg in history:
                     role = msg.get("role")
@@ -182,6 +242,26 @@ class ZhixuAgent:
                     await record_usage_for_token(token, chunk["usage"])
                 for event in normalizer.normalize(chunk):
                     yield event
+                if onboard_tools:
+                    for item in onboard_tools.drain_ui():
+                        yield {
+                            "type": "onboarding_ui",
+                            "role": "assistant",
+                            "content": "",
+                            "item": item,
+                        }
+                for event in _embed_events_from_tools(task_tools):
+                    yield event
+            if onboard_tools:
+                for item in onboard_tools.drain_ui():
+                    yield {
+                        "type": "onboarding_ui",
+                        "role": "assistant",
+                        "content": "",
+                        "item": item,
+                    }
+            for event in _embed_events_from_tools(task_tools):
+                yield event
 
             if retriever.last_hits:
                 try:

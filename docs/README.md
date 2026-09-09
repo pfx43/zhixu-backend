@@ -30,7 +30,7 @@
 | [notes_frontend_guide.md](api/notes_frontend_guide.md) | 笔记功能前端对接 |
 | [account_delete_guide.md](api/account_delete_guide.md) | 账号注销接口对接 |
 | [TCN_API_对接文档.md](api/TCN/TCN_API_对接文档.md) | TCN 引擎对接（predict / 画像；Learning OS 不要当知序任务） |
-| [tcn-knowledge-tags.md](api/TCN/tcn-knowledge-tags.md) | 从图谱抽出的知识点 tag（higher_math） |
+| [tcn-knowledge-tags.md](api/TCN/tcn-knowledge-tags.md) | 按领域抽出的知识点 tag（higher_math / math / physics / discrete_math） |
 
 ### 架构与实现（architecture/）
 | 文件 | 说明 |

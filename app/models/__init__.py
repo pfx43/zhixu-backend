@@ -12,6 +12,8 @@ from .usage import UsageDaily, UsageToken
 from .goal import Goal
 from .daily_task import DailyTask
 from .evidence import GoalEvidenceEvent
+from .qgen import QgenJob, QgenJobPage
+from .tcn_domain import TcnDomain
 
 __all__ = [
     "User",
@@ -39,4 +41,7 @@ __all__ = [
     "Goal",
     "DailyTask",
     "GoalEvidenceEvent",
+    "QgenJob",
+    "QgenJobPage",
+    "TcnDomain",
 ]

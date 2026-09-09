@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -158,6 +158,29 @@ def count_questions_per_page(
         .all()
     )
     return {page_num: count for page_num, count in rows}
+
+
+def count_user_questions_for_documents(
+    db: Session,
+    user_id: int,
+    document_ids: List[str],
+) -> Dict[str, int]:
+    """当前用户在若干文档上已入库的题目数（按 document_id 聚合，用户隔离）。"""
+    if not document_ids:
+        return {}
+    rows = (
+        db.query(
+            UserQuestionRef.document_id,
+            func.count(func.distinct(UserQuestionRef.question_id)),
+        )
+        .filter(
+            UserQuestionRef.user_id == user_id,
+            UserQuestionRef.document_id.in_(document_ids),
+        )
+        .group_by(UserQuestionRef.document_id)
+        .all()
+    )
+    return {doc_id: int(cnt) for doc_id, cnt in rows}
 
 
 def get_user_ref(

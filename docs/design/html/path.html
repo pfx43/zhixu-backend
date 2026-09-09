@@ -34,8 +34,13 @@
     .nav-idle { color: #8A8580; }
     .nav-idle:hover { background: #fff; color: #7B9C9A; }
     .nav-active { background: #fff; color: #7B9C9A; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .task-card { border: 1px solid #EAE8E4; }
-    .task-card.is-active { border-color: rgba(123, 156, 154, 0.55); background: #fff; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+    .book-chip { border: 1px solid #EAE8E4; background: #fff; color: #8A8580; }
+    .book-chip.is-on { border-color: rgba(123, 156, 154, 0.55); color: #6A8987; background: #F3F6F5; }
+    .ch-row { border: 1px solid #EAE8E4; }
+    .ch-row.is-current { border-color: rgba(123, 156, 154, 0.55); background: #fff; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+    .g-node { cursor: pointer; }
+    .g-node:focus { outline: none; }
+    .g-node.is-on .g-dot { stroke: #6A8987; stroke-width: 3; }
   </style>
   <link rel="stylesheet" href="sidebar.css">
   <link rel="stylesheet" href="status-rail.css">
@@ -112,101 +117,68 @@
 
   <div class="flex-1 flex overflow-hidden">
     <section class="flex-1 p-8 overflow-y-auto">
-      <div class="flex justify-between items-start mb-8">
+      <div class="flex justify-between items-start mb-6">
         <div>
           <h2 class="text-3xl font-bold mb-1">学习路径</h2>
-          <p class="text-sm text-secondary-text">基于知识库和刷题表现，排出接下来该补什么。</p>
+          <p class="text-sm text-secondary-text">下一步按什么顺序走。刷得怎样去看进度。</p>
         </div>
-        <button class="flex items-center gap-2 px-4 py-2 border border-card-border rounded-xl bg-white text-sm text-secondary-text" type="button">刷新</button>
+        <a href="quiz.html" class="flex items-center gap-2 px-4 py-2 border border-card-border rounded-xl bg-white text-sm text-secondary-text">换一本书</a>
       </div>
 
-      <div class="bg-white border border-sage-accent/25 rounded-2xl shadow-soft p-8 mb-10 relative overflow-hidden">
-        <div class="absolute -right-8 -top-8 w-32 h-32 bg-sage-accent/5 rounded-full blur-3xl"></div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#F3F6F5] text-sage-dark rounded-full text-xs mb-5 font-semibold">下一步学习建议</div>
+      <div id="bookChips" class="flex flex-wrap gap-2 mb-6"></div>
+
+      <div class="bg-white border border-sage-accent/25 rounded-2xl shadow-soft p-6 mb-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-[#F3F6F5] text-sage-dark rounded-full text-xs mb-4 font-semibold">下一步</div>
         <div class="flex items-start justify-between gap-6">
-          <div class="max-w-lg">
-            <h3 class="text-xl font-bold mb-2">当前需要补强「State 管理」</h3>
-            <p class="text-sm text-secondary-text mb-2">就绪度高，适合立即开始 · 建议 30 分钟</p>
-            <p class="text-sm leading-relaxed mb-6">已有 Dart 和核心组件基础，State 管理掌握度偏低，会卡住后面的组件练习。</p>
-            <a href="practice.html" class="inline-flex bg-sage-accent hover:bg-sage-dark text-white px-6 py-2 rounded-full text-sm font-medium">开始学习</a>
-          </div>
-          <div class="hidden md:flex w-24 h-24 rounded-full border-4 border-sage-accent/20 items-center justify-center shrink-0">
-            <span class="text-2xl font-bold text-sage-accent">88</span>
+          <div class="min-w-0">
+            <p class="text-xs text-secondary-text mb-1" id="nextBook"></p>
+            <h3 class="text-xl font-bold mb-2" id="nextTitle"></h3>
+            <p class="text-sm text-secondary-text mb-5" id="nextReason"></p>
+            <a id="nextGo" href="practice.html" class="inline-flex bg-sage-accent hover:bg-sage-dark text-white px-6 py-2 rounded-full text-sm font-medium"></a>
           </div>
         </div>
       </div>
 
-      <div class="relative pl-2 space-y-0">
-        <button type="button" data-task="t1" class="task-card is-active w-full text-left rounded-2xl p-5 mb-4 bg-white">
-          <div class="flex gap-4">
-            <div class="flex flex-col items-center">
-              <div class="w-7 h-7 rounded-full bg-sage-accent text-white text-xs font-bold flex items-center justify-center">1</div>
-              <div class="w-px flex-1 bg-card-border mt-2 min-h-[12px]"></div>
-            </div>
-            <div class="flex-1 pb-1">
-              <div class="flex items-center justify-between gap-3 mb-1">
-                <h4 class="text-sm font-semibold">State 管理</h4>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">优先 95</span>
-              </div>
-              <p class="text-xs text-secondary-text">约 30 分钟 · 当前掌握 50% · 就绪度高</p>
-            </div>
+      <div id="graphPane" class="hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-lg font-bold">知识点顺序</h3>
+            <p class="text-xs text-secondary-text mt-0.5">边是先修。颜色是掌握度。点一个看名称，动作仍是刷题或出题。</p>
           </div>
-        </button>
-        <button type="button" data-task="t2" class="task-card w-full text-left rounded-2xl p-5 mb-4 bg-foggy-bg">
-          <div class="flex gap-4">
-            <div class="flex flex-col items-center">
-              <div class="w-7 h-7 rounded-full bg-white border border-card-border text-secondary-text text-xs font-bold flex items-center justify-center">2</div>
-              <div class="w-px flex-1 bg-card-border mt-2 min-h-[12px]"></div>
-            </div>
-            <div class="flex-1 pb-1">
-              <div class="flex items-center justify-between gap-3 mb-1">
-                <h4 class="text-sm font-semibold">异步编程</h4>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">优先 80</span>
-              </div>
-              <p class="text-xs text-secondary-text">约 40 分钟 · 当前掌握 30% · 就绪度中</p>
-            </div>
+          <div class="flex items-center gap-3 text-[11px] text-secondary-text">
+            <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-full inline-block" style="background:#5B8F7A"></i>已过</span>
+            <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-full inline-block" style="background:#C17B5A"></i>偏低</span>
+            <span class="inline-flex items-center gap-1"><i class="w-2.5 h-2.5 rounded-full inline-block bg-[#D4D1CC]"></i>还没记录</span>
           </div>
-        </button>
-        <button type="button" data-task="t3" class="task-card w-full text-left rounded-2xl p-5 bg-foggy-bg">
-          <div class="flex gap-4">
-            <div class="flex flex-col items-center">
-              <div class="w-7 h-7 rounded-full bg-white border border-card-border text-secondary-text text-xs font-bold flex items-center justify-center">3</div>
-            </div>
-            <div class="flex-1 pb-1">
-              <div class="flex items-center justify-between gap-3 mb-1">
-                <h4 class="text-sm font-semibold">HTTP 请求</h4>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">优先 70</span>
-              </div>
-              <p class="text-xs text-secondary-text">约 35 分钟 · 当前掌握 60% · 就绪度中</p>
-            </div>
-          </div>
-        </button>
+        </div>
+        <div class="bg-white border border-card-border rounded-2xl shadow-soft p-4 overflow-x-auto">
+          <svg id="graphSvg" viewBox="0 0 720 280" class="w-full min-w-[640px] h-[280px]" role="img" aria-label="知识图"></svg>
+        </div>
+        <p class="text-[11px] text-secondary-text mt-2">设计稿只画这一科的一小段。真页面按 domain 缓存，展开再拉图，不要一进页画整张。</p>
+      </div>
+
+      <div id="chapterPane" class="hidden">
+        <div class="mb-3">
+          <h3 class="text-lg font-bold">目录顺序</h3>
+          <p class="text-xs text-secondary-text mt-0.5">这本书还没有纳入知识点追踪。按章往下走，不在这里看对错。</p>
+        </div>
+        <div id="chapterList" class="relative pl-2 space-y-0"></div>
       </div>
     </section>
 
     <aside class="w-80 border-l border-card-border bg-[#F7F6F4] p-6 overflow-y-auto shrink-0">
-      <h4 class="text-base font-bold mb-1" id="detailTitle">State 管理</h4>
-      <p class="text-xs text-secondary-text mb-6" id="detailMeta">优先 95 · 约 30 分钟</p>
-      <div class="mb-6">
-        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">先修知识点</p>
-        <div id="detailPrereq" class="flex flex-wrap gap-1.5">
-          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">Dart 基础语法</span>
-          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">Flutter 核心组件</span>
-        </div>
-      </div>
-      <div class="mb-6">
-        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">为什么现在学</p>
-        <p id="detailReason" class="text-sm leading-relaxed">你已经具备 Dart 基础语法和 Flutter 核心组件基础，但 State 管理掌握度较低，会影响后续组件开发。</p>
+      <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2" id="detailKind">当前</p>
+      <h4 class="text-base font-bold mb-1" id="detailTitle"></h4>
+      <p class="text-xs text-secondary-text mb-6" id="detailMeta"></p>
+      <div class="mb-6" id="detailPrereqWrap">
+        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">先修</p>
+        <div id="detailPrereq" class="flex flex-wrap gap-1.5"></div>
       </div>
       <div class="mb-8">
-        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">建议步骤</p>
-        <ol id="detailSteps" class="text-sm space-y-1.5 list-decimal pl-4 leading-relaxed">
-          <li>先复习状态提升</li>
-          <li>再练 Provider / Riverpod 基础</li>
-          <li>最后完成一个小组件练习</li>
-        </ol>
+        <p class="text-[10px] text-secondary-text uppercase tracking-wider mb-2">为什么现在</p>
+        <p id="detailReason" class="text-sm leading-relaxed"></p>
       </div>
-      <a id="detailGo" href="practice.html" class="block text-center bg-sage-accent text-white px-4 py-2.5 rounded-xl text-sm font-medium">去练习</a>
+      <a id="detailGo" href="practice.html" class="block text-center bg-sage-accent text-white px-4 py-2.5 rounded-xl text-sm font-medium"></a>
     </aside>
   </div>
 </main>
@@ -215,57 +187,207 @@
 <script src="status-rail.js"></script>
 <script>
   (function () {
-    var TASKS = {
-      t1: {
-        title: "State 管理",
-        meta: "优先 95 · 约 30 分钟",
-        prereq: ["Dart 基础语法", "Flutter 核心组件"],
-        reason: "你已经具备 Dart 基础语法和 Flutter 核心组件基础，但 State 管理掌握度较低，会影响后续组件开发。",
-        steps: ["先复习状态提升", "再练 Provider / Riverpod 基础", "最后完成一个小组件练习"],
-        href: "practice.html"
+    var BOOKS = {
+      math: {
+        id: "math",
+        name: "高等数学讲义",
+        domain: "higher_math",
+        domainLabel: "高等数学",
+        next: {
+          id: "n4",
+          title: "函数的单调性",
+          reason: "先修已过，掌握度偏低",
+          action: "quiz",
+          href: "practice.html",
+          label: "去刷题"
+        },
+        nodes: [
+          { id: "n1", name: "集合的概念", x: 90, y: 140, mastery: 0.86, prereq: [], reason: "起点，已经过了" },
+          { id: "n2", name: "子集与运算", x: 250, y: 80, mastery: 0.72, prereq: ["集合的概念"], reason: "先修已过" },
+          { id: "n3", name: "函数的概念", x: 410, y: 140, mastery: 0.64, prereq: ["子集与运算"], reason: "先修已过" },
+          { id: "n4", name: "函数的单调性", x: 580, y: 80, mastery: 0.28, prereq: ["函数的概念"], reason: "先修已过，掌握度偏低" },
+          { id: "n5", name: "极限的定义", x: 580, y: 200, mastery: null, prereq: ["函数的概念"], reason: "先修已过，还没有掌握记录" }
+        ],
+        edges: [
+          ["n1", "n2"],
+          ["n2", "n3"],
+          ["n3", "n4"],
+          ["n3", "n5"]
+        ]
       },
-      t2: {
-        title: "异步编程",
-        meta: "优先 80 · 约 40 分钟",
-        prereq: ["Dart 基础语法"],
-        reason: "异步编程是 HTTP 请求和数据库操作的基础，掌握度偏低需要补齐。",
-        steps: ["理解 Future 和 async/await", "学习 Stream", "练习错误处理"],
-        href: "quiz.html"
-      },
-      t3: {
-        title: "HTTP 请求",
-        meta: "优先 70 · 约 35 分钟",
-        prereq: ["异步编程", "Dart 基础语法"],
-        reason: "HTTP 请求是后端通信的核心，需要结合异步编程巩固。",
-        steps: ["使用 dio 封装请求", "处理拦截器", "统一错误处理"],
-        href: "quiz.html"
+      notes: {
+        id: "notes",
+        name: "随笔",
+        domain: null,
+        domainLabel: "未纳入知识点追踪",
+        next: {
+          id: "c2",
+          title: "日记一",
+          reason: "按目录你现在在这一章",
+          action: "generate",
+          href: "generate.html?from=path",
+          label: "去出题"
+        },
+        chapters: [
+          { id: "c1", title: "前言", pages: "第 1–2 页", current: false, href: "generate.html?from=path", action: "generate", label: "去出题", reason: "还没有题，先按这一章出。" },
+          { id: "c2", title: "日记一", pages: "第 3–12 页", current: true, href: "practice.html", action: "quiz", label: "去刷题", reason: "最近在这一章。对错去进度页看。" },
+          { id: "c3", title: "日记二", pages: "第 13–20 页", current: false, href: "generate.html?from=path", action: "generate", label: "去出题", reason: "按目录下一章。" }
+        ]
       }
     };
 
-    function render(id) {
-      var t = TASKS[id];
-      document.getElementById("detailTitle").textContent = t.title;
-      document.getElementById("detailMeta").textContent = t.meta;
-      document.getElementById("detailReason").textContent = t.reason;
-      document.getElementById("detailPrereq").innerHTML = t.prereq.map(function (p) {
-        return '<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">' + p + "</span>";
+    var currentBook = "math";
+    var selectedId = BOOKS.math.next.id;
+
+    function fillColor(mastery) {
+      if (mastery == null) return "#D4D1CC";
+      if (mastery >= 0.6) return "#5B8F7A";
+      return "#C17B5A";
+    }
+
+    function masteryText(mastery) {
+      if (mastery == null) return "还没有掌握记录";
+      return "掌握度 " + Math.round(mastery * 100) + "%";
+    }
+
+    function renderChips() {
+      var wrap = document.getElementById("bookChips");
+      wrap.innerHTML = Object.keys(BOOKS).map(function (id) {
+        var b = BOOKS[id];
+        var badge = b.domain ? b.domainLabel : "未追踪";
+        return (
+          '<button type="button" data-book="' + id + '" class="book-chip px-3 py-1.5 rounded-full text-xs font-medium">' +
+          b.name +
+          '<span class="ml-1.5 text-[10px] opacity-70">' + badge + "</span></button>"
+        );
       }).join("");
-      document.getElementById("detailSteps").innerHTML = t.steps.map(function (s) {
-        return "<li>" + s + "</li>";
-      }).join("");
-      document.getElementById("detailGo").href = t.href;
-      document.querySelectorAll("[data-task]").forEach(function (btn) {
-        btn.classList.toggle("is-active", btn.getAttribute("data-task") === id);
-        btn.classList.toggle("bg-white", btn.getAttribute("data-task") === id);
-        btn.classList.toggle("bg-foggy-bg", btn.getAttribute("data-task") !== id);
+      wrap.querySelectorAll("[data-book]").forEach(function (btn) {
+        btn.classList.toggle("is-on", btn.getAttribute("data-book") === currentBook);
+        btn.addEventListener("click", function () {
+          showBook(btn.getAttribute("data-book"));
+        });
       });
     }
 
-    document.querySelectorAll("[data-task]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        render(btn.getAttribute("data-task"));
+    function showDetail(kind, title, meta, prereq, reason, href, label) {
+      document.getElementById("detailKind").textContent = kind;
+      document.getElementById("detailTitle").textContent = title;
+      document.getElementById("detailMeta").textContent = meta;
+      document.getElementById("detailReason").textContent = reason;
+      var wrap = document.getElementById("detailPrereqWrap");
+      var box = document.getElementById("detailPrereq");
+      if (!prereq || !prereq.length) {
+        wrap.classList.add("hidden");
+      } else {
+        wrap.classList.remove("hidden");
+        box.innerHTML = prereq.map(function (p) {
+          return '<span class="text-[11px] px-2.5 py-0.5 rounded-full bg-white border border-card-border text-secondary-text">' + p + "</span>";
+        }).join("");
+      }
+      var go = document.getElementById("detailGo");
+      go.href = href;
+      go.textContent = label;
+    }
+
+    function renderGraph(book) {
+      var svg = document.getElementById("graphSvg");
+      var byId = {};
+      book.nodes.forEach(function (n) { byId[n.id] = n; });
+      var lines = book.edges.map(function (e) {
+        var a = byId[e[0]];
+        var b = byId[e[1]];
+        return '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '" stroke="#EAE8E4" stroke-width="2"/>';
+      }).join("");
+      var nodes = book.nodes.map(function (n) {
+        var on = n.id === selectedId ? " is-on" : "";
+        var ring = n.id === book.next.id ? '<circle cx="' + n.x + '" cy="' + n.y + '" r="22" fill="none" stroke="#7B9C9A" stroke-width="2" stroke-dasharray="3 3"/>' : "";
+        return (
+          '<g class="g-node' + on + '" data-node="' + n.id + '" tabindex="0">' +
+          ring +
+          '<circle class="g-dot" cx="' + n.x + '" cy="' + n.y + '" r="14" fill="' + fillColor(n.mastery) + '" stroke="#fff" stroke-width="2"/>' +
+          '<text x="' + n.x + '" y="' + (n.y + 36) + '" text-anchor="middle" font-size="12" fill="#2D2A28">' + n.name + "</text>" +
+          "</g>"
+        );
+      }).join("");
+      svg.innerHTML = lines + nodes;
+      svg.querySelectorAll("[data-node]").forEach(function (g) {
+        g.addEventListener("click", function () {
+          selectedId = g.getAttribute("data-node");
+          var n = byId[selectedId];
+          showDetail(
+            "知识点",
+            n.name,
+            masteryText(n.mastery),
+            n.prereq,
+            n.reason,
+            "practice.html",
+            "去刷题"
+          );
+          renderGraph(book);
+        });
       });
-    });
+    }
+
+    function renderChapters(book) {
+      var list = document.getElementById("chapterList");
+      list.innerHTML = book.chapters.map(function (c, i) {
+        var last = i === book.chapters.length - 1;
+        var on = c.id === selectedId ? " is-current bg-white" : " bg-foggy-bg";
+        var numCls = c.current
+          ? "bg-sage-accent text-white"
+          : "bg-white border border-card-border text-secondary-text";
+        var mark = c.current
+          ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-[#F3F6F5] text-sage-accent">当前</span>'
+          : "";
+        return (
+          '<button type="button" data-ch="' + c.id + '" class="ch-row' + on + ' w-full text-left rounded-2xl p-5 mb-4">' +
+          '<div class="flex gap-4"><div class="flex flex-col items-center">' +
+          '<div class="w-7 h-7 rounded-full ' + numCls + ' text-xs font-bold flex items-center justify-center">' + (i + 1) + "</div>" +
+          (last ? "" : '<div class="w-px flex-1 bg-card-border mt-2 min-h-[12px]"></div>') +
+          '</div><div class="flex-1 pb-1"><div class="flex items-center justify-between gap-3 mb-1">' +
+          '<h4 class="text-sm font-semibold">' + c.title + "</h4>" + mark +
+          '</div><p class="text-xs text-secondary-text">' + c.pages + "</p></div></div></button>"
+        );
+      }).join("");
+      list.querySelectorAll("[data-ch]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          selectedId = btn.getAttribute("data-ch");
+          var c = book.chapters.filter(function (x) { return x.id === selectedId; })[0];
+          showDetail("章", c.title, c.pages, [], c.reason, c.href, c.label);
+          renderChapters(book);
+        });
+      });
+    }
+
+    function showBook(id) {
+      currentBook = id;
+      var book = BOOKS[id];
+      selectedId = book.next.id;
+      document.getElementById("nextBook").textContent = book.name + (book.domain ? " · " + book.domainLabel : " · 未纳入知识点追踪");
+      document.getElementById("nextTitle").textContent = book.next.title;
+      document.getElementById("nextReason").textContent = book.next.reason;
+      var go = document.getElementById("nextGo");
+      go.href = book.next.href;
+      go.textContent = book.next.label;
+      var graphPane = document.getElementById("graphPane");
+      var chapterPane = document.getElementById("chapterPane");
+      if (book.domain) {
+        graphPane.classList.remove("hidden");
+        chapterPane.classList.add("hidden");
+        var n = book.nodes.filter(function (x) { return x.id === selectedId; })[0];
+        showDetail("知识点", n.name, masteryText(n.mastery), n.prereq, n.reason, book.next.href, book.next.label);
+        renderGraph(book);
+      } else {
+        graphPane.classList.add("hidden");
+        chapterPane.classList.remove("hidden");
+        var c = book.chapters.filter(function (x) { return x.id === selectedId; })[0];
+        showDetail("章", c.title, c.pages, [], c.reason, c.href, c.label);
+        renderChapters(book);
+      }
+      renderChips();
+    }
+
+    showBook("math");
   })();
 </script>
 </body>

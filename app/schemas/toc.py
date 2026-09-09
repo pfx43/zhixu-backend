@@ -16,3 +16,5 @@ class TocListOut(BaseModel):
     document_id: str
     toc: List[TocOut]
     total: int
+    tcn_domain: Optional[str] = None
+    tcn_domain_label: Optional[str] = None

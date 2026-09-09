@@ -18,6 +18,8 @@
   "pdf_max_pages": 0,
   "pdf_ocr_render_dpi": 150,
   "max_questions_per_document": 20,
+  "max_pages_per_gen": 10,
+  "question_gen_max_agents": 10,
   "document_pipeline_async": true,
   "question_gen_async": true,
   "llm_async": true,

@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.models import DocumentToc
@@ -26,6 +28,26 @@ def replace_toc_for_document(
         db.add(row)
         rows.append(row)
     db.flush()
+    return rows
+
+
+async def areplace_toc_for_document(
+    db: AsyncSession, document_id: str, entries: List[dict]
+) -> List[DocumentToc]:
+    await db.execute(delete(DocumentToc).where(DocumentToc.document_id == document_id))
+    await db.flush()
+    rows: List[DocumentToc] = []
+    for idx, entry in enumerate(entries):
+        row = DocumentToc(
+            document_id=document_id,
+            order_index=idx,
+            title=entry["title"],
+            page_start=entry["page_start"],
+            page_end=entry["page_end"],
+        )
+        db.add(row)
+        rows.append(row)
+    await db.flush()
     return rows
 
 

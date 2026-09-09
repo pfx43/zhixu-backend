@@ -79,6 +79,10 @@ class Document(Base):
     indexing_status = Column(String(20), default="pending")
     segment_status = Column(String(20), default="not_started")
     question_gen_status = Column(String(20), default="not_started")
+    # TCN 学科：tcn_domains.id 或 NULL。拿不准就是 NULL；人改了只影响新出的题。
+    tcn_domain = Column(
+        String(64), ForeignKey("tcn_domains.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -87,6 +91,7 @@ class Document(Base):
     global_document = relationship("GlobalDocument", back_populates="documents")
     segments = relationship("DocumentSegment", back_populates="document")
     toc_entries = relationship("DocumentToc", back_populates="document")
+    tcn_domain_row = relationship("TcnDomain", back_populates="documents")
 
 
 class DocumentSegment(Base):

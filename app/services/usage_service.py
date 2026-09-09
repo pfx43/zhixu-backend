@@ -115,14 +115,12 @@ async def resolve_user_id_by_token(token: str) -> int:
         return 0
 
 
-async def record_usage_for_token(token: str, usage: dict) -> None:
-    """按客户端登录 token 反查 user_id 并异步写入用量表。
-
-    每次 LLM 调用（含 Agent 工具循环内每一轮）记录一条；token 为空、
-    解析不到用户或记账失败均跳过，不阻塞生成。
-    """
-    user_id = await resolve_user_id_by_token(token)
+async def record_usage_for_user_id(user_id: int, usage: dict) -> None:
+    """出题 worker 等已有 user_id 的路径：直接写入用量表，不反查登录 token。"""
     if not user_id:
+        return
+    if AsyncSessionLocal is None:
+        logger.warning("record_usage_for_user_id 跳过：异步会话不可用")
         return
     try:
         prompt_tokens = usage.get("prompt_tokens")
@@ -153,7 +151,19 @@ async def record_usage_for_token(token: str, usage: dict) -> None:
             )
             await db.commit()
     except Exception:
-        logger.exception("record_usage_for_token 记账失败: token=<redacted>")
+        logger.exception("record_usage_for_user_id 记账失败: user_id=%s", user_id)
+
+
+async def record_usage_for_token(token: str, usage: dict) -> None:
+    """按客户端登录 token 反查 user_id 并异步写入用量表。
+
+    每次 LLM 调用（含 Agent 工具循环内每一轮）记录一条；token 为空、
+    解析不到用户或记账失败均跳过，不阻塞生成。
+    """
+    user_id = await resolve_user_id_by_token(token)
+    if not user_id:
+        return
+    await record_usage_for_user_id(user_id, usage)
 
 
 def record_turn_usage(

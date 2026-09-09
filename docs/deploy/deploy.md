@@ -134,6 +134,7 @@ OCR 后端通过 `.env` 文件中的 `OCR_BACKEND` 配置：
 | `local` | PaddleOCR 本地识别（默认，需安装 paddleocr） |
 | `baidu` | 百度云 OCR API（需配置 `BAIDU_OCR_API_KEY` / `BAIDU_OCR_SECRET_KEY`） |
 | `auto` | 优先 PaddleOCR，不可用时回退百度 OCR |
+| `mineru` | 扫描件走 [MinerU](https://mineru.net/apiManage/docs) 云端解析，按页生成影子文档（需 `MINERU_API_TOKEN`） |
 
 详见 `.env.example` 模板文件。
 
@@ -183,12 +184,48 @@ Flutter 端配置：`设置页面 → KT 后端地址` 填入对应地址。
 
 ---
 
-## 五、生产环境建议
+## 五、Linux 生产（多 worker）
 
-当前为本地单机部署。如需远程/多用户：
+本地开发保持单进程：
 
-1. 改为 `--host 0.0.0.0`（监听所有接口）
-2. 前面加 Nginx 反向代理
-3. 加 API 认证（FastAPI middleware）
-4. 用 `gunicorn + uvicorn workers` 多进程
-5. 数据库持久化学习记录
+```bash
+uvicorn server:app --host 127.0.0.1 --port 8765
+```
+
+Linux 生产用 gunicorn 开多个 uvicorn worker。出题流 / 聊天 SSE 会超过 30 秒，
+`--timeout` 默认会把 worker 杀掉，所以脚本里默认 180 秒。
+
+`.env` 至少：
+
+```env
+CACHE_BACKEND=redis
+REDIS_URL=redis://127.0.0.1:6379/0
+WEB_CONCURRENCY=4
+```
+
+启动：
+
+```bash
+pip install -r requirements.txt
+alembic upgrade head
+chmod +x start_prod.sh
+./start_prod.sh
+```
+
+worker 数用环境变量改，不要在本地电脑跑这个脚本：
+
+```bash
+WEB_CONCURRENCY=4 CACHE_BACKEND=redis ./start_prod.sh
+```
+
+Nginx 反代时把流式接口超时拉长，否则浏览器仍会 `ERR_CONNECTION_CLOSED` /
+`ERR_INCOMPLETE_CHUNKED_ENCODING`：
+
+```nginx
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;
+proxy_buffering off;
+```
+
+4 个 worker 时每个进程各有一套数据库连接池（默认 `pool_size=5`、`max_overflow=10`），
+合计大约 60 条同步连接。确认 PostgreSQL `max_connections` 够用。
