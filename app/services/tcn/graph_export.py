@@ -1,4 +1,4 @@
-"""从本地 tcn-graph 导出读一科的点 + 内部边，不打 /admin/graph。"""
+"""从本地 TCN 学科完整图谱读点 + 内部边，不打 /admin/graph。"""
 from __future__ import annotations
 
 import json
@@ -7,24 +7,21 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional
 
-_GRAPH_FILES = {
-    "higher_math": "tcn-graph-2026-08-28.json",
-    "math": "tcn-graph-2026-08-30 (1).json",
-    "physics": "tcn-graph-2026-08-30 (2).json",
-    "discrete_math": "tcn-graph-2026-08-30.json",
-}
+# 封闭学科完整导出：assets/tcn/domain-graphs/{domain}.tcn-domain-graph.json
+_DOMAIN_GRAPH_SUFFIX = ".tcn-domain-graph.json"
 
 
-def _tags_dir() -> Path:
-    return Path(__file__).resolve().parents[3] / "docs" / "api" / "TCN"
+def _domain_graphs_dir() -> Path:
+    return Path(__file__).resolve().parents[3] / "assets" / "tcn" / "domain-graphs"
+
+
+def _domain_graph_path(domain: str) -> Path:
+    return _domain_graphs_dir() / f"{domain}{_DOMAIN_GRAPH_SUFFIX}"
 
 
 @lru_cache(maxsize=8)
 def _load_export(domain: str) -> dict:
-    filename = _GRAPH_FILES.get(domain)
-    if not filename:
-        return {}
-    path = _tags_dir() / filename
+    path = _domain_graph_path(domain)
     if not path.is_file():
         return {}
     try:

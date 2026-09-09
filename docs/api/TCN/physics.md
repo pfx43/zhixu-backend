@@ -1,6 +1,6 @@
 # TCN 知识点 tag（physics）
 
-从 [`tcn-graph-2026-08-30 (2).json`](./tcn-graph-2026-08-30 (2).json) 抽出。学科 `physics`，共 **87** 个 active 节点。
+从 [`physics.tcn-domain-graph.json`](../../../assets/tcn/domain-graphs/physics.tcn-domain-graph.json) 抽出。学科 `physics`，共 **87** 个 active 节点。
 
 `id` 是调 TCN `predict` 时的 `current_node`；`name` 可当知序题目/资料上的知识点 tag。
 

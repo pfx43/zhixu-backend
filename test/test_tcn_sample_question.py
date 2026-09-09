@@ -74,8 +74,10 @@ def test_sample_question_predict_on_live_tcn():
     question = _load_question()
     base = _live_tcn_base()
     user_hash = "zhixu_test_" + uuid.uuid4().hex[:12]
+    api_key = (os.environ.get("TCN_API_KEY") or "").strip()
+    headers = {"X-Api-Key": api_key} if api_key else {}
     payload = {
-        "api_key": "",
+        "api_key": api_key,
         "user_hash": user_hash,
         "domain_id": question["domain_id"],
         "current_node": question["tc_node_id"],
@@ -84,7 +86,12 @@ def test_sample_question_predict_on_live_tcn():
         "session_id": "squeeze-theorem-sample",
     }
 
-    resp = httpx.post(f"{base}/v1/user/predict", json=payload, timeout=30.0)
+    resp = httpx.post(
+        f"{base}/v1/user/predict", json=payload, headers=headers, timeout=30.0
+    )
+
+    if resp.status_code == 401:
+        pytest.skip("TCN predict 需要 X-Api-Key，CI/本地未配置 TCN_API_KEY")
 
     assert resp.status_code != 404, (
         f"current_node={question['tc_node_id']} 不在引擎图谱里: {resp.text[:300]}"

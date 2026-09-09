@@ -1,6 +1,6 @@
 # TCN 知识点 tag（higher_math）
 
-从 [`tcn-graph-2026-08-28.json`](./tcn-graph-2026-08-28.json) 抽出。学科 `higher_math`，共 **233** 个 active 节点。
+从 [`higher_math.tcn-domain-graph.json`](../../../assets/tcn/domain-graphs/higher_math.tcn-domain-graph.json) 抽出。学科 `higher_math`，共 **233** 个 active 节点。
 
 `id` 是调 TCN `predict` 时的 `current_node`；`name` 可当知序题目/资料上的知识点 tag。
 
