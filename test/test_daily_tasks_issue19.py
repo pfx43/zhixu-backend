@@ -34,7 +34,6 @@ from app.models import (
     QuizSessionQuestion,
     DailyTask,
 )
-from app.services.quiz import question_gen_service
 from app.services.knowledge import kb_service
 from app.services.tasks import task_service
 
@@ -358,31 +357,8 @@ def test_upload_parse_failure_does_not_complete(task_client, monkeypatch):
 
 # ── 验收 4：出题检查器 ───────────────────────────────────────
 
-def _patch_generate_pages(monkeypatch, document_id: str, page_numbers):
-    async def fake_generate_from_pages(**kwargs):
-        from app.schemas.question import PageQuestionResponse
-        return PageQuestionResponse(
-            document_id=document_id,
-            page_numbers=list(page_numbers),
-            mode="generate",
-            questions_created=0,
-            questions_reused=0,
-            total_questions=0,
-        )
-
-    monkeypatch.setattr(question_gen_service, "is_question_gen_async", lambda: False)
-    monkeypatch.setattr(question_gen_service, "generate_from_pages", fake_generate_from_pages)
-
-
-def _post_generate(client, document_id="doc-1", pages=None):
-    return client.post(
-        "/api/v1/questions/generate-from-pages",
-        json={"document_id": document_id, "page_numbers": pages or [1, 2]},
-        headers={"Authorization": "Bearer TEST_TOKEN_FOR_USER"},
-    )
-
-
-def test_generate_completes_when_payload_pages_have_questions(task_client, monkeypatch):
+def test_generate_completes_when_payload_pages_have_questions(task_client):
+    """payload 页都已有题 → 出题任务自动完成（直接跑检查器，不依赖已删除的按页出题入口）。"""
     client, SessionLocal = task_client
     with SessionLocal() as session:
         doc = _seed_document(session, 8801, "doc-1", "高数.pdf")
@@ -394,22 +370,20 @@ def test_generate_completes_when_payload_pages_have_questions(task_client, monke
             payload={"document_id": "doc-1", "page_numbers": [1, 2]},
             rule={"kind": "pages_have_questions", "document_id": "doc-1", "page_numbers": [1, 2]},
         )
-    _patch_generate_pages(monkeypatch, "doc-1", [1, 2])
+        task_id = task.id
+        receipts = task_service.run_completion_checks(session, 8801, "questions_generated")
 
-    resp = _post_generate(client)
-    assert resp.status_code == 200
-    receipts = resp.json()["completed_tasks"]
-    assert len(receipts) == 1 and receipts[0]["id"] == task.id
+    assert len(receipts) == 1 and receipts[0]["id"] == task_id
     assert receipts[0]["source_action"] == "questions_generated"
     assert receipts[0]["after_status"] == "completed"
     assert len(receipts[0]["idempotency_key"]) == 64
 
     with SessionLocal() as session:
-        t = session.query(DailyTask).filter(DailyTask.id == task.id).first()
+        t = session.query(DailyTask).filter(DailyTask.id == task_id).first()
         assert t.status == "completed"
 
 
-def test_generate_wrong_pages_does_not_complete(task_client, monkeypatch):
+def test_generate_wrong_pages_does_not_complete(task_client):
     """只出了别的页（payload 页仍空）→ 任务继续挂。"""
     client, SessionLocal = task_client
     with SessionLocal() as session:
@@ -420,15 +394,13 @@ def test_generate_wrong_pages_does_not_complete(task_client, monkeypatch):
             payload={"document_id": "doc-1", "page_numbers": [1, 2]},
             rule={"kind": "pages_have_questions", "document_id": "doc-1", "page_numbers": [1, 2]},
         )
-    # 本次操作只覆盖页 3（与 payload 无关），但检查器只看 payload 页是否已有题
-    _patch_generate_pages(monkeypatch, "doc-1", [3])
+        task_id = task.id
+        receipts = task_service.run_completion_checks(session, 8801, "questions_generated")
 
-    resp = _post_generate(client, pages=[3])
-    assert resp.status_code == 200
-    assert resp.json()["completed_tasks"] == []
+    assert receipts == []
 
     with SessionLocal() as session:
-        t = session.query(DailyTask).filter(DailyTask.id == task.id).first()
+        t = session.query(DailyTask).filter(DailyTask.id == task_id).first()
         assert t.status == "pending"
 
 

@@ -186,27 +186,12 @@ def test_goal_isolation(task_tools_env):
 
 # ── 验收 2：禁止猜页 ─────────────────────────────────────────
 
-async def _fake_generate_from_pages(**kwargs):
-    from app.schemas.question import PageQuestionResponse
-    return PageQuestionResponse(
-        document_id=kwargs.get("document_id"),
-        page_numbers=list(kwargs.get("page_numbers") or []),
-        mode="generate",
-        questions_created=1,
-        questions_reused=0,
-        total_questions=len(kwargs.get("page_numbers") or []),
-    )
-
-
 def test_generate_questions_rejects_guessed_pages(task_tools_env, monkeypatch):
     """越界页码（不在目录/入库分段范围）被拒绝，并返回合法页码。
 
     工具是 async def，这里用 asyncio.run 跑；CI 不装 pytest-asyncio，函数保持同步。
     """
     import asyncio
-
-    monkeypatch.setattr(question_gen_service, "is_question_gen_async", lambda: False)
-    monkeypatch.setattr(question_gen_service, "generate_from_pages", _fake_generate_from_pages)
 
     resp = json.loads(asyncio.run(_tools_a().generate_questions("doc-a", "99")))
     assert "error" in resp
@@ -215,20 +200,26 @@ def test_generate_questions_rejects_guessed_pages(task_tools_env, monkeypatch):
 
 
 def test_generate_questions_accepts_toc_pages(task_tools_env, monkeypatch):
-    """页码来自目录/入库分段（合法）时正常调用现有按页出题。"""
+    """页码来自目录/入库分段（合法）时提交按页出题作业（入队）。"""
     import asyncio
 
     called = {}
 
-    async def fake_generate(**kwargs):
-        called.update(kwargs)
-        return await _fake_generate_from_pages(**kwargs)
+    class _Resp:
+        job_id = "job-1"
 
-    monkeypatch.setattr(question_gen_service, "is_question_gen_async", lambda: False)
-    monkeypatch.setattr(question_gen_service, "generate_from_pages", fake_generate)
+    def fake_enqueue(**kwargs):
+        called.update(kwargs)
+        return _Resp()
+
+    monkeypatch.setattr(
+        "app.services.tools.task_tools.qgen_job_service.enqueue_generate_from_pages",
+        fake_enqueue,
+    )
 
     resp = json.loads(asyncio.run(_tools_a().generate_questions("doc-a", "1,2")))
-    assert resp["status"] == "completed"
+    assert resp["status"] == "scheduled"
+    assert resp["job_id"] == "job-1"
     assert called["user_id"] == 8801
     assert called["page_numbers"] == [1, 2]
 

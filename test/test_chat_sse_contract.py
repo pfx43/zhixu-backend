@@ -546,7 +546,16 @@ class ChatPersistenceAsyncTests(unittest.TestCase):
         self.assertTrue(save_calls)
         self.assertEqual(
             save_calls[-1][1]["payload"],
-            {"onboarding": [{"type": "goal_card", "goal": "考研上岸"}]},
+            {
+                "blocks": [
+                    {"type": "text", "content": "记下了。"},
+                    {
+                        "type": "onboarding",
+                        "item": {"type": "goal_card", "goal": "考研上岸"},
+                    },
+                ],
+                "onboarding": [{"type": "goal_card", "goal": "考研上岸"}],
+            },
         )
 
     def test_show_question_and_tip_forwarded_and_saved(self):
@@ -609,6 +618,61 @@ class ChatPersistenceAsyncTests(unittest.TestCase):
         self.assertEqual(payload["questions"][0]["question_id"], "q1")
         self.assertNotIn("answer", payload["questions"][0])
         self.assertEqual(payload["tips"][0]["id"], "t1")
+
+    def test_show_plot_and_canvas_forwarded_and_saved(self):
+        """画布事件独立 type；落库挂本会话 payload.plots / canvases。"""
+        saved = []
+        raw = [
+            {
+                "type": "show_plot",
+                "role": "assistant",
+                "plot": {
+                    "id": "p1",
+                    "title": "夹逼",
+                    "expressions": ["sin(x)/x"],
+                    "x_min": -5,
+                    "x_max": 5,
+                },
+            },
+            {
+                "type": "show_canvas",
+                "role": "assistant",
+                "canvas": {
+                    "id": "c1",
+                    "title": "圆",
+                    "html": "<svg><circle r='10'/></svg>",
+                },
+            },
+        ]
+        with (
+            patch.object(chat_api.agent_manager, "get_agent", return_value=RawAgent(raw)),
+            patch.object(chat_api, "_save_message", _record_save(saved)),
+            patch.object(chat_api, "_clear_interrupt", AsyncMock()),
+            patch.object(chat_api, "_check_interrupt", AsyncMock(return_value=False)),
+        ):
+            lines = _collect(chat_api._stream_agent_response(
+                user_id=8801,
+                session_id="canvas-1",
+                message="画一下 sin(x)/x",
+                dataset_id="ds1",
+                collection_id=None,
+                history=[],
+                mode="qa",
+                token="t",
+            ))
+        events = _parse_sse("".join(lines))
+        self.assertEqual(events[-1], "[DONE]")
+        payloads = [json.loads(e) for e in events[:-1]]
+        plots = [p for p in payloads if p["type"] == "show_plot"]
+        canvases = [p for p in payloads if p["type"] == "show_canvas"]
+        self.assertEqual(plots[0]["plot"]["id"], "p1")
+        self.assertEqual(plots[0]["plot"]["expressions"], ["sin(x)/x"])
+        self.assertEqual(canvases[0]["canvas"]["id"], "c1")
+        save_calls = [s for s in saved if s[0][2] == "assistant"]
+        self.assertTrue(save_calls)
+        payload = save_calls[-1][1]["payload"]
+        self.assertEqual(payload["plots"][0]["id"], "p1")
+        self.assertEqual(payload["canvases"][0]["id"], "c1")
 
 
 if __name__ == "__main__":

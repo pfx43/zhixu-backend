@@ -16,7 +16,11 @@ load_dotenv(_BACKEND_DIR / ".env")
 
 # 测试专用开关：测试后门 token 与内部健康检查 key（生产环境不得设置）
 os.environ.setdefault("ALLOW_TEST_TOKEN", "1")
-os.environ.setdefault("INTERNAL_API_KEY", "test-internal-key")
+# 强制覆盖：.env 可能为本地出题服务设了真实 INTERNAL_API_KEY，
+# 测试固定用 test-internal-key，保证契约测试与 .env 解耦。
+os.environ["INTERNAL_API_KEY"] = "test-internal-key"
+# 出题默认走 inline 路径做单测；需要队列的用例自行 monkeypatch is_question_gen_worker。
+os.environ["QUESTION_GEN_WORKER"] = "false"
 # 测试环境保留 /openapi.json（契约测试依赖）；生产不设置，文档仍关闭
 os.environ.setdefault("ENABLE_OPENAPI", "1")
 

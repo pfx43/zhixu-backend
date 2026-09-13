@@ -1,4 +1,5 @@
 """出题作业：入队快照、complete 入库、一页失败不影响其它页、TCN 词表。"""
+import asyncio
 import sys
 from pathlib import Path
 
@@ -238,3 +239,73 @@ def test_tcn_tag_names_lock_hint_when_domain_set():
     assert "随便编" not in hint
     assert build_tag_hint("已有 tag：极限", None) == "已有 tag：极限"
     assert tag_names_for_domain("not_a_domain") == []
+
+
+def test_complete_page_records_counts(db_session, monkeypatch):
+    user = _make_user(db_session, "qgen-counts@example.com")
+    doc = _make_doc(db_session, user)
+    _patch_pages(monkeypatch, [_page(1)])
+    resp = qgen_job_service.enqueue_generate_from_pages(db_session, user.id, doc.id, [1])
+    db_session.commit()
+    qgen_job_service.claim_next_job(db_session)
+    db_session.commit()
+    qgen_job_service.complete_page(db_session, resp.job_id, 1, [_qdata("计数的题？")])
+    db_session.commit()
+
+    public = qgen_job_service.get_job_for_user(db_session, user.id, resp.job_id)
+    page = public["pages"][0]
+    assert page["questions_created"] == 1
+    assert page["questions_reused"] == 0
+    assert page["total_questions"] == 1
+
+
+def test_stream_job_events_polls_progress(db_session, monkeypatch):
+    """入队 + 轮询路径：产出与 inline 同构的 page_start/page_complete/page_failed/done。"""
+    user = _make_user(db_session, "qgen-stream@example.com")
+    doc = _make_doc(db_session, user)
+    _patch_pages(monkeypatch, [_page(1), _page(2)])
+    resp = qgen_job_service.enqueue_generate_from_pages(
+        db_session, user.id, doc.id, [1, 2]
+    )
+    db_session.commit()
+
+    qgen_job_service.claim_next_job(db_session)
+    db_session.commit()
+    qgen_job_service.complete_page(db_session, resp.job_id, 1, [_qdata("第一页？")])
+    db_session.commit()
+    qgen_job_service.fail_page(db_session, resp.job_id, 2, "boom")
+    db_session.commit()
+
+    async def _collect():
+        return [
+            (name, data)
+            async for name, data in qgen_job_service.stream_job_events(
+                user_id=user.id,
+                job_id=resp.job_id,
+                document_id=doc.id,
+                document_name=doc.display_name,
+                page_numbers=[1, 2],
+                poll_interval=0.01,
+                timeout_seconds=2,
+            )
+        ]
+
+    events = asyncio.run(_collect())
+    types = [data["type"] for _, data in events]
+    assert types[0] == "page_start"
+    assert types[1] == "page_start"
+    assert "page_complete" in types
+    assert "page_failed" in types
+    assert types[-1] == "done"
+
+    done = events[-1][1]
+    assert done["status"] == "completed"
+    assert done["document_id"] == doc.id
+    assert done["page_numbers"] == [1, 2]
+    assert done["total_pages"] == 2
+    assert done["questions_created"] == 1
+    assert done["total_questions"] == 1
+
+    failed = next(data for _, data in events if data["type"] == "page_failed")
+    assert failed["page_number"] == 2
+    assert failed["error"] == "boom"

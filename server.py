@@ -206,22 +206,42 @@ def _collect_health_detail(request: Request) -> dict:
     llm_ready = _check_llm_ready()
     api_ok = not missing_paths
 
-    # 综合判断：TCN + LLM + API 合约三者都 ok 才返回 ok
-    if tcn_healthy and llm_ready and api_ok:
+    # user 通道实时状态：以 tcn_client.is_enabled 为准。
+    # admin 图接口（/admin/graph/*）失败不再翻转该标志，故与 KT 读接口一致。
+    try:
+        from app.services.tcn.tcn_client import tcn_client
+
+        tcn_available = tcn_client.is_enabled
+    except Exception:
+        tcn_available = tcn_healthy
+
+    # 图谱缓存为可选增强：为空单独标注，不代表 user 通道不可用。
+    try:
+        from app.services.tcn.graph_cache import get_graph_cache
+
+        graph_nodes = len(get_graph_cache())
+    except Exception:
+        graph_nodes = 0
+
+    # 综合判断：TCN user 通道 + LLM + API 合约三者都 ok 才返回 ok
+    if tcn_available and llm_ready and api_ok:
         overall = "ok"
-    elif not tcn_healthy and not llm_ready:
-        overall = "degraded"
     else:
         overall = "degraded"
 
     return {
         "status": overall,
         "skills_count": tcn_nodes,
-        # HEAD: TCN 模型健康状态
+        # HEAD: TCN 模型健康状态（启动探测的引擎可达性）
         "model_loaded": tcn_healthy,
         # fix/cyb-issue-6-7-tcn-chat: LLM 就绪 + TCN 单独状态
         "llm_ready": llm_ready,
-        "tcn_status": "ok" if tcn_healthy else "unavailable",
+        # 实时反映 /v1/user/* 可用性；admin 图接口失败不会影响它
+        "tcn_status": "ok" if tcn_available else "unavailable",
+        "graph_cache": {
+            "status": "ok" if graph_nodes else "empty",
+            "nodes": graph_nodes,
+        },
         # HEAD: Question Agent 独立探测
         "question_generation": _question_generation_readiness(),
         "api_contract": {

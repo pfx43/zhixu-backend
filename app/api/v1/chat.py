@@ -1,16 +1,17 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.api.deps import get_current_active_user, get_current_token, get_streaming_user
 from app.api.deps_quota import enforce_quota_for_user
-from app.core.config import is_local_rag
+from app.core.config import DEBUG_MAX_UPLOAD_SIZE, is_local_rag
 from app.core.database import short_session
 from app.core.redis import async_cache, cache
 from app.core.agent_manager import agent_manager
@@ -29,6 +30,15 @@ from app.services.onboarding.chat_cards import is_skip_or_uploaded, persistable_
 from app.services.onboarding.onboarding_service import (
     complete_onboarding_for_user,
     mark_onboarding_in_progress,
+)
+from app.services.chat.chat_blocks import (
+    append_canvas_block,
+    append_onboarding_block,
+    append_plot_block,
+    append_question_block,
+    append_text_block,
+    append_tip_block,
+    pack_assistant_payload,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +61,67 @@ ALLOWED_EVENT_TYPES = {
     "onboarding_ui",
     "show_question",
     "show_tip",
+    "show_plot",
+    "show_canvas",
 }
+
+_PLOT_PUBLIC_KEYS = ("id", "title", "expressions", "x_min", "x_max")
+_CANVAS_PUBLIC_KEYS = ("id", "title", "html")
+
+# ── 对话图片上传（多模态） ──
+_CHAT_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+_CHAT_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+# 未配置上传上限时给一个安全默认值（10MB）
+_CHAT_IMAGE_FALLBACK_MAX_BYTES = 10 * 1024 * 1024
+
+
+def _resolve_chat_image_paths(user_id: int, images: Optional[List[str]]) -> List[str]:
+    """把上传返回的图片 id 解析成本地绝对路径；不存在或越权的直接跳过。"""
+    paths: List[str] = []
+    for name in images or []:
+        if not name:
+            continue
+        path = storage_service.get_chat_image(user_id, name)
+        if path is not None:
+            paths.append(str(path))
+    return paths
+
+
+def _public_embed_plot(plot: dict) -> Optional[dict]:
+    if not isinstance(plot, dict):
+        return None
+    exprs = plot.get("expressions")
+    if not isinstance(exprs, list) or not exprs:
+        return None
+    out = {k: plot.get(k) for k in _PLOT_PUBLIC_KEYS if k in plot}
+    out["expressions"] = [str(e) for e in exprs[:3] if str(e).strip()]
+    if not out["expressions"] or not out.get("id"):
+        return None
+    try:
+        out["x_min"] = float(out.get("x_min", -10))
+        out["x_max"] = float(out.get("x_max", 10))
+    except (TypeError, ValueError):
+        out["x_min"], out["x_max"] = -10.0, 10.0
+    return out
+
+
+def _public_embed_canvas(canvas: dict) -> Optional[dict]:
+    if not isinstance(canvas, dict):
+        return None
+    html = canvas.get("html")
+    if not isinstance(html, str) or not html.strip():
+        return None
+    out = {k: canvas.get(k) for k in _CANVAS_PUBLIC_KEYS if k in canvas}
+    out["html"] = html
+    if not out.get("id"):
+        return None
+    return out
 
 
 def _interrupt_key(user_id: int, session_id: str) -> str:
@@ -302,6 +372,7 @@ async def _stream_agent_response(
     tc_domain_id: Optional[str] = None,
     mode: str = "qa",
     token: Optional[str] = None,
+    images: Optional[List[str]] = None,
 ):
     """流式 Agent 回复（async generator）。
 
@@ -347,6 +418,9 @@ async def _stream_agent_response(
     onboarding_items: List[dict] = []
     question_widgets: List[dict] = []
     tip_widgets: List[dict] = []
+    plot_widgets: List[dict] = []
+    canvas_widgets: List[dict] = []
+    blocks: List[dict] = []
     tcn_result = None
     interrupted = False
     disconnected = False
@@ -358,7 +432,12 @@ async def _stream_agent_response(
     chunk_counter = 0
     try:
         async for chunk in agent.generate(
-            message, history, collection_id=collection_id, mode=mode, token=token
+            message,
+            history,
+            collection_id=collection_id,
+            mode=mode,
+            token=token,
+            image_paths=images,
         ):
             chunk_counter += 1
             # 用户打断：降频检查（每 8 chunk 一次 Redis 往返），命中则停止产出
@@ -375,6 +454,7 @@ async def _stream_agent_response(
             content = chunk.get("content", "")
             if event_type == "answer" and content:
                 full_content += content
+                append_text_block(blocks, content)
             elif event_type == "reasoning":
                 rc = chunk.get("reasoning_content")
                 if rc:
@@ -385,10 +465,25 @@ async def _stream_agent_response(
                     tool_names.append(tn)
             elif event_type == "onboarding_ui" and chunk.get("item"):
                 onboarding_items.append(chunk["item"])
+                append_onboarding_block(blocks, chunk["item"])
             elif event_type == "show_question" and isinstance(chunk.get("question"), dict):
-                question_widgets.append(_public_embed_question(chunk["question"]))
+                public_q = _public_embed_question(chunk["question"])
+                question_widgets.append(public_q)
+                append_question_block(blocks, public_q)
             elif event_type == "show_tip" and isinstance(chunk.get("tip"), dict):
-                tip_widgets.append(_public_embed_tip(chunk["tip"]))
+                public_tip = _public_embed_tip(chunk["tip"])
+                tip_widgets.append(public_tip)
+                append_tip_block(blocks, public_tip)
+            elif event_type == "show_plot" and isinstance(chunk.get("plot"), dict):
+                public_plot = _public_embed_plot(chunk["plot"])
+                if public_plot and not any(p.get("id") == public_plot["id"] for p in plot_widgets):
+                    plot_widgets.append(public_plot)
+                    append_plot_block(blocks, public_plot)
+            elif event_type == "show_canvas" and isinstance(chunk.get("canvas"), dict):
+                public_canvas = _public_embed_canvas(chunk["canvas"])
+                if public_canvas and not any(c.get("id") == public_canvas["id"] for c in canvas_widgets):
+                    canvas_widgets.append(public_canvas)
+                    append_canvas_block(blocks, public_canvas)
 
             payload: dict = {
                 "session_id": session_id,
@@ -409,6 +504,10 @@ async def _stream_agent_response(
                 payload["question"] = question_widgets[-1] if question_widgets else chunk.get("question")
             elif event_type == "show_tip":
                 payload["tip"] = tip_widgets[-1] if tip_widgets else chunk.get("tip")
+            elif event_type == "show_plot":
+                payload["plot"] = plot_widgets[-1] if plot_widgets else chunk.get("plot")
+            elif event_type == "show_canvas":
+                payload["canvas"] = canvas_widgets[-1] if canvas_widgets else chunk.get("canvas")
             elif event_type == "metadata":
                 if chunk.get("citations"):
                     payload["citations"] = chunk["citations"]
@@ -432,13 +531,16 @@ async def _stream_agent_response(
 
     # ── 保存前置：先持久化，再产出 [DONE]（客户端收到 [DONE] 即认为完成） ──
     onboarding_cards = persistable_cards(onboarding_items)
-    history_payload: dict = {}
-    if onboarding_cards:
-        history_payload["onboarding"] = onboarding_cards
-    if question_widgets:
-        history_payload["questions"] = question_widgets
-    if tip_widgets:
-        history_payload["tips"] = tip_widgets
+    if interrupted:
+        append_text_block(blocks, INTERRUPT_NOTICE)
+    history_payload = pack_assistant_payload(
+        blocks=blocks,
+        questions=question_widgets,
+        tips=tip_widgets,
+        plots=plot_widgets,
+        canvases=canvas_widgets,
+        onboarding=onboarding_cards,
+    ) or {}
     if full_content or interrupted or history_payload:
         content = full_content + (INTERRUPT_NOTICE if interrupted else "")
         try:
@@ -511,8 +613,55 @@ def chat_info():
             "history": "GET /api/v1/chat/history?session_id=xxx",
             "sessions": "GET /api/v1/chat/sessions",
             "delete_session": "DELETE /api/v1/chat/sessions/{session_id}",
+            "upload_image": "POST /api/v1/chat/images",
         },
     }
+
+
+@router.post("/images", status_code=status.HTTP_201_CREATED)
+async def upload_chat_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """上传对话图片（先上传拿 id，再随消息用）。仅本人可读。"""
+    user_id = current_user["user_id"]
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in _CHAT_IMAGE_EXTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="仅支持 png/jpg/jpeg/webp/gif 图片",
+        )
+    content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="空文件"
+        )
+    max_bytes = DEBUG_MAX_UPLOAD_SIZE or _CHAT_IMAGE_FALLBACK_MAX_BYTES
+    if len(content) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"图片超过大小上限 {max_bytes} 字节",
+        )
+    filename = f"{uuid4().hex}{ext}"
+    storage_service.save_chat_image(user_id, filename, content)
+    return {"id": filename, "url": f"/api/v1/chat/images/{filename}"}
+
+
+@router.get("/images/{filename}")
+def get_chat_image(
+    filename: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """读取本人上传的对话图片。"""
+    path = storage_service.get_chat_image(current_user["user_id"], filename)
+    if path is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="图片不存在"
+        )
+    return FileResponse(
+        str(path),
+        media_type=_CHAT_IMAGE_MIME.get(path.suffix.lower(), "application/octet-stream"),
+    )
 
 
 @router.post("", response_model=ChatResponse)
@@ -542,13 +691,24 @@ async def send_chat(
     session_id = request.session_id or uuid4().hex
     session_meta = await _aload_session_meta(user_id, session_id)
 
-    if session_meta is None and not request.content:
+    image_paths = await asyncio.to_thread(
+        _resolve_chat_image_paths, user_id, request.images
+    )
+
+    if session_meta is None and not request.content and not image_paths:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="新会话必须提供 content"
+            detail="新会话必须提供 content 或图片"
         )
 
-    await _save_message(user_id, session_id, "user", request.content)
+    user_payload = {"images": request.images} if request.images else None
+    await _save_message(
+        user_id,
+        session_id,
+        "user",
+        request.content or ("[图片]" if image_paths else ""),
+        payload=user_payload,
+    )
 
     if mode == "onboarding":
         def _touch_onboarding():
@@ -584,6 +744,7 @@ async def send_chat(
             tc_domain_id=request.tc_domain_id,
             mode=mode,
             token=token,
+            images=image_paths,
         ),
         media_type="text/event-stream",
         headers={

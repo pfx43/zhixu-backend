@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知序 · 产品介绍</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      color: #2D2A28;
+      background: #FAF9F8;
+    }
+
+    /* 网页比例：整屏一节，内容宽约工作台 */
+    .screen {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 2.5rem 3rem 2rem;
+      position: relative;
+      background:
+        radial-gradient(900px 480px at 85% 0%, rgba(123, 156, 154, 0.18), transparent 55%),
+        radial-gradient(700px 420px at 5% 100%, rgba(193, 123, 90, 0.06), transparent 50%),
+        #FAF9F8;
+      border-bottom: 1px solid #EAE8E4;
+    }
+    .screen-inner {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .top img {
+      width: 2.25rem; height: 2.25rem; border-radius: 0.55rem;
+      object-fit: cover; border: 1px solid #EAE8E4;
+    }
+    .top .name {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 1.35rem; letter-spacing: 0.12em;
+    }
+    .top .pg {
+      margin-left: auto;
+      font-size: 0.75rem; color: #A39E99; letter-spacing: 0.14em;
+    }
+
+    .h1 {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: clamp(2.5rem, 5vw, 3.75rem);
+      line-height: 1.1; letter-spacing: -0.02em;
+      margin-bottom: 0.85rem; font-weight: 400;
+    }
+    .h1.sm { font-size: clamp(2rem, 4vw, 3rem); }
+    .lead {
+      font-size: 1.05rem; color: #8A8580; font-weight: 300;
+      line-height: 1.6; max-width: 36rem; margin-bottom: 2rem;
+    }
+
+    .fill { flex: 1; min-height: 0; }
+
+    .foot {
+      margin-top: 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem; color: #A39E99; letter-spacing: 0.06em;
+    }
+
+    /* 封面舞台 — 接近真实工作台宽高比 */
+    .cover-stage {
+      flex: 1;
+      border-radius: 1.1rem;
+      border: 1px solid #EAE8E4;
+      background: #fff;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 4.5rem minmax(0, 1fr) minmax(11rem, 18rem);
+      box-shadow: 0 8px 28px rgba(45,42,40,0.06);
+      margin-bottom: 1.5rem;
+      min-height: 22rem;
+    }
+    .nav {
+      background: #F7F5F2; border-right: 1px solid #EAE8E4;
+      padding: 1.25rem 0; display: flex; flex-direction: column; align-items: center; gap: 1.25rem;
+    }
+    .nav i { width: 1.1rem; height: 1.1rem; border-radius: 0.3rem; background: #EAE8E4; display: block; }
+    .nav i.on { background: #7B9C9A; }
+    .pane { padding: 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 0.85rem; overflow: auto; }
+    .hello { font-size: 1.35rem; font-weight: 500; }
+    .card {
+      border: 1px solid #EAE8E4; border-radius: 0.75rem; padding: 0.9rem 1rem;
+    }
+    .card.goal { border-left: 3px solid #7B9C9A; }
+    .k { font-size: 0.65rem; letter-spacing: 0.1em; color: #7B9C9A; font-weight: 600; margin-bottom: 0.35rem; }
+    .t { font-size: 1rem; font-weight: 500; }
+    .m { font-size: 0.8rem; color: #8A8580; margin-top: 0.3rem; }
+    .big { font-size: 2.25rem; font-weight: 700; color: #7B9C9A; line-height: 1; }
+    .bar { height: 4px; background: #EAE8E4; border-radius: 99px; overflow: hidden; margin-top: 0.5rem; }
+    .bar > i { display: block; height: 100%; background: #7B9C9A; border-radius: 99px; }
+    .task { display: flex; align-items: center; gap: 0.55rem; font-size: 0.9rem; margin-top: 0.45rem; }
+    .task b {
+      width: 1.2rem; height: 1.2rem; border-radius: 50%;
+      background: rgba(123,156,154,.15); color: #7B9C9A;
+      font-size: 0.7rem; display: flex; align-items: center; justify-content: center;
+    }
+    .canvas {
+      border-left: 1px solid #EAE8E4; background: #FAF9F8;
+      padding: 1.1rem 1rem; display: flex; flex-direction: column;
+    }
+    .canvas-label {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #7B9C9A; font-weight: 600; margin-bottom: 0.65rem;
+    }
+    .plot {
+      flex: 1; border-radius: 0.65rem; background: #fff;
+      border: 1px solid #EAE8E4; position: relative; overflow: hidden; min-height: 10rem;
+    }
+    .plot svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .chips { display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.9rem; }
+    .chips span { position: relative; padding-left: 0.85rem; }
+    .chips span::before {
+      content: ""; position: absolute; left: 0; top: 0.55em;
+      width: 0.35rem; height: 0.35rem; border-radius: 50%; background: #7B9C9A;
+    }
+
+    /* 路径 */
+    .path {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      align-content: center;
+      padding: 1rem 0 2rem;
+    }
+    .step {
+      background: #fff;
+      border: 1px solid #EAE8E4;
+      border-radius: 1rem;
+      padding: 1.75rem 1.35rem;
+      min-height: 14rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .num {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 2.25rem; color: #7B9C9A; line-height: 1; margin-bottom: 1.25rem;
+    }
+    .step h2 {
+      font-size: 1.35rem; font-weight: 400; margin-bottom: 0.65rem;
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+    }
+    .step p { font-size: 0.95rem; color: #8A8580; font-weight: 300; line-height: 1.55; margin-top: auto; }
+
+    /* 三块 */
+    .trio {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      align-content: center;
+      padding: 1rem 0 2rem;
+    }
+    .panel {
+      background: #fff;
+      border: 1px solid #EAE8E4;
+      border-radius: 1rem;
+      padding: 1.75rem 1.5rem;
+      min-height: 16rem;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 16px rgba(45,42,40,0.04);
+    }
+    .panel .icon {
+      width: 2.25rem; height: 2.25rem; border-radius: 0.5rem;
+      background: rgba(123,156,154,.12); margin-bottom: 2rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .panel .icon span {
+      width: 0.85rem; height: 0.85rem; border-radius: 0.2rem; background: #7B9C9A;
+    }
+    .panel .icon.r span { border-radius: 50%; }
+    .panel .icon.t span {
+      width: 0; height: 0; border-radius: 0; background: transparent;
+      border-left: 0.45rem solid transparent; border-right: 0.45rem solid transparent;
+      border-bottom: 0.75rem solid #7B9C9A;
+    }
+    .panel h3 {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 1.75rem; margin-bottom: 1rem; font-weight: 400;
+    }
+    .panel ul { list-style: none; margin-top: auto; }
+    .panel li {
+      font-size: 0.95rem; color: #8A8580; padding: 0.55rem 0;
+      border-top: 1px solid #EAE8E4; font-weight: 300;
+    }
+    .panel li:first-child { border-top: 0; }
+
+    /* Tina */
+    .chat-stage {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 1.25rem;
+      min-height: 0;
+      padding-bottom: 0.5rem;
+    }
+    .chat {
+      background: #fff;
+      border: 1px solid #EAE8E4;
+      border-radius: 1rem;
+      padding: 1.75rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .bubble {
+      max-width: 82%;
+      padding: 0.9rem 1.1rem;
+      border-radius: 0.85rem;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      font-weight: 300;
+    }
+    .bubble.bot { background: #F3F6F5; align-self: flex-start; }
+    .bubble.me { background: #7B9C9A; color: #fff; align-self: flex-end; }
+    .bubble .who {
+      font-size: 0.65rem; letter-spacing: 0.08em;
+      margin-bottom: 0.35rem; opacity: 0.7; font-weight: 500;
+    }
+    .side-plot {
+      background: #FAF9F8;
+      border: 1px solid #EAE8E4;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 18rem;
+    }
+    .side-plot .lab {
+      font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #7B9C9A; font-weight: 600; margin-bottom: 0.85rem;
+    }
+    .side-plot .plot { flex: 1; min-height: 14rem; }
+
+    /* 下一程 */
+    .split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      align-items: stretch;
+      padding: 1rem 0 1.5rem;
+    }
+    .block {
+      border-radius: 1rem;
+      border: 1px solid #EAE8E4;
+      background: #fff;
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 16rem;
+    }
+    .block.soft { background: #F3F6F5; border-color: transparent; }
+    .block .tag {
+      font-size: 0.75rem; letter-spacing: 0.1em; color: #7B9C9A;
+      font-weight: 600; margin-bottom: 1.5rem;
+    }
+    .block h2 {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: clamp(1.75rem, 3vw, 2.35rem); line-height: 1.2;
+      margin-bottom: 1rem; font-weight: 400;
+    }
+    .block p {
+      font-size: 1rem; color: #8A8580; font-weight: 300; line-height: 1.55;
+      margin-top: auto;
+    }
+    .end-line {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: clamp(1.5rem, 2.5vw, 2rem);
+      text-align: center; letter-spacing: 0.04em;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .screen { padding: 1.5rem 1.25rem 1.25rem; }
+      .cover-stage { grid-template-columns: 1fr; min-height: auto; }
+      .nav, .canvas { display: none; }
+      .path, .trio, .chat-stage, .split { grid-template-columns: 1fr; }
+      .step, .panel, .block { min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="screen" id="p1">
+    <div class="screen-inner">
+      <header class="top">
+        <img src="logo.jpg" alt="">
+        <span class="name">知序</span>
+        <span class="pg">01 / 05</span>
+      </header>
+      <h1 class="h1">今天，该学什么</h1>
+      <p class="lead">把教材放进自己的库。出题、刷题、辅导。Tina 按目标和学情，告诉你下一步。</p>
+      <div class="cover-stage fill" aria-hidden="true">
+        <aside class="nav"><i class="on"></i><i></i><i></i><i></i><i></i></aside>
+        <section class="pane">
+          <p class="hello">下午好</p>
+          <div class="card goal">
+            <p class="k">目标</p>
+            <p class="t">备战考研 · 大学数学</p>
+            <p class="m">122 天后</p>
+          </div>
+          <div class="card">
+            <p class="k">掌握</p>
+            <p class="big">68%</p>
+            <div class="bar"><i style="width:68%"></i></div>
+          </div>
+          <div class="card">
+            <p class="k">今天</p>
+            <div class="task"><b>1</b>补资料</div>
+            <div class="task"><b>2</b>出题 · 极限</div>
+            <div class="task"><b>3</b>刷薄弱 8 题</div>
+          </div>
+        </section>
+        <aside class="canvas">
+          <p class="canvas-label">画布</p>
+          <div class="plot">
+            <svg viewBox="0 0 100 140" preserveAspectRatio="none">
+              <path d="M14 110 C 28 110, 36 40, 50 70 S 72 30, 90 38" fill="none" stroke="#7B9C9A" stroke-width="2.2"/>
+              <path d="M14 118 C 32 112, 42 80, 55 78 S 78 50, 90 52" fill="none" stroke="#C4A35A" stroke-width="1.6" stroke-dasharray="3 2.5"/>
+            </svg>
+          </div>
+        </aside>
+      </div>
+      <div class="chips">
+        <span>资料 · 出题 · 刷题</span>
+        <span>目标 · 今日</span>
+        <span>Tina · 画布</span>
+      </div>
+      <footer class="foot"><span>知序 · AI 知识工作台</span><span>2026</span></footer>
+    </div>
+  </section>
+
+  <section class="screen" id="p2">
+    <div class="screen-inner">
+      <header class="top">
+        <img src="logo.jpg" alt="">
+        <span class="name">知序</span>
+        <span class="pg">02 / 05</span>
+      </header>
+      <h1 class="h1 sm">一条线用完</h1>
+      <p class="lead">不用排满日程。每天只做几件清楚的事。</p>
+      <div class="path fill">
+        <div class="step">
+          <div class="num">01</div>
+          <h2>放进教材</h2>
+          <p>上传 PDF，解析成可翻的页，抽出目录。</p>
+        </div>
+        <div class="step">
+          <div class="num">02</div>
+          <h2>按页出题</h2>
+          <p>勾选章节页码，AI 出题进你的题库。</p>
+        </div>
+        <div class="step">
+          <div class="num">03</div>
+          <h2>刷 · 不会再讲</h2>
+          <p>对、错、不会。不会可看解析，可叫辅导。</p>
+        </div>
+        <div class="step">
+          <div class="num">04</div>
+          <h2>明天还知道做什么</h2>
+          <p>目标记下你要去哪；今日任务推进那一步。</p>
+        </div>
+      </div>
+      <footer class="foot"><span>使用路径</span><span>02 / 05</span></footer>
+    </div>
+  </section>
+
+  <section class="screen" id="p3">
+    <div class="screen-inner">
+      <header class="top">
+        <img src="logo.jpg" alt="">
+        <span class="name">知序</span>
+        <span class="pg">03 / 05</span>
+      </header>
+      <h1 class="h1 sm">三块能力</h1>
+      <p class="lead">学、练、问——都在自己的资料上发生。</p>
+      <div class="trio fill">
+        <div class="panel">
+          <div class="icon"><span></span></div>
+          <h3>学</h3>
+          <ul>
+            <li>资料入库</li>
+            <li>目录与分页</li>
+            <li>伴读 · 划词 tip</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="icon r"><span></span></div>
+          <h3>练</h3>
+          <ul>
+            <li>按页出题</li>
+            <li>刷题会话</li>
+            <li>薄弱再练</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <div class="icon t"><span></span></div>
+          <h3>问</h3>
+          <ul>
+            <li>Tina 伙伴</li>
+            <li>苏格拉底辅导</li>
+            <li>讲题画布</li>
+          </ul>
+        </div>
+      </div>
+      <footer class="foot"><span>产品能力</span><span>03 / 05</span></footer>
+    </div>
+  </section>
+
+  <section class="screen" id="p4">
+    <div class="screen-inner">
+      <header class="top">
+        <img src="logo.jpg" alt="">
+        <span class="name">知序</span>
+        <span class="pg">04 / 05</span>
+      </header>
+      <h1 class="h1 sm">讲得见</h1>
+      <p class="lead">高数不只靠文字。Tina 讲题时，旁边可以出图。</p>
+      <div class="chat-stage fill">
+        <div class="chat">
+          <div class="bubble me">
+            <div class="who">你</div>
+            夹逼准则到底在说什么？
+          </div>
+          <div class="bubble bot">
+            <div class="who">TINA</div>
+            两边把中间夹住，极限就被迫相同。右侧是示意。
+          </div>
+          <div class="bubble bot">
+            <div class="who">TINA</div>
+            今天可以从「存在性」那几页再出一组题。
+          </div>
+        </div>
+        <aside class="side-plot">
+          <p class="lab">画布</p>
+          <div class="plot">
+            <svg viewBox="0 0 120 160" preserveAspectRatio="none">
+              <line x1="16" y1="140" x2="108" y2="140" stroke="#EAE8E4"/>
+              <line x1="16" y1="140" x2="16" y2="20" stroke="#EAE8E4"/>
+              <path d="M20 120 C 40 118, 48 40, 70 70 S 95 35, 110 42" fill="none" stroke="#7B9C9A" stroke-width="2.5"/>
+              <path d="M20 128 C 45 120, 55 85, 75 82 S 100 55, 110 58" fill="none" stroke="#C4A35A" stroke-width="1.8" stroke-dasharray="4 3"/>
+            </svg>
+          </div>
+        </aside>
+      </div>
+      <footer class="foot"><span>Tina · 讲题画布</span><span>04 / 05</span></footer>
+    </div>
+  </section>
+
+  <section class="screen" id="p5">
+    <div class="screen-inner">
+      <header class="top">
+        <img src="logo.jpg" alt="">
+        <span class="name">知序</span>
+        <span class="pg">05 / 05</span>
+      </header>
+      <h1 class="h1 sm">下一程</h1>
+      <p class="lead">驾驶室看学情总控；主页管今天几件事；画布让高数讲得见。</p>
+      <div class="split fill">
+        <div class="block">
+          <p class="tag">驾驶室</p>
+          <h2>与主页同侧<br>看清现在怎样</h2>
+          <p>掌握度、目标进度、Tina 判断依据；不再塞进主页。</p>
+        </div>
+        <div class="block soft">
+          <p class="tag">讲题画布</p>
+          <h2>讲题时<br>看得见</h2>
+          <p>函数图像与小演示出现在对话旁边，不再只靠纯文字。</p>
+        </div>
+      </div>
+      <p class="end-line">先学得成，再讲得见</p>
+      <footer class="foot"><span>知序 · 2026</span><span>05 / 05</span></footer>
+    </div>
+  </section>
+
+</body>
+</html>

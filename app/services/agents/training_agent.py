@@ -15,6 +15,7 @@ from tina import Agent
 from app.services.llm.llm_pool import llm_pool
 from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.tools.training_tools import TrainingTools
+from app.services.usage_service import record_usage_for_token
 from app.utils.prompt_loader import load_prompt
 
 if TYPE_CHECKING:
@@ -119,9 +120,10 @@ class TrainingCoachAgent:
             self.training_tools.submitted_plan = None
 
         try:
-            self.llm.set_token(token or "")
-            async for _chunk in self.agent.apredict(instruction=instruction):
-                pass
+            async for chunk in self.agent.apredict(instruction=instruction):
+                mapped = _chunk_to_dict(chunk)
+                if mapped.get("usage"):
+                    await record_usage_for_token(token or "", mapped["usage"])
         except Exception as e:
             logger.warning("TrainingCoachAgent.plan_training 失败: %s", e, exc_info=True)
 
@@ -161,9 +163,10 @@ class TrainingCoachAgent:
             return
 
         try:
-            self.llm.set_token(token or "")
             async for chunk in self.agent.apredict(instruction=message):
                 mapped = _chunk_to_dict(chunk)
+                if mapped.get("usage"):
+                    await record_usage_for_token(token or "", mapped["usage"])
                 content = mapped.get("content", "")
                 yield {
                     "role": mapped.get("role", "assistant"),

@@ -224,11 +224,13 @@ from app.schemas.quiz import CitationOut
 
 
 class ChatRequest(BaseModel):
-    content: str
+    content: str = ""
     session_id: Optional[str] = None
     collection_id: Optional[str] = None
     # 对话模式: qa / learning / classroom_note / verify / onboarding
     mode: Optional[str] = "qa"
+    # 对话附带的图片（先经 POST /chat/images 上传，这里传返回的 id 列表）
+    images: Optional[List[str]] = None
     # TCN 集成字段（可选，不传则跳过知识状态更新）
     tc_node_id: Optional[str] = None
     tc_user_action: Optional[str] = None  # "correct" | "incorrect"

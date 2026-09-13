@@ -15,7 +15,7 @@ import asyncio
 import logging
 from typing import AsyncGenerator, List, Optional
 
-from tina import Agent
+from tina import Agent, MultimodalAgent, Tools
 
 from app.core.config import LLM_MAX_TOOL_LOOP, is_local_rag, is_keyword_rag
 from app.core.database import async_short_session
@@ -25,6 +25,7 @@ from app.services.tutor.citation_service import build_citations_from_hits_async
 from app.services.chat.local_retrieval_service import search as local_search
 from app.services.chat.keyword_retrieval_service import search_async as keyword_search_async
 from app.services.chat.chat_contract import ChatChunkNormalizer
+from app.services.tools.canvas_tools import CanvasTools
 from app.services.tools.knowledge_retriever import KnowledgeRetriever
 from app.services.tools.onboarding_tools import OnboardingTools
 from app.services.tools.task_tools import TaskPlannerTools, build_user_context
@@ -76,6 +77,28 @@ def _embed_events_from_tools(task_tools: Optional[TaskPlannerTools]) -> List[dic
                 "type": "show_tip",
                 "role": "assistant",
                 "tip": item["tip"],
+            })
+    return events
+
+
+def _canvas_events_from_tools(canvas_tools: Optional[CanvasTools]) -> List[dict]:
+    """把 show_plot / show_canvas 转成独立 SSE 事件。"""
+    if canvas_tools is None:
+        return []
+    events: List[dict] = []
+    for item in canvas_tools.drain_ui():
+        kind = item.get("kind")
+        if kind == "show_plot" and isinstance(item.get("plot"), dict):
+            events.append({
+                "type": "show_plot",
+                "role": "assistant",
+                "plot": item["plot"],
+            })
+        elif kind == "show_canvas" and isinstance(item.get("canvas"), dict):
+            events.append({
+                "type": "show_canvas",
+                "role": "assistant",
+                "canvas": item["canvas"],
             })
     return events
 
@@ -150,11 +173,15 @@ class ZhixuAgent:
         collection_id: Optional[str] = None,
         mode: str = "qa",
         token: str = "",
+        image_paths: Optional[List[str]] = None,
     ) -> AsyncGenerator[dict, None]:
         """流式生成，产出归一化的公开 SSE 事件（reasoning/tool_call/answer/metadata）。
 
         每次调用独立创建 tina Agent（无共享、无锁）；流中发现 usage 即按 token
         记账；检索工具通过 RAGTools.set_token 动态绑定当前用户。
+
+        ``image_paths`` 非空时走 ``MultimodalAgent``（图片随本轮 user 消息以
+        base64 part 发给多模态模型）；为空时保持原 ``Agent`` 文本路径。
         """
         if not self._llm_ready:
             yield {
@@ -180,6 +207,7 @@ class ZhixuAgent:
 
         onboard_tools = None
         task_tools = None
+        canvas_tools = None
         tool_bundles = [retriever.get_tools()]
         if mode == "onboarding":
             shown = cards_shown_from_history(history)
@@ -195,6 +223,9 @@ class ZhixuAgent:
             # 内部出题 submit_question 不挂到这里。show_question / show_tip 走 pending_ui。
             task_tools = TaskPlannerTools(user_id=self.user_id, token=token)
             tool_bundles.append(task_tools.get_tools())
+            # 讲题画布：挂在本用户会话消息 payload，不另开全局表。
+            canvas_tools = CanvasTools()
+            tool_bundles.append(canvas_tools.get_tools())
 
         try:
             base_prompt = MODE_PROMPTS.get(mode, SYSTEM_PROMPT)
@@ -214,14 +245,19 @@ class ZhixuAgent:
             except Exception as e:
                 logger.warning(f"构建任务上下文失败: {e}")
 
-            agent = Agent(
+            tools = Tools(name="_self")
+            tools.add_tools(tool_bundles)
+            context_manager = PairedContextManager(
+                tools=tools,
+                max_length=80000,
+                max_tool_result_length=6000,
+            )
+            agent_cls = MultimodalAgent if image_paths else Agent
+            agent = agent_cls(
                 llm=llm,
-                tools=tool_bundles,
+                tools=tools,
                 system_prompt=base_prompt,
-                context_manager=PairedContextManager(
-                    max_length=80000,
-                    max_tool_result_length=6000,
-                ),
+                context_manager=context_manager,
                 max_tool_loop=LLM_MAX_TOOL_LOOP,
                 name=f"zhixu_{self.user_id}"
             )
@@ -237,7 +273,10 @@ class ZhixuAgent:
                         agent.add_message(role=role, content=content)
 
             normalizer = ChatChunkNormalizer()
-            async for chunk in agent.apredict(instruction=message, temperature=0.7):
+            predict_kwargs = {"instruction": message, "temperature": 0.7}
+            if image_paths:
+                predict_kwargs["image"] = image_paths
+            async for chunk in agent.apredict(**predict_kwargs):
                 if isinstance(chunk, dict) and chunk.get("usage"):
                     await record_usage_for_token(token, chunk["usage"])
                 for event in normalizer.normalize(chunk):
@@ -252,6 +291,8 @@ class ZhixuAgent:
                         }
                 for event in _embed_events_from_tools(task_tools):
                     yield event
+                for event in _canvas_events_from_tools(canvas_tools):
+                    yield event
             if onboard_tools:
                 for item in onboard_tools.drain_ui():
                     yield {
@@ -261,6 +302,8 @@ class ZhixuAgent:
                         "item": item,
                     }
             for event in _embed_events_from_tools(task_tools):
+                yield event
+            for event in _canvas_events_from_tools(canvas_tools):
                 yield event
 
             if retriever.last_hits:
