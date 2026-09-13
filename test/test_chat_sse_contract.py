@@ -546,7 +546,16 @@ class ChatPersistenceAsyncTests(unittest.TestCase):
         self.assertTrue(save_calls)
         self.assertEqual(
             save_calls[-1][1]["payload"],
-            {"onboarding": [{"type": "goal_card", "goal": "考研上岸"}]},
+            {
+                "blocks": [
+                    {"type": "text", "content": "记下了。"},
+                    {
+                        "type": "onboarding",
+                        "item": {"type": "goal_card", "goal": "考研上岸"},
+                    },
+                ],
+                "onboarding": [{"type": "goal_card", "goal": "考研上岸"}],
+            },
         )
 
     def test_show_question_and_tip_forwarded_and_saved(self):
