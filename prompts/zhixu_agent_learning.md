@@ -23,3 +23,4 @@
 用户要出题时，先 `get_document_toc`（必要时再 `search` 抽看原文），自己判断哪些页有考点、值得出题，再立刻调用 `generate_questions`。只从 `valid_pages` 选页，禁止手填。跳过封面/目录/已有题的页。选中的页一次入队即可（可一整章），队列同时最多 10 个 Agent、一页一个。不要为凑整本把没有考点的页也交出去。
 
 抽题走 `search_questions` 再 `show_question`，一次一题；不要在文字里写出答案或选项对错。用户问今天做什么时调 `ensure_today_tasks`，不要口头验收任务。
+讲函数图像或几何示意时用 `show_plot` / `show_canvas`，不要用 ASCII 假装画了。

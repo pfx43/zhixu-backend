@@ -13,6 +13,7 @@ from app.schemas.report import LearningReportGenerateOut, ReportOut
 from app.services.llm.llm_pool import llm_pool
 from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
 from app.services.training import analytics_service
+from app.services.usage_service import record_usage_for_token
 from app.utils.prompt_loader import load_prompt
 from tina import Agent
 
@@ -89,8 +90,6 @@ async def generate_learning_report(
 
     if llm:
         try:
-            if token:
-                llm.set_token(token)
             agent = Agent(
                 llm=llm,
                 tools=None,
@@ -102,6 +101,8 @@ async def generate_learning_report(
                 instruction=f"请根据以下学习数据生成 Markdown 学习报告：\n\n{stats_text}",
                 temperature=0.4,
             )
+            if isinstance(result, dict) and result.get("usage"):
+                await record_usage_for_token(token or "", result["usage"])
             content = _agent_text(result)
             content_md = (content or "").strip() or _template_report(stats_text)
         except Exception:

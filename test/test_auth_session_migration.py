@@ -23,7 +23,7 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
 # Alembic HEAD revision：每次新增迁移都要同步更新这个版本号。
 # 链：… → goal_evidence → qgen_jobs → user_storage → tcn_domains。
-ALEMBIC_HEAD_REVISION = "20260831_tcn_domains"
+ALEMBIC_HEAD_REVISION = "20260912_qgen_page_counts"
 
 
 def _create_all_except(engine, excluded: set[str]) -> None:

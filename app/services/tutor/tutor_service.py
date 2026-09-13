@@ -24,6 +24,7 @@ from app.schemas.tutor import (
 )
 from app.services.llm.llm_pool import llm_pool
 from app.services.llm.reasoning_roundtrip import attach_reasoning_roundtrip
+from app.services.usage_service import record_usage_for_token
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +257,7 @@ class SocraticTutorAgent:
             self._llm = llm_pool.acquire()
             if self._llm is None:
                 raise RuntimeError("LLMPool 为空")
-            self._llm.set_token(self._token)
+            # 用量在 Agent 流里按 chunk["usage"] 记账，不对裸 BaseAPI 调 set_token
             from tina import Agent, ContextManager
 
             context_manager = ContextManager(max_length=80000, max_tool_result_length=4000)
@@ -291,6 +292,8 @@ class SocraticTutorAgent:
                     if role in ("user", "assistant"):
                         self._agent.add_message(role=role, content=part)
             result = await self._agent.apredict_no_stream(instruction=message)
+            if isinstance(result, dict) and result.get("usage"):
+                await record_usage_for_token(self._token, result["usage"])
             if isinstance(result, dict):
                 return result.get("content", "") or str(result)
             if hasattr(result, "get"):
@@ -320,7 +323,10 @@ class SocraticTutorAgent:
                     if role in ("user", "assistant"):
                         self._agent.add_message(role=role, content=part)
             async for chunk in self._agent.apredict(instruction=message):
-                yield _chunk_to_dict(chunk)
+                mapped = _chunk_to_dict(chunk)
+                if mapped.get("usage"):
+                    await record_usage_for_token(self._token, mapped["usage"])
+                yield mapped
         except Exception as e:
             logger.error(f"SocraticTutorAgent.predict_stream 错误: {e}")
             yield {"role": "assistant", "content": f"抱歉，生成辅导回复时出错了：{str(e)}"}

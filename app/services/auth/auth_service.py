@@ -44,10 +44,31 @@ logger = logging.getLogger(__name__)
 
 class AuthManager:
     @staticmethod
-    def _gen_user_hash() -> str:
-        """生成 TCN 用户哈希"""
+    def _gen_user_hash(user_id: int | None = None) -> str:
+        """生成 TCN 用户哈希；有 user_id 时按稳定盐派生，便于幂等建档。"""
         from app.services.tcn.tcn_client import tcn_client
-        return tcn_client.generate_user_hash(secrets.randbits(32))
+        seed = user_id if user_id is not None else secrets.randbits(32)
+        return tcn_client.generate_user_hash(int(seed))
+
+    @staticmethod
+    def _archive_tcn_user(user_hash: str | None, *, context: str) -> None:
+        """本地已有 user_hash 后，调 TCN register 建档；失败降级，不打断主流程。"""
+        if not (user_hash or "").strip():
+            return
+        try:
+            from app.services.tcn.tcn_client import tcn_client
+            result = tcn_client.register_user_sync(user_hash)
+            if result.get("_degraded"):
+                logger.warning(
+                    "TCN 建档降级（%s）: user_hash=%s reason=%s",
+                    context,
+                    user_hash,
+                    result.get("_degraded_reason"),
+                )
+            else:
+                logger.info("TCN 建档成功（%s）: user_hash=%s", context, user_hash)
+        except Exception as e:
+            logger.warning("TCN 建档异常（%s，不影响主流程）: user_hash=%s err=%s", context, user_hash, e)
 
     @staticmethod
     def register(db: Session, email: str, password: str, nickname: str, username: str = None, verification_code: str = None):
@@ -83,12 +104,14 @@ class AuthManager:
             nickname=nickname,
             is_active=True,
             plan_level=0,
-            user_hash=AuthManager._gen_user_hash(),
+            user_hash=None,
         )
         try:
             # create user and onboarding record in same transaction
             db.add(new_user)
             db.flush()
+            # 先落本地 user_hash，再调 TCN register 建档
+            new_user.user_hash = AuthManager._gen_user_hash(new_user.id)
             # initialize onboarding state
             try:
                 init_state = OnboardingState(
@@ -114,6 +137,8 @@ class AuthManager:
             db.rollback()
             logger.error(f"注册数据库错误: {str(e)}")
             raise HTTPException(status_code=500, detail="注册失败，请稍后重试")
+
+        AuthManager._archive_tcn_user(new_user.user_hash, context="register")
 
         # 3.5 自动创建 Dify 知识库（仅 RAG_BACKEND=dify 时）
         if not is_local_rag():
@@ -195,13 +220,14 @@ class AuthManager:
         if not user.is_active:
              raise HTTPException(status_code=400, detail="User is inactive")
 
-        # 若 user_hash 缺失（存量用户），自动生成并持久化
+        # 若 user_hash 缺失（存量用户），自动生成并持久化，再尝试 TCN 建档
         if not user.user_hash:
             try:
-                user.user_hash = AuthManager._gen_user_hash()
+                user.user_hash = AuthManager._gen_user_hash(user.id)
                 db.commit()
                 db.refresh(user)
                 logger.info("为存量用户生成 user_hash: user_id=%s", user.id)
+                AuthManager._archive_tcn_user(user.user_hash, context="login-backfill")
             except Exception:
                 db.rollback()
                 logger.warning("生成 user_hash 失败（不影响登录）: user_id=%s", user.id)

@@ -71,6 +71,9 @@ class QgenJobPage(Base):
     segment_id = Column(String(36), nullable=True)
     status = Column(String(20), nullable=False, default="queued")
     questions_json = Column(JSON, nullable=True)
+    # 完成任务时记录：该页新建 / 复用了多少题（SSE 进度与 done 汇总用）
+    questions_created = Column(Integer, nullable=False, default=0, server_default="0")
+    questions_reused = Column(Integer, nullable=False, default=0, server_default="0")
     usage_json = Column(JSON, nullable=True)
     error = Column(Text, nullable=True)
 

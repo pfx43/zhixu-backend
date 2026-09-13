@@ -1,13 +1,16 @@
 """出题作业：入队快照、抢单、按页 complete 入库。出题进程不写 global_questions。"""
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from datetime import datetime
 from typing import Any, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.database import short_session
 from app.crud import kb as kb_crud
 from app.models import Document, Goal
 from app.models.qgen import QgenJob, QgenJobPage
@@ -149,6 +152,10 @@ def job_to_public(job: QgenJob, *, user_id: int) -> dict[str, Any]:
                 "page_number": page.page_number,
                 "status": page.status,
                 "error": page.error,
+                "questions_created": page.questions_created or 0,
+                "questions_reused": page.questions_reused or 0,
+                "total_questions": (page.questions_created or 0)
+                + (page.questions_reused or 0),
             }
             for page in job.pages
         ],
@@ -347,6 +354,8 @@ def complete_page(
 
     page.status = STATUS_COMPLETED
     page.questions_json = normalized
+    page.questions_created = created
+    page.questions_reused = reused
     page.usage_json = usage
     page.error = None
     _refresh_job_status(job)
@@ -397,3 +406,99 @@ def get_job_for_user(db: Session, user_id: int, job_id: str) -> dict[str, Any]:
     if job is None:
         raise HTTPException(status_code=404, detail="出题任务不存在")
     return job_to_public(job, user_id=user_id)
+
+
+async def stream_job_events(
+    *,
+    user_id: int,
+    job_id: str,
+    document_id: str,
+    document_name: str,
+    page_numbers: list[int],
+    poll_interval: float = 1.0,
+    timeout_seconds: float = 900.0,
+):
+    """轮询出题作业，产出与 inline SSE 相同的事件序列。
+
+    用于「去出题」走独立出题服务：入队后主进程只轮询进度，不跑 Agent。
+    yield (event_name, payload_dict)，与按页 SSE 事件同构。
+    """
+    for page_number in page_numbers:
+        yield ("message", {"type": "page_start", "page_number": page_number})
+
+    reported: set[int] = set()
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        with short_session() as db:
+            snapshot = get_job_for_user(db, user_id, job_id)
+
+        pages = snapshot["pages"]
+        for page in pages:
+            number = page["page_number"]
+            if number in reported:
+                continue
+            if page["status"] == STATUS_COMPLETED:
+                reported.add(number)
+                yield (
+                    "message",
+                    {
+                        "type": "page_complete",
+                        "page_number": number,
+                        "status": "completed",
+                        "questions_created": page.get("questions_created", 0),
+                        "questions_reused": page.get("questions_reused", 0),
+                        "total_questions": page.get("total_questions", 0),
+                    },
+                )
+            elif page["status"] == STATUS_FAILED:
+                reported.add(number)
+                yield (
+                    "message",
+                    {
+                        "type": "page_failed",
+                        "page_number": number,
+                        "status": "failed",
+                        "error": page.get("error") or None,
+                    },
+                )
+
+        if snapshot["status"] in (STATUS_COMPLETED, STATUS_FAILED):
+            yield (
+                "message",
+                {
+                    "type": "done",
+                    "document_id": document_id,
+                    "document_name": document_name,
+                    "status": snapshot["status"],
+                    "page_numbers": page_numbers,
+                    "total_pages": len(page_numbers),
+                    "questions_created": sum(
+                        p.get("questions_created", 0) for p in pages
+                    ),
+                    "questions_reused": sum(p.get("questions_reused", 0) for p in pages),
+                    "total_questions": sum(p.get("total_questions", 0) for p in pages),
+                },
+            )
+            return
+
+        if time.monotonic() > deadline:
+            logger.error(
+                "出题作业超时未完成: job_id=%s user_id=%s", job_id, user_id
+            )
+            yield (
+                "message",
+                {
+                    "type": "done",
+                    "document_id": document_id,
+                    "document_name": document_name,
+                    "status": STATUS_FAILED,
+                    "page_numbers": page_numbers,
+                    "total_pages": len(page_numbers),
+                    "questions_created": 0,
+                    "questions_reused": 0,
+                    "total_questions": 0,
+                },
+            )
+            return
+
+        await asyncio.sleep(poll_interval)

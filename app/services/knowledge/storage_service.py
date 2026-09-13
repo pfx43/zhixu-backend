@@ -89,6 +89,20 @@ class LocalStorage:
             return path.read_bytes()
         return None
 
+    def save_chat_image(self, user_id: int, filename: str, content: bytes) -> Path:
+        """保存对话图片到 storage/{user_id}/chat_images/，返回完整路径。"""
+        d = self._user_dir(user_id, "chat_images")
+        path = d / Path(filename).name
+        path.write_bytes(content)
+        logger.info(f"LocalStorage.save_chat_image: {path} ({len(content)} bytes)")
+        return path
+
+    def get_chat_image(self, user_id: int, filename: str) -> Optional[Path]:
+        """读取对话图片路径（仅本人目录，防路径穿越），不存在返回 None。"""
+        d = self._user_dir(user_id, "chat_images")
+        path = d / Path(filename).name
+        return path if path.is_file() else None
+
     def get_parsed(self, user_id: int, filename: str) -> Optional[str]:
         """读取解析后的文本缓存"""
         d = self._user_dir(user_id, "parsed")
@@ -456,6 +470,12 @@ class FileStorageService:
 
     def get_file(self, user_id: int, filename: str) -> Optional[bytes]:
         return self._backend.get_file(user_id, filename)
+
+    def save_chat_image(self, user_id: int, filename: str, content: bytes) -> Path:
+        return self._backend.save_chat_image(user_id, filename, content)
+
+    def get_chat_image(self, user_id: int, filename: str) -> Optional[Path]:
+        return self._backend.get_chat_image(user_id, filename)
 
     def delete_file(self, user_id: int, filename: str) -> bool:
         return self._backend.delete_file(user_id, filename)

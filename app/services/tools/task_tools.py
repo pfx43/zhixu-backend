@@ -388,67 +388,23 @@ class TaskPlannerTools:
             doc_name = doc.display_name
 
         try:
-            if question_gen_service.is_question_gen_worker():
-                with short_session() as db:
-                    result = qgen_job_service.enqueue_generate_from_pages(
-                        db=db,
-                        user_id=self._user_id,
-                        document_id=doc_id,
-                        page_numbers=pages,
-                        questions_per_page=None,
-                    )
-                    db.commit()
-                return json.dumps(
-                    {
-                        "status": "scheduled",
-                        "document_id": doc_id,
-                        "document_name": doc_name,
-                        "page_numbers": pages,
-                        "job_id": result.job_id,
-                        "message": "已提交按页出题，稍后刷新目录可看到新题",
-                    },
-                    ensure_ascii=False,
-                )
-            if question_gen_service.is_question_gen_async():
-                with short_session() as db:
-                    result = await question_gen_service.schedule_generate_from_pages(
-                        db=db,
-                        user_id=self._user_id,
-                        document_id=doc_id,
-                        page_numbers=pages,
-                        questions_per_page=None,
-                        token=self._token,
-                    )
-                    db.commit()
-                return json.dumps(
-                    {
-                        "status": "scheduled",
-                        "document_id": doc_id,
-                        "document_name": doc_name,
-                        "page_numbers": pages,
-                        "message": "已提交按页出题，稍后刷新目录可看到新题",
-                    },
-                    ensure_ascii=False,
-                )
             with short_session() as db:
-                result = await question_gen_service.generate_from_pages(
+                result = qgen_job_service.enqueue_generate_from_pages(
                     db=db,
                     user_id=self._user_id,
                     document_id=doc_id,
                     page_numbers=pages,
                     questions_per_page=None,
-                    token=self._token,
                 )
                 db.commit()
             return json.dumps(
                 {
-                    "status": "completed",
+                    "status": "scheduled",
                     "document_id": doc_id,
                     "document_name": doc_name,
                     "page_numbers": pages,
-                    "questions_created": result.questions_created,
-                    "questions_reused": result.questions_reused,
-                    "total_questions": result.total_questions,
+                    "job_id": result.job_id,
+                    "message": "已提交按页出题，稍后刷新目录可看到新题",
                 },
                 ensure_ascii=False,
             )

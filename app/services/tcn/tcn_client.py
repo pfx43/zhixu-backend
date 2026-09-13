@@ -7,6 +7,7 @@ OpenAPI 文档：http://127.0.0.1:8001/docs
 import asyncio
 import hashlib
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -14,6 +15,7 @@ import httpx
 
 from app.core.tcn_config import (
     TCN_ADMIN_TOKEN,
+    TCN_API_KEY,
     TCN_BASE_URL,
     TCN_ENABLED,
     TCN_MAX_RETRIES,
@@ -43,13 +45,39 @@ class TCNClient:
         self._client = httpx.AsyncClient(
             base_url=TCN_BASE_URL.rstrip("/"),
             timeout=httpx.Timeout(TCN_TIMEOUT),
-            headers={"X-Admin-Token": TCN_ADMIN_TOKEN},
+            headers=self._auth_headers(),
         )
         self._enabled = TCN_ENABLED
+
+    @staticmethod
+    def _auth_headers() -> dict:
+        """服务侧鉴权头：/v1/user/* 用 X-Api-Key（TCN 签发的服务密钥）。"""
+        headers: dict[str, str] = {}
+        api_key = (TCN_API_KEY or "").strip()
+        if api_key:
+            headers["X-Api-Key"] = api_key
+        return headers
+
+    @staticmethod
+    def _admin_headers() -> dict:
+        """admin 图接口鉴权头：控制台签发的 admin token 走 Authorization: Bearer。
+
+        实测 TCN 引擎的 /admin/graph/* 只认 Bearer JWT，不认 X-Admin-Token、
+        也不认 /v1/user/* 的服务密钥，故单独构造。
+        """
+        headers: dict[str, str] = {}
+        admin = (TCN_ADMIN_TOKEN or "").strip()
+        if admin:
+            headers["Authorization"] = f"Bearer {admin}"
+        return headers
 
     @property
     def is_enabled(self) -> bool:
         return self._enabled
+
+    def refresh_auth_headers(self) -> None:
+        """测试或运行时改了环境变量后，刷新底层客户端头。"""
+        self._client.headers.update(self._auth_headers())
 
     @staticmethod
     def _degraded_at() -> str:
@@ -64,36 +92,59 @@ class TCNClient:
 
     # ─── 核心重试机制 ─────────────────────────────────────
 
-    async def _call_with_retry(self, request_name: str, fn, *args, **kwargs) -> dict:
+    async def _call_with_retry(
+        self,
+        request_name: str,
+        fn,
+        *args,
+        affects_availability: bool = True,
+        **kwargs,
+    ) -> dict:
         """统一的 TCN 调用重试包装：
         - 第 1 次失败 → 打印重试日志，等待 1s 后重试
         - 第 2 次失败 → 再等待 1s 后重试
-        - 第 3 次仍失败 → 标记服务异常，返回降级数据
+        - 第 3 次仍失败 → 返回降级数据
         - 任意一次成功 → 自动恢复 _enabled = True
+
+        affects_availability=False 用于 admin 图接口：这些接口用独立凭证、
+        失败不代表 /v1/user/* 不可用，绝不能触发全局熔断（否则一个 admin
+        401 会把整个 KT 读接口打成 503）。
         """
         fallback = kwargs.pop("_fallback", {})  # 取出降级数据，不传给 fn
+        last_error: Exception | None = None
         for attempt in range(1, self._MAX_RETRIES + 2):  # 1, 2, 3
             try:
                 result = await fn(*args, **kwargs)
-                # 成功 → 恢复可用状态
-                if not self._enabled:
+                # 成功 → 恢复可用状态（仅当该调用代表 user 通道可用性）
+                if affects_availability and not self._enabled:
                     logger.info(f"TCN 服务恢复可用 ({request_name})")
                     self._enabled = True
                 return result
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code if e.response is not None else 0
+                # 404 = 未建档 / 无数据，是正常业务态：不重试、不熔断
+                if status == 404:
+                    logger.info(f"TCN 404 按空态降级 ({request_name})")
+                    return fallback
+                last_error = e
             except Exception as e:
-                if attempt < self._MAX_RETRIES + 1:
-                    logger.warning(
-                        f"TCN 调用失败 ({request_name})，正在进行第 {attempt} 次重试: {e}"
-                    )
-                    await asyncio.sleep(1)
-                else:
-                    logger.error(
-                        f"TCN 调用连续 {self._MAX_RETRIES + 1} 次失败 ({request_name})，判定服务异常: {e}"
-                    )
+                last_error = e
+
+            if attempt < self._MAX_RETRIES + 1:
+                logger.warning(
+                    f"TCN 调用失败 ({request_name})，正在进行第 {attempt} 次重试: {last_error}"
+                )
+                await asyncio.sleep(1)
+            else:
+                logger.error(
+                    f"TCN 调用连续 {self._MAX_RETRIES + 1} 次失败 ({request_name}): {last_error}"
+                )
+                if affects_availability:
+                    logger.error(f"判定 user 通道异常 ({request_name})")
                     self._enabled = False
 
         # 全部重试失败 → 返回降级数据（由各方法提供）
-        return kwargs.pop("_fallback", {})
+        return fallback
 
     # ─── 降级数据工厂 ──────────────────────────────────────
 
@@ -119,6 +170,95 @@ class TCNClient:
         except Exception as e:
             logger.warning(f"TCN 健康检查失败: {e}")
             return {"status": "unreachable", "nodes": 0}
+
+    async def register_user(self, user_hash: str) -> dict:
+        """POST /v1/user/register — 显式建档（幂等），body 仅 user_hash。"""
+        user_hash = (user_hash or "").strip()
+        if not user_hash:
+            return {"ok": False, "_degraded": True, "_degraded_reason": "empty user_hash"}
+
+        async def _call():
+            resp = await self._client.post(
+                "/v1/user/register",
+                json={"user_hash": user_hash},
+                headers=self._auth_headers(),
+            )
+            resp.raise_for_status()
+            if resp.content:
+                try:
+                    return resp.json()
+                except Exception:
+                    pass
+            return {"ok": True, "user_hash": user_hash}
+
+        fallback = {
+            "ok": False,
+            "user_hash": user_hash,
+            "_degraded": True,
+            "_degraded_reason": "TCN register 不可达，本地已保留 user_hash，稍后可重试建档",
+        }
+        return await self._call_with_retry("register_user", _call, **{"_fallback": fallback}) or fallback
+
+    def register_user_sync(self, user_hash: str) -> dict:
+        """同步建档：供注册/登录等同步路由调用，避免复用 AsyncClient 跨 loop。"""
+        user_hash = (user_hash or "").strip()
+        if not user_hash:
+            return {"ok": False, "_degraded": True, "_degraded_reason": "empty user_hash"}
+        if not self._enabled:
+            return {
+                "ok": False,
+                "user_hash": user_hash,
+                "_degraded": True,
+                "_degraded_reason": "TCN_ENABLED=false",
+            }
+
+        headers = {"Content-Type": "application/json", **self._auth_headers()}
+        last_error: Exception | None = None
+        for attempt in range(1, self._MAX_RETRIES + 2):
+            try:
+                with httpx.Client(
+                    base_url=TCN_BASE_URL.rstrip("/"),
+                    timeout=httpx.Timeout(TCN_TIMEOUT),
+                    headers=headers,
+                ) as client:
+                    resp = client.post("/v1/user/register", json={"user_hash": user_hash})
+                    resp.raise_for_status()
+                    if not self._enabled:
+                        self._enabled = True
+                    if resp.content:
+                        try:
+                            body = resp.json()
+                            if isinstance(body, dict):
+                                body.setdefault("ok", True)
+                                body.setdefault("user_hash", user_hash)
+                                return body
+                        except Exception:
+                            pass
+                    return {"ok": True, "user_hash": user_hash}
+            except Exception as e:
+                last_error = e
+                if attempt < self._MAX_RETRIES + 1:
+                    logger.warning(
+                        "TCN register 失败，第 %s 次重试: user_hash=%s err=%s",
+                        attempt,
+                        user_hash,
+                        e,
+                    )
+                    time.sleep(1)
+                else:
+                    logger.error(
+                        "TCN register 连续失败，降级放行注册: user_hash=%s err=%s",
+                        user_hash,
+                        e,
+                    )
+                    self._enabled = False
+
+        return {
+            "ok": False,
+            "user_hash": user_hash,
+            "_degraded": True,
+            "_degraded_reason": f"TCN register 失败: {last_error}",
+        }
 
     async def predict(
         self, user_hash: str, current_node: str, user_action: str,
@@ -171,26 +311,48 @@ class TCNClient:
             return fallback
 
     async def get_graph_domains(self) -> list:
-        """GET /admin/graph/domains"""
+        """GET /admin/graph/domains — 控制台 admin 接口，不参与 user 通道熔断。"""
+        fallback: list = []
+        if not (TCN_ADMIN_TOKEN or "").strip():
+            logger.warning("TCN_ADMIN_TOKEN 未配置，跳过图谱域拉取（KT 用户接口不受影响）")
+            return fallback
 
         async def _call():
-            resp = await self._client.get("/admin/graph/domains")
+            resp = await self._client.get(
+                "/admin/graph/domains", headers=self._admin_headers()
+            )
             resp.raise_for_status()
             return resp.json()
 
-        fallback: dict = {"_fallback": []}
-        return await self._call_with_retry("get_graph_domains", _call, **fallback) or []
+        result = await self._call_with_retry(
+            "get_graph_domains",
+            _call,
+            _fallback=fallback,
+            affects_availability=False,
+        )
+        return result or fallback
 
     async def get_graph_data(self, domain: str) -> dict:
-        """GET /admin/graph/data/{domain}"""
+        """GET /admin/graph/data/{domain} — 控制台 admin 接口，不参与 user 通道熔断。"""
+        fallback: dict = {"nodes": [], "edges": []}
+        if not (TCN_ADMIN_TOKEN or "").strip():
+            logger.warning("TCN_ADMIN_TOKEN 未配置，跳过图谱数据拉取: domain=%s", domain)
+            return fallback
 
         async def _call():
-            resp = await self._client.get(f"/admin/graph/data/{domain}")
+            resp = await self._client.get(
+                f"/admin/graph/data/{domain}", headers=self._admin_headers()
+            )
             resp.raise_for_status()
             return resp.json()
 
-        fallback = {"_fallback": {"nodes": [], "edges": []}}
-        return await self._call_with_retry("get_graph_data", _call, **fallback) or {"nodes": [], "edges": []}
+        result = await self._call_with_retry(
+            "get_graph_data",
+            _call,
+            _fallback=fallback,
+            affects_availability=False,
+        )
+        return result or fallback
 
     # ─── 4 个新接口（respond_fix.md 真实格式确认） ─────────────
 

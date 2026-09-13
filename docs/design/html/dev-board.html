@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>开发公告板 · 知序</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { background: #E8E4DE; }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      color: #2D2A28;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 36px;
+      padding: 32px 0;
+    }
+
+    .poster {
+      width: 210mm;
+      height: 297mm;
+      flex-shrink: 0;
+      overflow: hidden;
+      padding: 16mm 17mm 14mm;
+      background:
+        radial-gradient(140mm 90mm at 8% -5%, rgba(123, 156, 154, 0.16), transparent 58%),
+        radial-gradient(110mm 70mm at 95% 5%, rgba(193, 123, 90, 0.07), transparent 52%),
+        linear-gradient(180deg, #F7F5F2 0%, #FAF9F8 45%, #F3F1EE 100%);
+      box-shadow: 0 12px 40px rgba(45, 42, 40, 0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 9mm;
+      flex-shrink: 0;
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 3.5mm;
+    }
+
+    .brand-lockup img {
+      width: 12mm;
+      height: 12mm;
+      border-radius: 2.8mm;
+      object-fit: cover;
+      border: 0.3mm solid #EAE8E4;
+      background: #fff;
+    }
+
+    .brand-dept {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 16pt;
+      line-height: 1.15;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-week { color: #7B9C9A; }
+
+    .brand-mark {
+      margin-top: 1.2mm;
+      font-size: 6.5pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #7B9C9A;
+      font-weight: 500;
+    }
+
+    .meta {
+      text-align: right;
+      font-size: 8pt;
+      color: #8A8580;
+      line-height: 1.65;
+    }
+
+    .meta strong { color: #2D2A28; font-weight: 500; }
+    .page-mark { font-size: 7.5pt; color: #A39E97; letter-spacing: 0.1em; }
+
+    .hero-title {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 38pt;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      font-weight: 400;
+      margin-bottom: 4mm;
+      flex-shrink: 0;
+    }
+
+    .hero-lead {
+      max-width: 158mm;
+      font-size: 10pt;
+      color: #8A8580;
+      line-height: 1.75;
+      margin-bottom: 7mm;
+      flex-shrink: 0;
+    }
+
+    .hero-lead b { color: #2D2A28; font-weight: 500; }
+
+    .section-label {
+      font-size: 7.5pt;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #8A8580;
+      font-weight: 600;
+      margin-bottom: 5mm;
+      flex-shrink: 0;
+    }
+
+    /* 上版本更新日志：双列丰富卡片 */
+    .shipped {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .shipped-head {
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+      margin-bottom: 5mm;
+    }
+
+    .shipped-head .title {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 26pt;
+      font-weight: 400;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: #2D2A28;
+    }
+
+    .shipped-head .sub {
+      font-size: 11pt;
+      color: #8A8580;
+      line-height: 1.5;
+    }
+
+    .shipped-head .row {
+      display: flex;
+      align-items: baseline;
+      gap: 3.5mm;
+      flex-wrap: wrap;
+    }
+
+    .shipped-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      flex: 1;
+    }
+
+    .ship-card {
+      padding: 4mm 4.5mm 4mm 0;
+      border-top: 0.3mm solid #EAE8E4;
+    }
+
+    .ship-card:nth-child(even) {
+      padding-left: 5mm;
+      padding-right: 0;
+      border-left: 0.3mm solid #EAE8E4;
+    }
+
+    .ship-card h3 {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 14pt;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      margin-bottom: 2mm;
+      line-height: 1.2;
+    }
+
+    .ship-card p {
+      font-size: 7.8pt;
+      color: #6F6A65;
+      line-height: 1.6;
+    }
+
+    .stage-home {
+      margin-top: 5mm;
+      width: 100%;
+      height: 48mm;
+      border-radius: 3.5mm;
+      border: 0.3mm solid #E0DCD6;
+      background: #FBFaf8;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 12mm 1fr 42mm;
+      box-shadow: 0 3mm 12mm rgba(45, 42, 40, 0.05);
+      flex-shrink: 0;
+    }
+
+    .stage-home .rail {
+      background: #F0EEEA;
+      border-right: 0.3mm solid #E5E1DB;
+      padding: 4mm 2.5mm;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5mm;
+    }
+
+    .stage-home .rail i {
+      display: block;
+      height: 2mm;
+      border-radius: 99px;
+      background: #D4CFC8;
+    }
+
+    .stage-home .rail i.on { background: #7B9C9A; width: 100%; }
+    .stage-home .rail i:not(.on) { width: 65%; opacity: 0.7; }
+
+    .stage-home .body {
+      padding: 4mm 5mm;
+    }
+
+    .stage-home .lbl {
+      font-size: 6pt;
+      color: #A39E97;
+      letter-spacing: 0.05em;
+      margin-bottom: 2mm;
+    }
+
+    .stage-home .hello {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 13pt;
+      margin-bottom: 3mm;
+    }
+
+    .stage-home .task {
+      display: flex;
+      align-items: center;
+      gap: 2.5mm;
+      padding: 2mm 0;
+      border-top: 0.25mm solid #EAE8E4;
+      font-size: 7pt;
+      color: #6F6A65;
+    }
+
+    .stage-home .task b {
+      width: 4.5mm;
+      height: 4.5mm;
+      border-radius: 50%;
+      background: #7B9C9A;
+      color: #fff;
+      font-size: 5.5pt;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+    .stage-home .task .go {
+      margin-left: auto;
+      font-size: 6pt;
+      color: #7B9C9A;
+      border: 0.25mm solid rgba(123,156,154,0.4);
+      border-radius: 99px;
+      padding: 0.6mm 2mm;
+    }
+
+    .stage-home .side {
+      border-left: 0.3mm solid #E5E1DB;
+      background: #F7F5F2;
+      padding: 4mm;
+    }
+
+    .stage-home .side .mini {
+      background: #fff;
+      border: 0.25mm solid #EAE8E4;
+      border-radius: 2mm;
+      padding: 2.5mm;
+      margin-bottom: 2mm;
+    }
+
+    .stage-home .bar {
+      height: 1.8mm;
+      border-radius: 99px;
+      background: #E8E4DE;
+      margin-top: 2mm;
+      overflow: hidden;
+    }
+
+    .stage-home .bar i {
+      display: block;
+      height: 100%;
+      width: 68%;
+      background: #7B9C9A;
+      border-radius: 99px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: 6.5pt;
+      letter-spacing: 0.06em;
+      padding: 0.5mm 2mm;
+      border-radius: 99px;
+      border: 0.3mm solid #EAE8E4;
+      color: #8A8580;
+      white-space: nowrap;
+    }
+
+    .tag-done { color: #5B8F7A; border-color: rgba(91, 143, 122, 0.35); background: rgba(91, 143, 122, 0.08); }
+    .tag-next { color: #7B9C9A; border-color: rgba(123, 156, 154, 0.4); background: rgba(123, 156, 154, 0.1); }
+    .tag-plan { color: #6A8987; border-color: rgba(106, 137, 135, 0.45); background: rgba(123, 156, 154, 0.12); }
+    .tag-wait { color: #C4A35A; border-color: rgba(196, 163, 90, 0.4); background: rgba(196, 163, 90, 0.1); }
+    .tag-later { color: #8A8580; border-color: #EAE8E4; background: rgba(255,255,255,0.4); }
+
+    /* 功能大页 */
+    .block {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .block-n {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 14pt;
+      color: #7B9C9A;
+      letter-spacing: 0.08em;
+      margin-bottom: 2mm;
+    }
+
+    .block-head {
+      display: flex;
+      align-items: baseline;
+      gap: 3mm;
+      flex-wrap: wrap;
+      margin-bottom: 4mm;
+    }
+
+    .block h2 {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 28pt;
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .block .copy {
+      font-size: 9.5pt;
+      color: #6F6A65;
+      line-height: 1.75;
+      max-width: 160mm;
+    }
+
+    .block .copy + .copy { margin-top: 2.5mm; }
+    .block .copy b { color: #2D2A28; font-weight: 500; }
+
+    .stage {
+      margin-top: 8mm;
+      width: 100%;
+      height: 78mm;
+      border-radius: 4mm;
+      border: 0.3mm solid #E0DCD6;
+      background: #FBFaf8;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 4mm 14mm rgba(45, 42, 40, 0.06);
+      flex-shrink: 0;
+    }
+
+    .stage .nav {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 14mm;
+      background: #F0EEEA;
+      border-right: 0.3mm solid #E5E1DB;
+      display: flex;
+      flex-direction: column;
+      gap: 3mm;
+      padding: 5mm 3mm;
+    }
+
+    .stage .nav i {
+      display: block;
+      height: 2.2mm;
+      border-radius: 99px;
+      background: #D4CFC8;
+    }
+
+    .stage .nav i.on { background: #7B9C9A; width: 100%; }
+    .stage .nav i:not(.on) { width: 65%; opacity: 0.75; }
+
+    .stage .main {
+      margin-left: 14mm;
+      padding: 6mm 7mm;
+      height: 100%;
+    }
+
+    .stage .lbl {
+      font-size: 7pt;
+      color: #A39E97;
+      letter-spacing: 0.06em;
+      margin-bottom: 3mm;
+    }
+
+    .stage .line {
+      height: 2.2mm;
+      border-radius: 99px;
+      background: #E8E4DE;
+      margin-bottom: 2.5mm;
+    }
+
+    .stage .line.w60 { width: 55%; }
+    .stage .line.w80 { width: 78%; }
+    .stage .line.w40 { width: 38%; }
+    .stage .line.accent { background: #7B9C9A; }
+
+    .stage .ruler {
+      height: 3.5mm;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #C17B5A, #C4A35A 42%, #7B9C9A);
+      margin: 2mm 0 6mm;
+      position: relative;
+      max-width: 140mm;
+    }
+
+    .stage .ruler::after {
+      content: "";
+      position: absolute;
+      left: 68%;
+      top: -2.5mm;
+      width: 1.2mm;
+      height: 8.5mm;
+      background: #2D2A28;
+      border-radius: 99px;
+    }
+
+    .stage .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4mm;
+      max-width: 150mm;
+    }
+
+    .stage .card {
+      background: #fff;
+      border: 0.3mm solid #EAE8E4;
+      border-radius: 2.5mm;
+      padding: 3.5mm 4mm;
+      min-height: 22mm;
+    }
+
+    .stage .card .k { font-size: 6.5pt; color: #A39E97; margin-bottom: 2mm; }
+    .stage .card .v {
+      font-size: 18pt;
+      font-weight: 600;
+      color: #2D2A28;
+      font-variant-numeric: tabular-nums;
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+    }
+    .stage .card .v.sm { font-size: 13pt; font-weight: 500; }
+    .stage .card .hint { margin-top: 2mm; font-size: 6.5pt; color: #8A8580; }
+
+    .stage-canvas {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      height: 100%;
+    }
+
+    .stage-canvas .chat {
+      padding: 6mm 5mm;
+      border-right: 0.3mm solid #E5E1DB;
+      background: #F7F5F2;
+    }
+
+    .stage-canvas .bubble {
+      background: #fff;
+      border: 0.3mm solid #EAE8E4;
+      border-radius: 2.5mm;
+      padding: 4mm;
+      margin-bottom: 4mm;
+    }
+
+    .stage-canvas .chip {
+      display: inline-block;
+      font-size: 7pt;
+      color: #7B9C9A;
+      border: 0.3mm solid rgba(123,156,154,0.35);
+      border-radius: 99px;
+      padding: 1.2mm 3mm;
+      background: rgba(123,156,154,0.08);
+    }
+
+    .stage-canvas .plot {
+      padding: 5mm 6mm;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stage-canvas .plot svg { flex: 1; width: 100%; }
+
+    .stage-plugin {
+      padding: 10mm 12mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      height: 100%;
+      align-content: center;
+    }
+
+    .stage-plugin .slot {
+      display: flex;
+      align-items: center;
+      gap: 3.5mm;
+      background: #fff;
+      border: 0.35mm dashed #D4CFC8;
+      border-radius: 2.5mm;
+      padding: 5mm 6mm;
+      min-height: 18mm;
+    }
+
+    .stage-plugin .slot.on {
+      border-style: solid;
+      border-color: rgba(123,156,154,0.45);
+      background: rgba(123,156,154,0.06);
+    }
+
+    .stage-plugin .dot {
+      width: 4.5mm;
+      height: 4.5mm;
+      border-radius: 50%;
+      background: #D4CFC8;
+      flex-shrink: 0;
+    }
+
+    .stage-plugin .slot.on .dot { background: #7B9C9A; }
+    .stage-plugin .slot .line { flex: 1; margin: 0; height: 2.5mm; border-radius: 99px; background: #E8E4DE; }
+    .stage-plugin .slot .line.accent { background: #7B9C9A; }
+    .stage-plugin .slot .name { font-size: 9pt; color: #6F6A65; min-width: 28mm; }
+
+    .stage-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100%;
+    }
+
+    .stage-split .pane {
+      padding: 8mm 8mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stage-split .pane + .pane {
+      border-left: 0.3mm solid #E5E1DB;
+      background: #F7F5F2;
+    }
+
+    .stage-split .row {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      padding: 3.5mm 0;
+      border-bottom: 0.25mm solid #EAE8E4;
+    }
+
+    .stage-split .row:last-child { border-bottom: 0; }
+
+    .stage-split .bell {
+      width: 5mm;
+      height: 5mm;
+      border-radius: 50%;
+      background: #7B9C9A;
+      flex-shrink: 0;
+    }
+
+    .stage-split .bell.dim { background: #D4CFC8; }
+
+    .stage-split .check {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      margin-bottom: 4mm;
+    }
+
+    .stage-split .box {
+      width: 4.5mm;
+      height: 4.5mm;
+      border-radius: 0.8mm;
+      border: 0.35mm solid #7B9C9A;
+      background: rgba(123,156,154,0.2);
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .stage-split .box::after {
+      content: "";
+      position: absolute;
+      left: 1mm;
+      top: 0.4mm;
+      width: 1.5mm;
+      height: 2.6mm;
+      border-right: 0.4mm solid #5B8F7A;
+      border-bottom: 0.4mm solid #5B8F7A;
+      transform: rotate(40deg);
+    }
+
+    .stage-split .box.empty {
+      background: transparent;
+      border-color: #D4CFC8;
+    }
+
+    .stage-split .box.empty::after { display: none; }
+
+    .footer {
+      display: grid;
+      grid-template-columns: 1.5fr 0.5fr;
+      gap: 8mm;
+      align-items: end;
+      margin-top: 6mm;
+      padding-top: 5mm;
+      border-top: 0.3mm solid #EAE8E4;
+      flex-shrink: 0;
+    }
+
+    .footer-note {
+      font-size: 8.5pt;
+      color: #8A8580;
+      line-height: 1.65;
+      max-width: 140mm;
+    }
+
+    .footer-note strong { color: #2D2A28; font-weight: 500; }
+
+    .sign { text-align: right; }
+
+    .sign .name {
+      font-family: 'Instrument Serif', 'Noto Serif SC', serif;
+      font-size: 20pt;
+      margin-bottom: 1.2mm;
+    }
+
+    .sign p {
+      font-size: 7.5pt;
+      color: #8A8580;
+      line-height: 1.5;
+    }
+
+    @media print {
+      html, body {
+        background: #fff;
+        padding: 0;
+        margin: 0;
+        gap: 0;
+        width: 210mm;
+      }
+      body { display: block; }
+      .poster {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: always;
+      }
+      .poster:last-child { page-break-after: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 01 封面：上版本更新日志 -->
+  <article class="poster" aria-label="上版本更新日志">
+    <header class="top-bar">
+      <div class="brand-lockup">
+        <img src="logo.jpg" alt="知序">
+        <div>
+          <p class="brand-dept">知序开发部</p>
+          <p class="brand-mark">Zhixu · Engineering</p>
+        </div>
+      </div>
+      <div class="meta">
+        产品日程 · <strong>2026-09-11</strong><br>
+        <span class="page-mark">01 / 05</span>
+      </div>
+    </header>
+
+    <h1 class="hero-title">开发公告板</h1>
+    <p class="hero-lead">
+      上瘾点在主页任务：看一眼、点一下、去做。<br>
+      先看上版本已经落地的能力，再从 <b>驾驶室</b> 往下排。
+    </p>
+
+    <section class="shipped">
+      <div class="shipped-head">
+        <div class="row">
+          <h2 class="title">上版本更新日志</h2>
+          <span class="tag tag-done">已发布</span>
+        </div>
+        <p class="sub">近期合入、用户今天就能走通的路径</p>
+      </div>
+
+      <div class="shipped-list">
+        <div class="ship-card">
+          <h3>主页 · 今日任务</h3>
+          <p>每天少量可跳转的事：上传、出题、刷题。做完由程序判定，不用自己勾选。点任务后面的按钮，直接进对的页面——这是最容易上瘾的一层。</p>
+        </div>
+        <div class="ship-card">
+          <h3>Tina 对话</h3>
+          <p>流式聊天，能检索自己的书与页码；结合目标和今日安排说话。新手可用对话走完引导，确认称呼、目标与第一份资料。</p>
+        </div>
+        <div class="ship-card">
+          <h3>资料 · 按页出题</h3>
+          <p>上传教材进学习区，解析成分页与章节目录。按章勾页批量出题，可排队；扫描件尽量保留配图。题入库带页码与知识点。</p>
+        </div>
+        <div class="ship-card">
+          <h3>刷题 · 辅导</h3>
+          <p>对 / 错 / 不会。不会可看解析与原文回溯，可进入苏格拉底式辅导。薄弱点可再练一组，和进度页能对上。</p>
+        </div>
+        <div class="ship-card">
+          <h3>目标</h3>
+          <p>一人强调一条进行中的长期目标。任务围着它派；详情里能看到相关材料与推进。改目标可以找 Tina。</p>
+        </div>
+        <div class="ship-card">
+          <h3>学科掌握主线</h3>
+          <p>书可标封闭学科；出题受词表约束；作答可回写掌握。主线已差不多接通，驾驶室要好看懂，还差建档等体验收口。</p>
+        </div>
+      </div>
+
+      <div class="stage-home" aria-hidden="true">
+        <div class="rail"><i class="on"></i><i></i><i></i><i></i></div>
+        <div class="body">
+          <div class="lbl">主页 · 今天该做什么</div>
+          <div class="hello">下午好</div>
+          <div class="task"><b>1</b>给「极限」相关页再出一组题<span class="go">去做</span></div>
+          <div class="task"><b>2</b>刷昨天不会的 8 道<span class="go">去做</span></div>
+          <div class="task"><b>3</b>补传一章讲义<span class="go">去做</span></div>
+        </div>
+        <div class="side">
+          <div class="lbl">目标摘要</div>
+          <div class="mini">
+            <div class="lbl">备战考研 · 大学数学</div>
+            <div class="bar"><i></i></div>
+          </div>
+          <div class="mini">
+            <div class="lbl">Tina 说</div>
+            <div style="height:1.6mm;width:90%;background:#E8E4DE;border-radius:99px;margin-top:2mm"></div>
+            <div style="height:1.6mm;width:55%;background:#E8E4DE;border-radius:99px;margin-top:1.5mm"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </article>
+
+  <!-- 02 驾驶室 -->
+  <article class="poster" aria-label="驾驶室">
+    <header class="top-bar">
+      <div class="brand-lockup">
+        <img src="logo.jpg" alt="知序">
+        <div>
+          <p class="brand-dept">知序开发部</p>
+          <p class="brand-mark">Zhixu · Engineering</p>
+        </div>
+      </div>
+      <div class="meta"><span class="page-mark">02 / 05</span></div>
+    </header>
+
+    <p class="section-label">从驾驶室开始</p>
+
+    <section class="block">
+      <p class="block-n">01</p>
+      <div class="block-head">
+        <h2>驾驶室</h2>
+        <span class="tag tag-next">进行中</span>
+        <span class="tag tag-plan">体验</span>
+      </div>
+      <p class="copy">
+        与「主页」同侧置顶。打开不是再拼几个页面，而是一眼看见：目标还剩多少天、掌握标尺停在哪、最弱的几块知识点、Tina 为什么派今天这些事。
+      </p>
+      <p class="copy">
+        设计稿即 <b>dashboard_v3</b>。主页只留问候与今日任务——上瘾的「点一下去做」留在主页；驾驶室专管「我处在哪、系统为何这样排」。
+      </p>
+
+      <div class="stage" aria-hidden="true">
+        <div class="nav"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        <div class="main">
+          <div class="lbl">驾驶室 · 掌握标尺</div>
+          <div class="ruler"></div>
+          <div class="cards">
+            <div class="card">
+              <div class="k">整体掌握</div>
+              <div class="v">68%</div>
+              <div class="hint">较上周 +4</div>
+            </div>
+            <div class="card">
+              <div class="k">距目标</div>
+              <div class="v">122</div>
+              <div class="hint">天 · 需加速</div>
+            </div>
+            <div class="card">
+              <div class="k">最薄弱</div>
+              <div class="v sm">极限</div>
+              <div class="hint">Tina 建议先补</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </article>
+
+  <!-- 03 画布 -->
+  <article class="poster" aria-label="讲题画布">
+    <header class="top-bar">
+      <div class="brand-lockup">
+        <img src="logo.jpg" alt="知序">
+        <div>
+          <p class="brand-dept">知序开发部</p>
+          <p class="brand-mark">Zhixu · Engineering</p>
+        </div>
+      </div>
+      <div class="meta"><span class="page-mark">03 / 05</span></div>
+    </header>
+
+    <section class="block">
+      <p class="block-n">02</p>
+      <div class="block-head">
+        <h2>Tina 讲题画布</h2>
+        <span class="tag tag-plan">排期</span>
+        <span class="tag tag-next">讲题</span>
+      </div>
+      <p class="copy">
+        任务把人带进辅导 / Tina；画布让高数「讲得见」。对话旁出现函数图像或小演示，气泡里有入口卡片，一点就在副屏打开，可拖宽、可收起。
+      </p>
+      <p class="copy">
+        不做自由白板。先服务讲题路径：夹逼、图像、过程演示——纯文字讲不清的，用副屏补上。
+      </p>
+
+      <div class="stage" aria-hidden="true">
+        <div class="stage-canvas">
+          <div class="chat">
+            <div class="lbl">Tina</div>
+            <div class="bubble">
+              <div class="line w80"></div>
+              <div class="line w60"></div>
+              <div class="line w40" style="margin-bottom:0"></div>
+            </div>
+            <span class="chip">打开画布 · 函数图像</span>
+          </div>
+          <div class="plot">
+            <div class="lbl">画布副屏</div>
+            <svg viewBox="0 0 200 120" preserveAspectRatio="none">
+              <path d="M12 95 C 40 95, 55 25, 95 55 S 145 15, 188 28" fill="none" stroke="#7B9C9A" stroke-width="3"/>
+              <path d="M12 102 C 48 92, 70 70, 100 65 S 150 42, 188 48" fill="none" stroke="#C4A35A" stroke-width="2" stroke-dasharray="5 4"/>
+              <circle cx="95" cy="55" r="3.5" fill="#2D2A28"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  </article>
+
+  <!-- 04 插件（单独一页，避免叠字） -->
+  <article class="poster" aria-label="插件扩展">
+    <header class="top-bar">
+      <div class="brand-lockup">
+        <img src="logo.jpg" alt="知序">
+        <div>
+          <p class="brand-dept">知序开发部</p>
+          <p class="brand-mark">Zhixu · Engineering</p>
+        </div>
+      </div>
+      <div class="meta"><span class="page-mark">04 / 05</span></div>
+    </header>
+
+    <section class="block">
+      <p class="block-n">03</p>
+      <div class="block-head">
+        <h2>后端插件扩展</h2>
+        <span class="tag tag-plan">排期</span>
+        <span class="tag tag-wait">骨架</span>
+      </div>
+      <p class="copy">
+        系统要能往外挂能力，不必每次硬改主仓。先做官方模块扩展点：注册、启停、权限边界清楚；部署侧用环境开关统一打开。
+      </p>
+      <p class="copy">
+        现阶段不做每用户安装，更不做插件市场。画布、学科工具等可以先以内置官方模块的形式挂上扩展点；市场是更远期的事。
+      </p>
+
+      <div class="stage" aria-hidden="true">
+        <div class="stage-plugin">
+          <div class="slot on"><span class="dot"></span><span class="name">画布</span><div class="line accent" style="width:70%"></div></div>
+          <div class="slot on"><span class="dot"></span><span class="name">学科工具</span><div class="line accent" style="width:85%"></div></div>
+          <div class="slot"><span class="dot"></span><span class="name">待挂</span><div class="line" style="width:40%"></div></div>
+          <div class="slot"><span class="dot"></span><span class="name">待挂</span><div class="line" style="width:40%"></div></div>
+        </div>
+      </div>
+    </section>
+  </article>
+
+  <!-- 05 收口与上线（单独一页） -->
+  <article class="poster" aria-label="收口与上线">
+    <header class="top-bar">
+      <div class="brand-lockup">
+        <img src="logo.jpg" alt="知序">
+        <div>
+          <p class="brand-dept">知序开发部</p>
+          <p class="brand-mark">Zhixu · Engineering</p>
+        </div>
+      </div>
+      <div class="meta"><span class="page-mark">05 / 05</span></div>
+    </header>
+
+    <section class="block">
+      <p class="block-n">04 · 05 · 06</p>
+      <div class="block-head">
+        <h2>收口与上线</h2>
+        <span class="tag tag-wait">收口</span>
+        <span class="tag tag-later">其后 · 并行</span>
+      </div>
+      <p class="copy">
+        <b>TCN 体验</b>：补建档、Key、失败不挡学习，让驾驶室里的掌握度敢看。<b>通知 · 提醒 · 画像</b>：到点能喊、顶栏有信、画像能生成；契约对齐后再合，不抢驾驶室与画布。
+      </p>
+      <p class="copy">
+        <b>真人验收</b>：注册登录稳、核心链路无阻断。一个外人独立走完「看任务 → 点进去 → 做完」。用量继续记账；强制限额与插件市场不进本季上线故事。
+      </p>
+
+      <div class="stage" aria-hidden="true">
+        <div class="stage-split">
+          <div class="pane">
+            <div class="lbl">通知 · 提醒</div>
+            <div class="row"><span class="bell"></span><div style="flex:1"><div class="line w80 accent"></div><div class="line w40" style="margin:0"></div></div></div>
+            <div class="row"><span class="bell dim"></span><div style="flex:1"><div class="line w80"></div><div class="line w60" style="margin:0"></div></div></div>
+            <div class="row"><span class="bell dim"></span><div style="flex:1"><div class="line w60"></div><div class="line w40" style="margin:0"></div></div></div>
+          </div>
+          <div class="pane">
+            <div class="lbl">真人验收</div>
+            <div class="check"><span class="box"></span><div class="line w80" style="margin:0"></div></div>
+            <div class="check"><span class="box"></span><div class="line w60" style="margin:0"></div></div>
+            <div class="check"><span class="box empty"></span><div class="line w40" style="margin:0"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p class="footer-note">
+        <strong>口径：</strong>任务让人上瘾；驾驶室说清「为什么是这些事」；画布让高数讲得见；插件先扩官方能力。
+      </p>
+      <div class="sign">
+        <p class="name">知序</p>
+        <p>学得成 · 再讲得见</p>
+      </div>
+    </footer>
+  </article>
+
+</body>
+</html>
